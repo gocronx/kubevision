@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "overview": "概览",
+    "workloads": "工作负载",
+    "pods": "Pods",
+    "deployments": "Deployments",
+    "statefulsets": "StatefulSets",
+    "daemonsets": "DaemonSets",
+    "jobs": "Jobs",
+    "cronjobs": "CronJobs",
+    "network": "网络",
+    "services": "Services",
+    "ingresses": "Ingresses",
+    "config": "配置",
+    "configmaps": "ConfigMaps",
+    "secrets": "Secrets",
+    "storage": "存储",
+    "persistentvolumes": "持久卷",
+    "persistentvolumeclaims": "持久卷声明",
+    "storageclasses": "存储类",
+    "cluster": "集群",
+    "nodes": "节点",
+    "namespaces": "命名空间",
+    "events": "事件"
+  },
+  "common": {
+    "create": "创建",
+    "delete": "删除",
+    "edit": "编辑",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "search": "搜索",
+    "refresh": "刷新",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "name": "名称",
+    "namespace": "命名空间",
+    "status": "状态",
+    "age": "存活时间",
+    "actions": "操作",
+    "yaml": "YAML",
+    "overview": "概览",
+    "back": "返回",
+    "logout": "退出登录",
+    "login": "登录",
+    "username": "用户名",
+    "password": "密码"
+  },
+  "login": {
+    "title": "KubeVision",
+    "description": "Kubernetes 管理面板 - 登录您的账户",
+    "submit": "登录",
+    "error": "用户名或密码错误"
+  },
+  "overview": {
+    "title": "集群概览",
+    "pods": "Pods",
+    "deployments": "Deployments",
+    "services": "Services",
+    "nodes": "节点"
+  },
+  "notFound": {
+    "title": "404",
+    "description": "您访问的页面不存在。",
+    "back": "返回首页"
+  }
+}

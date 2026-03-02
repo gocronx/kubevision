@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "workloads": "Workloads",
+    "pods": "Pods",
+    "deployments": "Deployments",
+    "statefulsets": "StatefulSets",
+    "daemonsets": "DaemonSets",
+    "jobs": "Jobs",
+    "cronjobs": "CronJobs",
+    "network": "Network",
+    "services": "Services",
+    "ingresses": "Ingresses",
+    "config": "Config",
+    "configmaps": "ConfigMaps",
+    "secrets": "Secrets",
+    "storage": "Storage",
+    "persistentvolumes": "Persistent Volumes",
+    "persistentvolumeclaims": "PVCs",
+    "storageclasses": "Storage Classes",
+    "cluster": "Cluster",
+    "nodes": "Nodes",
+    "namespaces": "Namespaces",
+    "events": "Events"
+  },
+  "common": {
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "search": "Search",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "noData": "No data",
+    "name": "Name",
+    "namespace": "Namespace",
+    "status": "Status",
+    "age": "Age",
+    "actions": "Actions",
+    "yaml": "YAML",
+    "overview": "Overview",
+    "back": "Back",
+    "logout": "Logout",
+    "login": "Login",
+    "username": "Username",
+    "password": "Password"
+  },
+  "login": {
+    "title": "KubeVision",
+    "description": "Kubernetes Dashboard - Sign in to your account",
+    "submit": "Sign In",
+    "error": "Invalid username or password"
+  },
+  "overview": {
+    "title": "Cluster Overview",
+    "pods": "Pods",
+    "deployments": "Deployments",
+    "services": "Services",
+    "nodes": "Nodes"
+  },
+  "notFound": {
+    "title": "404",
+    "description": "The page you are looking for does not exist.",
+    "back": "Go Back Home"
+  }
+}

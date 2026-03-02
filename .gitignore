@@ -1,0 +1,49 @@
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Air hot-reload
+tmp/
+
+# Frontend (Node)
+web/node_modules/
+web/dist/
+web/.next/
+web/.cache/
+
+# Build artifacts
+dist/
+coverage/
+*.log
+
+# Config overrides (keep config.example.yaml tracked)
+config.yaml
+config.local.yaml

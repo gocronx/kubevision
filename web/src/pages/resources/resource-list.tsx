@@ -1,0 +1,255 @@
+import { useState, useMemo, useCallback } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { RefreshCw, Plus, Search } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { resourceUIConfig } from "@/config/resource-ui-config"
+import { useResourceList, useCreateResource } from "@/hooks/use-resource"
+import { useCluster } from "@/hooks/use-cluster"
+import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
+import { NamespaceSelector } from "@/components/shared/namespace-selector"
+import { StatusBadge } from "@/components/shared/status-badge"
+import { ResourceActions } from "@/components/shared/resource-actions"
+import { extractColumnValue, isNamespaced } from "@/lib/k8s-utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { toast } from "sonner"
+
+type K8sItem = Record<string, unknown>
+
+const statusColumns = new Set(["status"])
+const ageColumns = new Set(["age", "lastSchedule"])
+
+export function ResourceListPage() {
+  const { resource = "" } = useParams<{ resource: string }>()
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { currentCluster } = useCluster()
+
+  const [namespace, setNamespace] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createYaml, setCreateYaml] = useState("")
+
+  const config = resourceUIConfig[resource]
+  const displayName = config?.displayName ?? resource
+  const namespaced = isNamespaced(resource)
+
+  const { data, isLoading } = useResourceList(currentCluster, resource, {
+    namespace: namespaced ? namespace : undefined,
+    enabled: !!currentCluster,
+  })
+
+  const createMutation = useCreateResource(currentCluster, resource)
+
+  const items = useMemo(() => {
+    const all = data?.items ?? []
+    if (!searchQuery) return all
+    const lowerQuery = searchQuery.toLowerCase()
+    return all.filter((item) => {
+      const meta = item.metadata as { name?: string } | undefined
+      const name = meta?.name ?? ""
+      return name.toLowerCase().includes(lowerQuery)
+    })
+  }, [data, searchQuery])
+
+  const handleRowClick = useCallback(
+    (item: K8sItem) => {
+      const meta = item.metadata as { name?: string; namespace?: string } | undefined
+      const name = meta?.name ?? ""
+      const ns = meta?.namespace ?? ""
+      if (!name) return
+      const params = new URLSearchParams()
+      if (ns) params.set("namespace", ns)
+      navigate(`/${resource}/${name}?${params.toString()}`)
+    },
+    [navigate, resource]
+  )
+
+  const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: ["resources", currentCluster, resource],
+    })
+  }, [queryClient, currentCluster, resource])
+
+  const handleCreate = useCallback(() => {
+    try {
+      const body = JSON.parse(createYaml)
+      const ns = (body.metadata?.namespace as string) ?? namespace
+      createMutation.mutate(
+        { namespace: ns, body },
+        {
+          onSuccess: () => {
+            toast.success("Resource created successfully")
+            setCreateDialogOpen(false)
+            setCreateYaml("")
+          },
+        }
+      )
+    } catch {
+      toast.error("Invalid JSON. Please provide valid resource JSON.")
+    }
+  }, [createYaml, namespace, createMutation])
+
+  const tableColumns: DataTableColumn<K8sItem>[] = useMemo(() => {
+    const cols = config?.columns ?? [
+      { key: "name", label: "Name", sortable: true },
+    ]
+
+    const mapped: DataTableColumn<K8sItem>[] = cols.map((col) => ({
+      key: col.key,
+      label: col.label,
+      sortable: col.sortable,
+      render: (item: K8sItem) => {
+        const value = extractColumnValue(resource, item, col.key)
+
+        if (statusColumns.has(col.key)) {
+          return <StatusBadge status={value} />
+        }
+
+        if (ageColumns.has(col.key)) {
+          return (
+            <span className="text-muted-foreground">{value}</span>
+          )
+        }
+
+        if (col.key === "name") {
+          return (
+            <span className="font-medium text-foreground">{value}</span>
+          )
+        }
+
+        return <span>{value}</span>
+      },
+    }))
+
+    // Add actions column
+    mapped.push({
+      key: "_actions",
+      label: t("common.actions"),
+      sortable: false,
+      className: "w-[60px]",
+      render: (item: K8sItem) => {
+        const meta = item.metadata as { name?: string; namespace?: string } | undefined
+        return (
+          <ResourceActions
+            clusterID={currentCluster}
+            resource={resource}
+            name={meta?.name ?? ""}
+            namespace={meta?.namespace}
+            onDeleted={handleRefresh}
+          />
+        )
+      },
+    })
+
+    return mapped
+  }, [config, resource, t, currentCluster, handleRefresh])
+
+  const getRowKey = useCallback((item: K8sItem) => {
+    const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
+    return meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
+  }, [])
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {config?.icon && (
+            <config.icon className="size-6 text-muted-foreground" />
+          )}
+          <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="size-4" />
+            {t("common.refresh")}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            <Plus className="size-4" />
+            {t("common.create")}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {namespaced && (
+          <NamespaceSelector
+            clusterID={currentCluster}
+            value={namespace}
+            onChange={setNamespace}
+          />
+        )}
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={`${t("common.search")} ${displayName.toLowerCase()}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <DataTable
+        columns={tableColumns}
+        data={items}
+        isLoading={isLoading}
+        emptyMessage={t("common.noData")}
+        onRowClick={handleRowClick}
+        getRowKey={getRowKey}
+      />
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create {config?.displayName ?? resource}</DialogTitle>
+            <DialogDescription>
+              Paste the resource JSON below to create a new {resource.slice(0, -1)}.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            <textarea
+              className="h-[300px] w-full rounded-md border bg-muted/50 p-3 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"
+              placeholder='{"apiVersion": "v1", "kind": "...", "metadata": {"name": "..."}, ...}'
+              value={createYaml}
+              onChange={(e) => setCreateYaml(e.target.value)}
+            />
+          </ScrollArea>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogOpen(false)}
+              disabled={createMutation.isPending}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={createMutation.isPending || !createYaml.trim()}
+            >
+              {createMutation.isPending ? t("common.loading") : t("common.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
