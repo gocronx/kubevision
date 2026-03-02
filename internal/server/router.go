@@ -64,7 +64,33 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			}
 		}
 
-		// ---- Protected routes (authentication required) ----
+		// ---- Auth-only routes (authentication required, NO RBAC) ----
+		// These routes are available to all authenticated users regardless of role.
+		authOnly := v1.Group("")
+		if deps != nil && deps.AuthMiddleware != nil {
+			authOnly.Use(deps.AuthMiddleware)
+		} else {
+			authOnly.Use(middleware.Auth())
+		}
+		{
+			// User profile.
+			if deps != nil && deps.AuthHandler != nil {
+				authOnly.GET("/users/me", deps.AuthHandler.Me)
+
+				// 2FA management — require a valid session JWT.
+				twoFA := authOnly.Group("/auth/2fa")
+				twoFA.POST("/setup", deps.AuthHandler.Setup2FA)
+				twoFA.POST("/enable", deps.AuthHandler.Enable2FA)
+				twoFA.POST("/disable", deps.AuthHandler.Disable2FA)
+			}
+
+			// Change own password — any authenticated user.
+			if deps != nil && deps.UserHandler != nil {
+				authOnly.PUT("/users/me/password", deps.UserHandler.ChangePassword)
+			}
+		}
+
+		// ---- Protected routes (authentication + RBAC + audit) ----
 		protected := v1.Group("")
 		if deps != nil && deps.AuthMiddleware != nil {
 			protected.Use(deps.AuthMiddleware)
@@ -80,21 +106,6 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			protected.Use(deps.AuditMiddleware)
 		}
 		{
-			// User profile.
-			if deps != nil && deps.AuthHandler != nil {
-				protected.GET("/users/me", deps.AuthHandler.Me)
-
-				// 2FA management — require a valid session JWT.
-				twoFA := protected.Group("/auth/2fa")
-				twoFA.POST("/setup", deps.AuthHandler.Setup2FA)
-				twoFA.POST("/enable", deps.AuthHandler.Enable2FA)
-				twoFA.POST("/disable", deps.AuthHandler.Disable2FA)
-			}
-
-			// Change own password — any authenticated user.
-			if deps != nil && deps.UserHandler != nil {
-				protected.PUT("/users/me/password", deps.UserHandler.ChangePassword)
-			}
 
 			// User management routes — admin+ only.
 			// The RBAC middleware already enforces admin bypass; non-admin roles

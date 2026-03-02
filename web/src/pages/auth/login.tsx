@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import type { FormEvent, ChangeEvent } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Loader2, ShieldCheck, KeyRound } from "lucide-react"
+import { Loader2, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import api from "@/lib/api"
@@ -44,6 +44,7 @@ export function LoginPage() {
   // Credentials step state
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   // 2FA step state
@@ -162,15 +163,26 @@ export function LoginPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="password">{t("common.password")}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t("common.password")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder={t("common.password")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    className="pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="animate-spin" />}
