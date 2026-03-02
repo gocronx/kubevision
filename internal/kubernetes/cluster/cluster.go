@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -110,6 +111,18 @@ func (m *Manager) RESTConfig(id string) (*rest.Config, error) {
 		return nil, fmt.Errorf("cluster %s not found", id)
 	}
 	return cs.restConfig, nil
+}
+
+// DiscoveryClient returns a discovery.DiscoveryInterface for the specified cluster.
+func (m *Manager) DiscoveryClient(id string) (discovery.DiscoveryInterface, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	cs, ok := m.clusters[id]
+	if !ok {
+		return nil, fmt.Errorf("cluster %s not found", id)
+	}
+	return discovery.NewDiscoveryClientForConfig(cs.restConfig)
 }
 
 // ListIDs returns the IDs of all registered clusters.

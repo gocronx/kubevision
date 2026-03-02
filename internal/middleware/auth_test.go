@@ -60,6 +60,24 @@ func (m *mockUserRepo) Update(_ context.Context, user *model.User) error {
 	return nil
 }
 
+func (m *mockUserRepo) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	for _, u := range m.users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
+func (m *mockUserRepo) GetByOAuthID(_ context.Context, provider, oauthID string) (*model.User, error) {
+	for _, u := range m.users {
+		if u.AuthProvider == provider && u.OAuthID == oauthID {
+			return u, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
 func (m *mockUserRepo) Delete(_ context.Context, id uint) error {
 	delete(m.users, id)
 	return nil

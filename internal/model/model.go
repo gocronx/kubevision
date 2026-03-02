@@ -14,6 +14,7 @@ type User struct {
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
 	Username         string         `gorm:"uniqueIndex;size:64;not null" json:"username"`
 	Email            string         `gorm:"size:255" json:"email"`
+	OAuthID          string         `gorm:"size:255" json:"-"`
 	PasswordHash     string         `gorm:"size:255;not null" json:"-"`
 	Role             string         `gorm:"size:32;default:viewer" json:"role"` // super-admin|admin|editor|viewer|custom
 	AuthProvider     string         `gorm:"size:32;default:local" json:"authProvider"`
@@ -147,4 +148,17 @@ type TerminalSession struct {
 	Recording  string    `gorm:"type:text" json:"-"` // asciinema v2
 	DurationMs int64     `json:"durationMs"`
 	ExpiresAt  time.Time `gorm:"index" json:"expiresAt"`
+}
+
+// PluginConfig 插件配置
+type PluginConfig struct {
+	ID         uint           `gorm:"primarykey" json:"id"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	Name       string         `gorm:"uniqueIndex;size:64;not null" json:"name"`
+	PluginType string         `gorm:"size:32;not null" json:"pluginType"` // monitoring|gitops|dashboard
+	ClusterID  string         `gorm:"size:64" json:"clusterId"`
+	Enabled    bool           `gorm:"default:false" json:"enabled"`
+	Config     string         `gorm:"type:text" json:"config"` // JSON
 }

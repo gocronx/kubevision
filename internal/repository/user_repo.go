@@ -37,6 +37,22 @@ func (r *userRepo) GetByUsername(ctx context.Context, username string) (*model.U
 	return &user, nil
 }
 
+func (r *userRepo) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	var user model.User
+	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepo) GetByOAuthID(ctx context.Context, provider, oauthID string) (*model.User, error) {
+	var user model.User
+	if err := r.db.WithContext(ctx).Where("auth_provider = ? AND o_auth_id = ?", provider, oauthID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *userRepo) Update(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }

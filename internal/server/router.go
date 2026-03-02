@@ -25,6 +25,9 @@ type RouterDeps struct {
 	TerminalSessionHandler *handler.TerminalSessionHandler
 	CompareHandler         *handler.CompareHandler
 	TopologyHandler        *handler.TopologyHandler
+	CRDHandler             *handler.CRDHandler
+	OAuthHandler           *handler.OAuthHandler
+	PluginHandler          *handler.PluginHandler
 	WSHub                  *ws.Hub
 	TerminalHandler        *ws.TerminalHandler
 	LogsHandler            *ws.LogsHandler
@@ -61,6 +64,14 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				// tempToken issued during login rather than a full JWT.
 				authGroup.POST("/2fa/verify", deps.AuthHandler.Verify2FA)
 				authGroup.POST("/2fa/recovery", deps.AuthHandler.Recovery2FA)
+			}
+
+			// OAuth/OIDC routes — public (users are redirected here from providers).
+			if deps != nil && deps.OAuthHandler != nil {
+				oauth := authGroup.Group("/oauth")
+				oauth.GET("/providers", deps.OAuthHandler.ListProviders)
+				oauth.GET("/:provider/authorize", deps.OAuthHandler.Authorize)
+				oauth.GET("/:provider/callback", deps.OAuthHandler.Callback)
 			}
 		}
 
@@ -178,6 +189,26 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 					actions.GET("/deployments/:name/history", deps.ResourceActionHandler.RolloutHistory)
 					actions.POST("/deployments/:name/rollback", deps.ResourceActionHandler.Rollback)
 				}
+			}
+
+			// CRD discovery routes (nested under cluster).
+			if deps != nil && deps.CRDHandler != nil && deps.ClusterHandler != nil {
+				protected.GET("/clusters/:id/crds", deps.CRDHandler.List)
+				protected.POST("/clusters/:id/crds/refresh", deps.CRDHandler.Refresh)
+			}
+
+			// Plugin management routes.
+			if deps != nil && deps.PluginHandler != nil {
+				plugins := protected.Group("/plugins")
+				plugins.GET("", deps.PluginHandler.List)
+				plugins.GET("/:name", deps.PluginHandler.GetConfig)
+				plugins.PUT("/:name", deps.PluginHandler.Configure)
+				plugins.GET("/:name/health", deps.PluginHandler.HealthCheck)
+
+				// Plugin-specific data endpoints.
+				plugins.GET("/prometheus/query", deps.PluginHandler.PrometheusQuery)
+				plugins.GET("/grafana/dashboards", deps.PluginHandler.GrafanaDashboards)
+				plugins.GET("/argocd/applications", deps.PluginHandler.ArgoCDApplications)
 			}
 
 			// Favorites routes.

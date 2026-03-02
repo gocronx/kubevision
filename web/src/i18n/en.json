@@ -30,7 +30,9 @@
     "compare": "Compare Resources",
     "policy": "Policy",
     "settings": "Settings",
-    "settingsSecurity": "Security"
+    "settingsSecurity": "Security",
+    "customResources": "Custom Resources",
+    "crds": "CRDs"
   },
   "favorites": {
     "empty": "No favorites yet",
@@ -287,5 +289,32 @@
     "passwordChangedToast": "Password changed. Please sign in again.",
     "passwordMismatch": "New passwords do not match",
     "passwordTooShort": "Password must be at least 6 characters"
+  },
+  "crd": {
+    "title": "Custom Resource Definitions",
+    "description": "Discover and browse CRDs installed in the current cluster",
+    "empty": "No custom resources found",
+    "kind": "Kind",
+    "group": "Group",
+    "version": "Version",
+    "plural": "Plural",
+    "scope": "Scope",
+    "namespaced": "Namespaced",
+    "clusterScoped": "Cluster"
+  },
+  "oauth": {
+    "loginWith": "Sign in with {{provider}}",
+    "authenticating": "Authenticating...",
+    "callbackError": "OAuth authentication failed. Please try again."
+  },
+  "plugin": {
+    "title": "Plugins",
+    "description": "Manage integrations with Prometheus, Grafana, and ArgoCD",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "healthy": "Healthy",
+    "unhealthy": "Unhealthy",
+    "configure": "Configure Plugin",
+    "configureDescription": "Set the connection URL and credentials for this plugin"
   }
 }

@@ -13,12 +13,16 @@ import { WebhooksPage } from "@/pages/admin/webhooks"
 import { TerminalSessionsPage } from "@/pages/admin/terminal-sessions"
 import { UsersPage } from "@/pages/admin/users"
 import { ComparePage } from "@/pages/compare/index"
+import { PluginsPage } from "@/pages/admin/plugins"
+import { OAuthCallbackPage } from "@/pages/auth/oauth-callback"
+import { CRDListPage } from "@/pages/crds/index"
 import { NotFoundPage } from "@/pages/not-found"
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/oauth/:provider/callback" element={<OAuthCallbackPage />} />
       <Route
         path="/"
         element={
@@ -36,7 +40,9 @@ export function AppRoutes() {
         <Route path="admin/webhooks" element={<WebhooksPage />} />
         <Route path="admin/terminal-sessions" element={<TerminalSessionsPage />} />
         <Route path="admin/users" element={<UsersPage />} />
+        <Route path="admin/plugins" element={<PluginsPage />} />
         <Route path="compare" element={<ComparePage />} />
+        <Route path="crds" element={<CRDListPage />} />
         <Route path=":resource" element={<ResourceListPage />} />
         <Route path=":resource/:name" element={<ResourceDetailPage />} />
       </Route>

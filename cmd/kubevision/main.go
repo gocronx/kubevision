@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -108,6 +109,26 @@ func main() {
 	compareService := service.NewCompareService(k8sRepo)
 	topologyService := service.NewTopologyService(k8sRepo, clusterRepo)
 
+	// P4: CRD discovery, OAuth, and Plugin services.
+	crdService := service.NewCRDService(clusterManager, logger)
+	oauthService := service.NewOAuthService(userRepo, jwtManager, cfg, logger)
+	pluginConfigRepo := repository.NewPluginConfigRepo(db)
+	pluginService := service.NewPluginService(pluginConfigRepo, logger)
+	pluginService.InitFromDB(context.Background())
+
+	// Start periodic CRD discovery in the background.
+	crdCtx, crdCancel := context.WithCancel(context.Background())
+	go crdService.StartPeriodicDiscovery(crdCtx, clusterManager.ListIDs, cfg.Kube.CRDDiscoveryInterval)
+
+	// Periodically cleanup expired OAuth states.
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			oauthService.CleanupExpiredStates()
+		}
+	}()
+
 	// Register webhook service as an event listener so it dispatches on K8s events.
 	informerMgr.AddListener(webhookService)
 
@@ -128,6 +149,11 @@ func main() {
 	terminalSessionHandler := handler.NewTerminalSessionHandler(terminalSessionService)
 	compareHandler := handler.NewCompareHandler(compareService)
 	topologyHandler := handler.NewTopologyHandler(topologyService)
+
+	// P4: CRD, OAuth, and Plugin handlers.
+	crdHandler := handler.NewCRDHandler(crdService)
+	oauthHandler := handler.NewOAuthHandler(oauthService)
+	pluginHandler := handler.NewPluginHandler(pluginService)
 
 	// Pod terminal and log streaming handlers.
 	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger).
@@ -158,6 +184,9 @@ func main() {
 		TerminalSessionHandler: terminalSessionHandler,
 		CompareHandler:         compareHandler,
 		TopologyHandler:        topologyHandler,
+		CRDHandler:             crdHandler,
+		OAuthHandler:           oauthHandler,
+		PluginHandler:          pluginHandler,
 		WSHub:                  wsHub,
 		TerminalHandler:        terminalHandler,
 		LogsHandler:            logsHandler,
@@ -188,6 +217,9 @@ func main() {
 			logger.Error("server error", zap.Error(err))
 		}
 	}
+
+	// Stop CRD discovery.
+	crdCancel()
 
 	// Stop all informers.
 	informerMgr.StopAll()

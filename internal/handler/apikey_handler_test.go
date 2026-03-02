@@ -101,6 +101,12 @@ func (r *stubUserRepoForKey) GetByUsername(_ context.Context, _ string) (*model.
 func (r *stubUserRepoForKey) Update(_ context.Context, _ *model.User) error { return nil }
 func (r *stubUserRepoForKey) Delete(_ context.Context, _ uint) error        { return nil }
 func (r *stubUserRepoForKey) List(_ context.Context) ([]model.User, error)  { return nil, nil }
+func (r *stubUserRepoForKey) GetByEmail(_ context.Context, _ string) (*model.User, error) {
+	return nil, errors.New("not found")
+}
+func (r *stubUserRepoForKey) GetByOAuthID(_ context.Context, _, _ string) (*model.User, error) {
+	return nil, errors.New("not found")
+}
 
 var _ repository.UserRepo = (*stubUserRepoForKey)(nil)
 

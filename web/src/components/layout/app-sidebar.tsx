@@ -27,6 +27,8 @@ import {
   TerminalSquare,
   GitCompareArrows,
   Users,
+  Puzzle,
+  Plug,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useAuth } from "@/stores/auth-store"
@@ -111,6 +113,12 @@ const navGroups: NavGroup[] = [
       { titleKey: "nav.events", icon: Activity, to: "/events" },
       { titleKey: "nav.topology", icon: Activity, to: "/topology" },
       { titleKey: "nav.compare", icon: GitCompareArrows, to: "/compare" },
+    ],
+  },
+  {
+    labelKey: "nav.customResources",
+    items: [
+      { titleKey: "nav.crds", icon: Puzzle, to: "/crds" },
     ],
   },
   {
@@ -228,6 +236,16 @@ export function AppSidebar() {
                   <SidebarMenuButton isActive={isActive} tooltip={t("terminalSession.title")}>
                     <TerminalSquare />
                     <span>{t("terminalSession.title")}</span>
+                  </SidebarMenuButton>
+                )}
+              </NavLink>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <NavLink to="/admin/plugins">
+                {({ isActive }) => (
+                  <SidebarMenuButton isActive={isActive} tooltip={t("plugin.title")}>
+                    <Plug />
+                    <span>{t("plugin.title")}</span>
                   </SidebarMenuButton>
                 )}
               </NavLink>

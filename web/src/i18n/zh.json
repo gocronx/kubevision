@@ -30,7 +30,9 @@
     "compare": "资源对比",
     "policy": "策略",
     "settings": "设置",
-    "settingsSecurity": "安全"
+    "settingsSecurity": "安全",
+    "customResources": "自定义资源",
+    "crds": "CRDs"
   },
   "favorites": {
     "empty": "暂无收藏",
@@ -287,5 +289,32 @@
     "passwordChangedToast": "密码已修改，请重新登录。",
     "passwordMismatch": "两次输入的新密码不一致",
     "passwordTooShort": "密码长度至少为 6 位"
+  },
+  "crd": {
+    "title": "自定义资源定义",
+    "description": "发现并浏览当前集群中安装的 CRD",
+    "empty": "未发现自定义资源",
+    "kind": "类型",
+    "group": "API 组",
+    "version": "版本",
+    "plural": "复数名",
+    "scope": "作用域",
+    "namespaced": "命名空间",
+    "clusterScoped": "集群"
+  },
+  "oauth": {
+    "loginWith": "使用 {{provider}} 登录",
+    "authenticating": "认证中...",
+    "callbackError": "OAuth 认证失败，请重试。"
+  },
+  "plugin": {
+    "title": "插件",
+    "description": "管理 Prometheus、Grafana 和 ArgoCD 集成",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "healthy": "健康",
+    "unhealthy": "异常",
+    "configure": "配置插件",
+    "configureDescription": "设置此插件的连接地址和凭证"
   }
 }

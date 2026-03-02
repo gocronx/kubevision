@@ -51,6 +51,7 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 		&model.Webhook{},
 		&model.Favorite{},
 		&model.TerminalSession{},
+		&model.PluginConfig{},
 	); err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
 	}

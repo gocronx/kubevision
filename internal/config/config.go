@@ -20,6 +20,8 @@ type Config struct {
 	Kube      KubeConfig      `yaml:"kubernetes"`
 	WebSocket WebSocketConfig `yaml:"websocket"`
 	Audit     AuditConfig     `yaml:"audit"`
+	OAuth     OAuthConfig     `yaml:"oauth"`
+	Plugins   PluginsConfig   `yaml:"plugins"`
 	EncryptKey string         `yaml:"encrypt_key"`
 }
 
@@ -43,8 +45,41 @@ type AuthConfig struct {
 
 // KubeConfig holds Kubernetes client settings.
 type KubeConfig struct {
-	Kubeconfig    string        `yaml:"kubeconfig"`
-	InformerResync time.Duration `yaml:"informer_resync"`
+	Kubeconfig           string        `yaml:"kubeconfig"`
+	InformerResync       time.Duration `yaml:"informer_resync"`
+	CRDDiscoveryInterval time.Duration `yaml:"crd_discovery_interval"`
+}
+
+// OAuthProvider defines a single OAuth2/OIDC provider configuration.
+type OAuthProvider struct {
+	Name         string   `yaml:"name"`
+	ClientID     string   `yaml:"client_id"`
+	ClientSecret string   `yaml:"client_secret"`
+	Issuer       string   `yaml:"issuer"`
+	AuthURL      string   `yaml:"auth_url"`
+	TokenURL     string   `yaml:"token_url"`
+	UserInfoURL  string   `yaml:"userinfo_url"`
+	Scopes       []string `yaml:"scopes"`
+	RedirectURL  string   `yaml:"redirect_url"`
+}
+
+// OAuthConfig holds OAuth/OIDC settings.
+type OAuthConfig struct {
+	Enabled   bool            `yaml:"enabled"`
+	Providers []OAuthProvider `yaml:"providers"`
+}
+
+// PluginsConfig holds plugin integration settings.
+type PluginsConfig struct {
+	Prometheus PluginEndpoint `yaml:"prometheus"`
+	Grafana    PluginEndpoint `yaml:"grafana"`
+	ArgoCD     PluginEndpoint `yaml:"argocd"`
+}
+
+// PluginEndpoint holds connection info for an external service plugin.
+type PluginEndpoint struct {
+	URL   string `yaml:"url"`
+	Token string `yaml:"token"`
 }
 
 // WebSocketConfig holds WebSocket settings.
@@ -77,8 +112,9 @@ func Default() *Config {
 			RefreshTokenTTL: 168 * time.Hour,
 		},
 		Kube: KubeConfig{
-			Kubeconfig:    "",
-			InformerResync: 30 * time.Minute,
+			Kubeconfig:           "",
+			InformerResync:       30 * time.Minute,
+			CRDDiscoveryInterval: 5 * time.Minute,
 		},
 		WebSocket: WebSocketConfig{
 			BroadcastBuffer:   1024,
@@ -194,6 +230,14 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("KUBEVISION_ENCRYPT_KEY"); v != "" {
 		cfg.EncryptKey = v
+	}
+	if v := os.Getenv("KUBEVISION_CRD_DISCOVERY_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Kube.CRDDiscoveryInterval = d
+		}
+	}
+	if v := os.Getenv("KUBEVISION_OAUTH_ENABLED"); v != "" {
+		cfg.OAuth.Enabled = strings.EqualFold(v, "true") || v == "1"
 	}
 }
 

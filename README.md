@@ -331,7 +331,7 @@ All settings can be overridden via environment variables:
 | **P1** | Single cluster, generic CRUD, Informer + WebSocket, JWT auth, base UI | Done |
 | **P2** | Pod terminal/logs, Deployment ops, multi-cluster, global search, dry-run diff | Done |
 | **P3** | RBAC, 2FA (TOTP), audit, topology, batch ops, cross-cluster diff, webhooks, terminal recording | Done |
-| **P4** | Plugin system (Prometheus/Grafana/ArgoCD), OAuth/OIDC, CRD discovery, Helm chart | Planned |
+| **P4** | Plugin system (Prometheus/Grafana/ArgoCD), OAuth/OIDC, CRD discovery, Helm chart | Done |
 
 <br>
 

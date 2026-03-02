@@ -135,6 +135,8 @@ type UserRepo interface {
 	Create(ctx context.Context, user *model.User) error
 	GetByID(ctx context.Context, id uint) (*model.User, error)
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByOAuthID(ctx context.Context, provider, oauthID string) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context) ([]model.User, error)
@@ -232,4 +234,13 @@ type TerminalSessionRepo interface {
 	GetByID(ctx context.Context, id uint) (*model.TerminalSession, error)
 	ListByUser(ctx context.Context, userID uint) ([]model.TerminalSession, error)
 	PurgeExpired(ctx context.Context) (int64, error)
+}
+
+// PluginConfigRepo handles plugin configuration CRUD operations.
+type PluginConfigRepo interface {
+	Create(ctx context.Context, pc *model.PluginConfig) error
+	GetByName(ctx context.Context, name string) (*model.PluginConfig, error)
+	Update(ctx context.Context, pc *model.PluginConfig) error
+	Delete(ctx context.Context, id uint) error
+	List(ctx context.Context) ([]model.PluginConfig, error)
 }

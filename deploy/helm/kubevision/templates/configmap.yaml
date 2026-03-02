@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubevision.fullname" . }}
+  labels:
+    {{- include "kubevision.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: {{ .Values.config.server.port }}
+    database:
+      driver: {{ .Values.config.database.driver }}
+      dsn: {{ .Values.config.database.dsn }}
+    auth:
+      access_token_ttl: {{ .Values.config.auth.accessTokenTTL }}
+      refresh_token_ttl: {{ .Values.config.auth.refreshTokenTTL }}
+    kubernetes:
+      informer_resync: {{ .Values.config.kubernetes.informerResync }}
+      crd_discovery_interval: {{ .Values.config.kubernetes.crdDiscoveryInterval }}
+    audit:
+      enabled: {{ .Values.config.audit.enabled }}
+      retention_days: {{ .Values.config.audit.retentionDays }}
+    oauth:
+      enabled: {{ .Values.config.oauth.enabled }}
+    {{- if .Values.config.plugins.prometheus.url }}
+    plugins:
+      prometheus:
+        url: {{ .Values.config.plugins.prometheus.url }}
+      {{- if .Values.config.plugins.grafana.url }}
+      grafana:
+        url: {{ .Values.config.plugins.grafana.url }}
+      {{- end }}
+      {{- if .Values.config.plugins.argocd.url }}
+      argocd:
+        url: {{ .Values.config.plugins.argocd.url }}
+      {{- end }}
+    {{- end }}

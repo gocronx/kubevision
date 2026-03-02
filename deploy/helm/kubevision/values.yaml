@@ -1,0 +1,95 @@
+replicaCount: 1
+
+image:
+  repository: kubevision/kubevision
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to .Chart.AppVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: kubevision.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# KubeVision configuration
+config:
+  server:
+    port: 8080
+  database:
+    driver: sqlite
+    dsn: /data/kubevision.db
+  auth:
+    jwtSecret: ""  # Auto-generated if empty
+    accessTokenTTL: 15m
+    refreshTokenTTL: 168h
+  kubernetes:
+    informerResync: 30m
+    crdDiscoveryInterval: 5m
+  audit:
+    enabled: true
+    retentionDays: 90
+  oauth:
+    enabled: false
+    providers: []
+  plugins:
+    prometheus:
+      url: ""
+    grafana:
+      url: ""
+      token: ""
+    argocd:
+      url: ""
+      token: ""
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+rbac:
+  create: true
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

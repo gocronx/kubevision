@@ -1,0 +1,13 @@
+apiVersion: v2
+name: kubevision
+description: KubeVision - Modern Kubernetes Dashboard with multi-cluster support
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - dashboard
+  - monitoring
+home: https://github.com/kubevision/kubevision
+maintainers:
+  - name: KubeVision

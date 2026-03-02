@@ -103,6 +103,12 @@ func (m *mockUserRepoForAPIKey) GetByUsername(_ context.Context, _ string) (*mod
 func (m *mockUserRepoForAPIKey) Update(_ context.Context, _ *model.User) error { return nil }
 func (m *mockUserRepoForAPIKey) Delete(_ context.Context, _ uint) error         { return nil }
 func (m *mockUserRepoForAPIKey) List(_ context.Context) ([]model.User, error)   { return nil, nil }
+func (m *mockUserRepoForAPIKey) GetByEmail(_ context.Context, _ string) (*model.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockUserRepoForAPIKey) GetByOAuthID(_ context.Context, _, _ string) (*model.User, error) {
+	return nil, errors.New("not implemented")
+}
 
 // ---------------------------------------------------------------------------
 // Tests
