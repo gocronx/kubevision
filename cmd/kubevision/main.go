@@ -111,7 +111,7 @@ func main() {
 	topologyService := service.NewTopologyService(k8sRepo, clusterRepo)
 
 	// P4: CRD discovery, OAuth, and Plugin services.
-	crdService := service.NewCRDService(clusterManager, logger)
+	crdService := service.NewCRDService(clusterManager, clusterRepo, logger)
 	oauthService := service.NewOAuthService(userRepo, jwtManager, cfg, logger)
 	pluginConfigRepo := repository.NewPluginConfigRepo(db)
 	pluginService := service.NewPluginService(pluginConfigRepo, logger)

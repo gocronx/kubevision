@@ -44,7 +44,7 @@ func TestCRDService_Discover(t *testing.T) {
 	}
 
 	provider := &mockDiscoveryProvider{client: fakeDiscovery}
-	svc := NewCRDService(provider, zap.NewNop())
+	svc := NewCRDService(provider, nil, zap.NewNop())
 
 	crds, err := svc.Discover(context.Background(), "test-cluster")
 	if err != nil {
@@ -74,7 +74,7 @@ func TestCRDService_ListCached(t *testing.T) {
 	provider := &mockDiscoveryProvider{
 		client: fake.NewSimpleClientset().Discovery().(*discoveryfake.FakeDiscovery),
 	}
-	svc := NewCRDService(provider, zap.NewNop())
+	svc := NewCRDService(provider, nil, zap.NewNop())
 
 	// Pre-populate cache.
 	svc.mu.Lock()
@@ -99,7 +99,7 @@ func TestCRDService_InvalidateCache(t *testing.T) {
 	provider := &mockDiscoveryProvider{
 		client: fake.NewSimpleClientset().Discovery().(*discoveryfake.FakeDiscovery),
 	}
-	svc := NewCRDService(provider, zap.NewNop())
+	svc := NewCRDService(provider, nil, zap.NewNop())
 
 	svc.mu.Lock()
 	svc.cache["test-cluster"] = []CRDInfo{{Kind: "Foo"}}

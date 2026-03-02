@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubevision/kubevision/internal/repository"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -30,20 +31,36 @@ type DiscoveryClientProvider interface {
 
 // CRDService discovers custom resource definitions in clusters.
 type CRDService struct {
-	provider DiscoveryClientProvider
-	logger   *zap.Logger
+	provider    DiscoveryClientProvider
+	clusterRepo repository.ClusterRepo
+	logger      *zap.Logger
 
 	mu    sync.RWMutex
 	cache map[string][]CRDInfo // clusterID -> CRDs
 }
 
 // NewCRDService creates a new CRDService.
-func NewCRDService(provider DiscoveryClientProvider, logger *zap.Logger) *CRDService {
+func NewCRDService(provider DiscoveryClientProvider, clusterRepo repository.ClusterRepo, logger *zap.Logger) *CRDService {
 	return &CRDService{
-		provider: provider,
-		logger:   logger,
-		cache:    make(map[string][]CRDInfo),
+		provider:    provider,
+		clusterRepo: clusterRepo,
+		logger:      logger,
+		cache:       make(map[string][]CRDInfo),
 	}
+}
+
+// resolveClusterName converts a numeric DB ID to the cluster name used by the cluster manager.
+func (s *CRDService) resolveClusterName(ctx context.Context, idStr string) (string, error) {
+	// Try as numeric DB ID first.
+	var id uint
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err == nil && s.clusterRepo != nil {
+		cluster, err := s.clusterRepo.GetByID(ctx, id)
+		if err == nil {
+			return cluster.Name, nil
+		}
+	}
+	// Fall back to treating it as the cluster name directly.
+	return idStr, nil
 }
 
 // builtinGroups contains core Kubernetes API groups that are NOT CRDs.
@@ -72,8 +89,13 @@ var builtinGroups = map[string]bool{
 }
 
 // Discover fetches CRDs from the specified cluster's API server.
+// clusterID can be a numeric DB ID or a cluster name.
 func (s *CRDService) Discover(ctx context.Context, clusterID string) ([]CRDInfo, error) {
-	disco, err := s.provider.DiscoveryClient(clusterID)
+	name, err := s.resolveClusterName(ctx, clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve cluster: %w", err)
+	}
+	disco, err := s.provider.DiscoveryClient(name)
 	if err != nil {
 		return nil, fmt.Errorf("get discovery client: %w", err)
 	}

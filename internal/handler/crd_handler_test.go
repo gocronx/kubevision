@@ -39,7 +39,7 @@ func setupCRDHandler() (*CRDHandler, *gin.Engine) {
 	}
 
 	provider := &stubDiscoveryProvider{client: fakeDiscovery}
-	crdService := service.NewCRDService(provider, zap.NewNop())
+	crdService := service.NewCRDService(provider, nil, zap.NewNop())
 	handler := NewCRDHandler(crdService)
 
 	r := gin.New()
