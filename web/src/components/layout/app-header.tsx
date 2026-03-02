@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/stores/auth-store"
 import { useTheme } from "@/hooks/use-theme"
+import { GlobalSearch } from "@/components/shared/global-search"
 
 export function AppHeader() {
   const { t } = useTranslation()
@@ -45,6 +46,8 @@ export function AppHeader() {
         <span className="text-sm text-muted-foreground">{breadcrumb}</span>
       </div>
       <div className="flex items-center gap-2">
+        {/* Global search — always visible; Cmd+K / Ctrl+K also opens it */}
+        <GlobalSearch />
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </Button>

@@ -16,6 +16,8 @@ import {
   Monitor,
   FolderOpen,
   Activity,
+  BarChart3,
+  SlidersHorizontal,
 } from "lucide-react"
 
 export interface ColumnConfig {
@@ -225,6 +227,28 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
       { key: "object", label: "Object", sortable: true },
       { key: "message", label: "Message", sortable: false },
       { key: "count", label: "Count", sortable: true },
+      { key: "age", label: "Age", sortable: true },
+    ],
+  },
+  resourcequotas: {
+    icon: BarChart3,
+    category: "policy",
+    displayName: "Resource Quotas",
+    columns: [
+      { key: "name", label: "Name", sortable: true },
+      { key: "namespace", label: "Namespace", sortable: true },
+      { key: "quotaStatus", label: "Hard / Used", sortable: false },
+      { key: "age", label: "Age", sortable: true },
+    ],
+  },
+  limitranges: {
+    icon: SlidersHorizontal,
+    category: "policy",
+    displayName: "Limit Ranges",
+    columns: [
+      { key: "name", label: "Name", sortable: true },
+      { key: "namespace", label: "Namespace", sortable: true },
+      { key: "limitsCount", label: "Limits", sortable: true },
       { key: "age", label: "Age", sortable: true },
     ],
   },

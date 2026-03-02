@@ -5,6 +5,7 @@ import { LoginPage } from "@/pages/auth/login"
 import { OverviewPage } from "@/pages/overview/index"
 import { ResourceListPage } from "@/pages/resources/resource-list"
 import { ResourceDetailPage } from "@/pages/resources/resource-detail"
+import { QuotaPage } from "@/pages/quota/index"
 import { NotFoundPage } from "@/pages/not-found"
 
 export function AppRoutes() {
@@ -21,6 +22,7 @@ export function AppRoutes() {
       >
         <Route index element={<Navigate to="/overview" replace />} />
         <Route path="overview" element={<OverviewPage />} />
+        <Route path="quota" element={<QuotaPage />} />
         <Route path=":resource" element={<ResourceListPage />} />
         <Route path=":resource/:name" element={<ResourceDetailPage />} />
       </Route>

@@ -21,7 +21,20 @@
     "cluster": "Cluster",
     "nodes": "Nodes",
     "namespaces": "Namespaces",
-    "events": "Events"
+    "events": "Events",
+    "quota": "Resource Quotas",
+    "resourcequotas": "Resource Quotas",
+    "limitranges": "Limit Ranges",
+    "favorites": "Favorites",
+    "policy": "Policy"
+  },
+  "favorites": {
+    "empty": "No favorites yet",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "addedToast": "Added to favorites",
+    "removedToast": "Removed from favorites",
+    "errorToast": "Failed to update favorites"
   },
   "common": {
     "create": "Create",
@@ -64,5 +77,45 @@
     "title": "404",
     "description": "The page you are looking for does not exist.",
     "back": "Go Back Home"
+  },
+  "kubectl": {
+    "title": "kubectl",
+    "copy": "Copy command",
+    "copied": "Copied!"
+  },
+  "quota": {
+    "title": "Resource Quotas",
+    "description": "Monitor resource usage and limits across namespaces",
+    "noQuotas": "No resource quotas found",
+    "noQuotasDefined": "No resource quotas defined",
+    "noQuotasInNamespace": "No resource quotas are defined in namespace \"{{namespace}}\"",
+    "noQuotasInCluster": "No resource quotas are defined in this cluster"
+  },
+  "search": {
+    "title": "Global Search",
+    "description": "Search across all Kubernetes resources in this cluster",
+    "placeholder": "Search resources...",
+    "inputPlaceholder": "Search by name, namespace, or label...",
+    "noResults": "No resources matched your query.",
+    "hint": "Start typing to search across all resource types.",
+    "totalResults": "{{count}} total match",
+    "totalResults_other": "{{count}} total matches"
+  },
+  "pod": {
+    "logs": "Logs",
+    "terminal": "Terminal",
+    "container": "Container",
+    "shell": "Shell",
+    "reconnect": "Reconnect",
+    "follow": "Follow",
+    "pause": "Pause",
+    "download": "Download",
+    "timestamps": "Timestamps",
+    "searchLogs": "Search logs...",
+    "connected": "Connected",
+    "connecting": "Connecting",
+    "disconnected": "Disconnected",
+    "sessionEnded": "Session ended",
+    "streamEnded": "Stream ended"
   }
 }

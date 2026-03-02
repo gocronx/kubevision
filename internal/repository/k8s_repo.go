@@ -275,6 +275,94 @@ func (r *k8sResourceRepo) Patch(
 	return &res, nil
 }
 
+// DryRunCreate performs a server-side dry-run create via the dynamic client.
+// The Kubernetes API server validates the resource and fills in defaulted fields
+// but does not persist anything.
+func (r *k8sResourceRepo) DryRunCreate(
+	ctx context.Context,
+	clusterID, kind, namespace string,
+	obj map[string]interface{},
+) (*Resource, error) {
+	meta, ok := r.registry.Get(kind)
+	if !ok {
+		return nil, fmt.Errorf("unknown resource kind: %s", kind)
+	}
+
+	dynClient, err := r.clusterMgr.DynamicClient(clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("get dynamic client for cluster %s: %w", clusterID, err)
+	}
+
+	u := &unstructured.Unstructured{Object: obj}
+	createOpts := metav1.CreateOptions{
+		DryRun: []string{metav1.DryRunAll},
+	}
+
+	var result *unstructured.Unstructured
+	if namespace != "" {
+		result, err = dynClient.Resource(meta.GVR).Namespace(namespace).Create(ctx, u, createOpts)
+	} else {
+		result, err = dynClient.Resource(meta.GVR).Create(ctx, u, createOpts)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("dry-run create %s: %w", kind, err)
+	}
+
+	res := toResource(result)
+	return &res, nil
+}
+
+// DryRunUpdate performs a server-side dry-run update via the dynamic client.
+// It fetches the current live resource first so callers can compare before/after.
+// The proposed update is validated by the API server but not persisted.
+func (r *k8sResourceRepo) DryRunUpdate(
+	ctx context.Context,
+	clusterID, kind, namespace, name string,
+	obj map[string]interface{},
+) (*Resource, *Resource, error) {
+	meta, ok := r.registry.Get(kind)
+	if !ok {
+		return nil, nil, fmt.Errorf("unknown resource kind: %s", kind)
+	}
+
+	dynClient, err := r.clusterMgr.DynamicClient(clusterID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get dynamic client for cluster %s: %w", clusterID, err)
+	}
+
+	// Fetch the current live resource for diff comparison.
+	var current *unstructured.Unstructured
+	if namespace != "" {
+		current, err = dynClient.Resource(meta.GVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	} else {
+		current, err = dynClient.Resource(meta.GVR).Get(ctx, name, metav1.GetOptions{})
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("get current %s/%s: %w", kind, name, err)
+	}
+
+	// Perform the dry-run update.
+	u := &unstructured.Unstructured{Object: obj}
+	u.SetName(name)
+	updateOpts := metav1.UpdateOptions{
+		DryRun: []string{metav1.DryRunAll},
+	}
+
+	var proposed *unstructured.Unstructured
+	if namespace != "" {
+		proposed, err = dynClient.Resource(meta.GVR).Namespace(namespace).Update(ctx, u, updateOpts)
+	} else {
+		proposed, err = dynClient.Resource(meta.GVR).Update(ctx, u, updateOpts)
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("dry-run update %s/%s: %w", kind, name, err)
+	}
+
+	currentRes := toResource(current)
+	proposedRes := toResource(proposed)
+	return &currentRes, &proposedRes, nil
+}
+
 // toResource converts an unstructured Kubernetes object into the generic
 // Resource holder.
 func toResource(u *unstructured.Unstructured) Resource {

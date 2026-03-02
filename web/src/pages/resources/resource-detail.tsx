@@ -17,9 +17,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { KubectlHint } from "@/components/specialized/kubectl-hint"
+import { FavoriteButton } from "@/components/shared/favorite-button"
+import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
+import { PodTerminal } from "@/components/specialized/pod-terminal"
+import { PodLogs } from "@/components/specialized/pod-logs"
 import { resourceUIConfig } from "@/config/resource-ui-config"
-import { useResource, useUpdateResource, useDeleteResource } from "@/hooks/use-resource"
+import {
+  useResource,
+  useUpdateResource,
+  useDeleteResource,
+  useDryRunUpdate,
+} from "@/hooks/use-resource"
 import { useCluster } from "@/hooks/use-cluster"
+import { useCheckFavorite } from "@/hooks/use-favorites"
 import { toYaml, getResourceStatus, formatAge } from "@/lib/k8s-utils"
 import { toast } from "sonner"
 
@@ -29,12 +40,21 @@ export function ResourceDetailPage() {
   const namespace = searchParams.get("namespace") ?? ""
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { currentCluster } = useCluster()
+  const { currentCluster, clusters } = useCluster()
+
+  // Resolve the human-readable cluster name for the --context flag.
+  const clusterContext = useMemo(
+    () => clusters.find((c) => c.id === currentCluster)?.name,
+    [clusters, currentCluster]
+  )
 
   const [copied, setCopied] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editJson, setEditJson] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  // Dry-run preview dialog state.
+  const [dryRunDialogOpen, setDryRunDialogOpen] = useState(false)
 
   const config = resourceUIConfig[resource]
   const displayName = config?.displayName ?? resource
@@ -42,6 +62,12 @@ export function ResourceDetailPage() {
   const { data, isLoading } = useResource(currentCluster, resource, namespace, name)
   const updateMutation = useUpdateResource(currentCluster, resource)
   const deleteMutation = useDeleteResource(currentCluster, resource)
+  const dryRunUpdateMutation = useDryRunUpdate(currentCluster, resource)
+
+  const { data: favoriteCheck } = useCheckFavorite(
+    { clusterId: currentCluster, resourceType: resource, name, namespace },
+    !!currentCluster && !!resource && !!name
+  )
 
   const metadata = data?.metadata as {
     name?: string
@@ -63,6 +89,19 @@ export function ResourceDetailPage() {
     return getResourceStatus(resource, data)
   }, [data, resource])
 
+  // Extract the list of container names from the Pod spec (only relevant for pods).
+  const podContainers = useMemo<string[]>(() => {
+    if (resource !== "pods" || !data) return []
+    const spec = (data as Record<string, unknown>).spec as Record<string, unknown> | undefined
+    if (!spec) return []
+    const containers = spec.containers as Array<{ name: string }> | undefined
+    const initContainers = spec.initContainers as Array<{ name: string }> | undefined
+    return [
+      ...(containers ?? []).map((c) => c.name),
+      ...(initContainers ?? []).map((c) => c.name),
+    ]
+  }, [data, resource])
+
   const handleCopyYaml = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(yamlContent)
@@ -77,25 +116,72 @@ export function ResourceDetailPage() {
   const handleEditOpen = useCallback(() => {
     if (!data) return
     setEditJson(JSON.stringify(data, null, 2))
+    dryRunUpdateMutation.reset()
     setEditDialogOpen(true)
-  }, [data])
+  }, [data, dryRunUpdateMutation])
 
-  const handleEditSave = useCallback(() => {
+  // Parse the edit textarea JSON; return null and toast on failure.
+  const parseEditBody = useCallback((): Record<string, unknown> | null => {
     try {
-      const body = JSON.parse(editJson)
-      updateMutation.mutate(
-        { name, namespace, body },
-        {
-          onSuccess: () => {
-            toast.success(`${name} updated successfully`)
-            setEditDialogOpen(false)
-          },
-        }
-      )
+      return JSON.parse(editJson)
     } catch {
       toast.error("Invalid JSON")
+      return null
     }
-  }, [editJson, name, namespace, updateMutation])
+  }, [editJson])
+
+  // "Preview Changes" in the edit dialog — triggers dry-run, opens preview dialog.
+  const handlePreviewEdit = useCallback(() => {
+    const body = parseEditBody()
+    if (!body) return
+
+    dryRunUpdateMutation.mutate(
+      { name, namespace, body },
+      {
+        onSuccess: () => {
+          setDryRunDialogOpen(true)
+        },
+        onError: () => {
+          // Show the dialog even on error so the user can see validation details.
+          setDryRunDialogOpen(true)
+        },
+      }
+    )
+  }, [parseEditBody, name, namespace, dryRunUpdateMutation])
+
+  // "Apply" inside the preview dialog — performs the actual (non-dry-run) update.
+  const handleApplyEdit = useCallback(() => {
+    const body = parseEditBody()
+    if (!body) return
+
+    updateMutation.mutate(
+      { name, namespace, body },
+      {
+        onSuccess: () => {
+          toast.success(`${name} updated successfully`)
+          setDryRunDialogOpen(false)
+          setEditDialogOpen(false)
+          dryRunUpdateMutation.reset()
+        },
+      }
+    )
+  }, [parseEditBody, name, namespace, updateMutation, dryRunUpdateMutation])
+
+  // "Save" directly (bypass dry-run preview).
+  const handleEditSave = useCallback(() => {
+    const body = parseEditBody()
+    if (!body) return
+
+    updateMutation.mutate(
+      { name, namespace, body },
+      {
+        onSuccess: () => {
+          toast.success(`${name} updated successfully`)
+          setEditDialogOpen(false)
+        },
+      }
+    )
+  }, [parseEditBody, name, namespace, updateMutation])
 
   const handleDelete = useCallback(() => {
     deleteMutation.mutate(
@@ -152,6 +238,15 @@ export function ResourceDetailPage() {
         <span className="text-foreground font-medium">{name}</span>
       </nav>
 
+      {/* kubectl hint — shows the equivalent describe command for this resource */}
+      <KubectlHint
+        action="describe"
+        resource={resource}
+        name={name}
+        namespace={namespace || undefined}
+        clusterContext={clusterContext}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -169,6 +264,17 @@ export function ResourceDetailPage() {
           {status && <StatusBadge status={status} className="ml-2" />}
         </div>
         <div className="flex items-center gap-2">
+          {/* Favorite toggle — only available when a cluster is selected */}
+          {currentCluster && (
+            <FavoriteButton
+              clusterId={currentCluster}
+              resourceType={resource}
+              resourceName={name}
+              namespace={namespace}
+              displayName={name}
+              isFavorited={favoriteCheck?.favorited ?? false}
+            />
+          )}
           <Button variant="outline" size="sm" onClick={handleEditOpen}>
             <Pencil className="size-4" />
             {t("common.edit")}
@@ -190,6 +296,12 @@ export function ResourceDetailPage() {
           <TabsTrigger value="overview">{t("common.overview")}</TabsTrigger>
           <TabsTrigger value="yaml">{t("common.yaml")}</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
+          {resource === "pods" && (
+            <>
+              <TabsTrigger value="logs">{t("pod.logs")}</TabsTrigger>
+              <TabsTrigger value="terminal">{t("pod.terminal")}</TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         {/* Overview Tab */}
@@ -332,17 +444,72 @@ export function ResourceDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Logs Tab — Pods only */}
+        {resource === "pods" && (
+          <TabsContent value="logs" className="mt-4">
+            <Card className="flex flex-col" style={{ height: "60vh" }}>
+              <CardHeader className="pb-2 shrink-0">
+                <CardTitle className="text-base">{t("pod.logs")}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 pb-4">
+                <PodLogs
+                  clusterId={currentCluster}
+                  namespace={namespace}
+                  podName={name}
+                  containers={podContainers}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* Terminal Tab — Pods only */}
+        {resource === "pods" && (
+          <TabsContent value="terminal" className="mt-4">
+            <Card className="flex flex-col" style={{ height: "60vh" }}>
+              <CardHeader className="pb-2 shrink-0">
+                <CardTitle className="text-base">{t("pod.terminal")}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 pb-4">
+                <PodTerminal
+                  clusterId={currentCluster}
+                  namespace={namespace}
+                  podName={name}
+                  containers={podContainers}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      {/* ------------------------------------------------------------------ */}
+      {/* Edit Dialog                                                          */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open)
+          if (!open) dryRunUpdateMutation.reset()
+        }}
+      >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit {name}</DialogTitle>
             <DialogDescription>
-              Modify the resource JSON and save to apply changes.
+              Modify the resource JSON. Use &quot;Preview Changes&quot; to review the diff
+              before applying, or &quot;Save&quot; to apply directly.
             </DialogDescription>
           </DialogHeader>
+          <KubectlHint
+            action="edit"
+            resource={resource}
+            name={name}
+            namespace={namespace || undefined}
+            clusterContext={clusterContext}
+            defaultOpen
+          />
           <ScrollArea className="max-h-[500px]">
             <textarea
               className="h-[400px] w-full rounded-md border bg-muted/50 p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
@@ -353,14 +520,24 @@ export function ResourceDetailPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-              disabled={updateMutation.isPending}
+              onClick={() => {
+                setEditDialogOpen(false)
+                dryRunUpdateMutation.reset()
+              }}
+              disabled={updateMutation.isPending || dryRunUpdateMutation.isPending}
             >
               {t("common.cancel")}
             </Button>
             <Button
+              variant="secondary"
+              onClick={handlePreviewEdit}
+              disabled={updateMutation.isPending || dryRunUpdateMutation.isPending}
+            >
+              {dryRunUpdateMutation.isPending ? t("common.loading") : "Preview Changes"}
+            </Button>
+            <Button
               onClick={handleEditSave}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || dryRunUpdateMutation.isPending}
             >
               {updateMutation.isPending ? t("common.loading") : t("common.save")}
             </Button>
@@ -368,7 +545,26 @@ export function ResourceDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Dry-run preview dialog (update)                                      */}
+      {/* ------------------------------------------------------------------ */}
+      <DryRunDialog
+        open={dryRunDialogOpen}
+        onOpenChange={(open) => {
+          setDryRunDialogOpen(open)
+          if (!open) dryRunUpdateMutation.reset()
+        }}
+        dryRunResult={dryRunUpdateMutation.data}
+        isLoading={dryRunUpdateMutation.isPending}
+        title={`Preview Changes: ${name}`}
+        operation="update"
+        onApply={handleApplyEdit}
+        isApplying={updateMutation.isPending}
+      />
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Delete Dialog                                                        */}
+      {/* ------------------------------------------------------------------ */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -379,6 +575,14 @@ export function ResourceDetailPage() {
               be undone.
             </DialogDescription>
           </DialogHeader>
+          <KubectlHint
+            action="delete"
+            resource={resource}
+            name={name}
+            namespace={namespace || undefined}
+            clusterContext={clusterContext}
+            defaultOpen
+          />
           <DialogFooter>
             <Button
               variant="outline"

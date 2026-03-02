@@ -6,12 +6,13 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { resourceUIConfig } from "@/config/resource-ui-config"
-import { useResourceList, useCreateResource } from "@/hooks/use-resource"
+import { useResourceList, useCreateResource, useDryRunCreate } from "@/hooks/use-resource"
 import { useCluster } from "@/hooks/use-cluster"
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ResourceActions } from "@/components/shared/resource-actions"
+import { KubectlHint } from "@/components/specialized/kubectl-hint"
 import { extractColumnValue, isNamespaced } from "@/lib/k8s-utils"
 import {
   Dialog,
@@ -22,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
 import { toast } from "sonner"
 
 type K8sItem = Record<string, unknown>
@@ -34,12 +36,23 @@ export function ResourceListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { currentCluster } = useCluster()
+  const { currentCluster, clusters } = useCluster()
+
+  // Resolve the human-readable cluster name for the --context flag.
+  const clusterContext = useMemo(
+    () => clusters.find((c) => c.id === currentCluster)?.name,
+    [clusters, currentCluster]
+  )
 
   const [namespace, setNamespace] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Create dialog state.
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createYaml, setCreateYaml] = useState("")
+
+  // Dry-run preview dialog state.
+  const [dryRunDialogOpen, setDryRunDialogOpen] = useState(false)
 
   const config = resourceUIConfig[resource]
   const displayName = config?.displayName ?? resource
@@ -51,6 +64,7 @@ export function ResourceListPage() {
   })
 
   const createMutation = useCreateResource(currentCluster, resource)
+  const dryRunCreateMutation = useDryRunCreate(currentCluster, resource)
 
   const items = useMemo(() => {
     const all = data?.items ?? []
@@ -82,24 +96,83 @@ export function ResourceListPage() {
     })
   }, [queryClient, currentCluster, resource])
 
-  const handleCreate = useCallback(() => {
+  // Parse the raw JSON from the textarea; return null and toast on failure.
+  const parseCreateBody = useCallback((): Record<string, unknown> | null => {
     try {
-      const body = JSON.parse(createYaml)
-      const ns = (body.metadata?.namespace as string) ?? namespace
-      createMutation.mutate(
-        { namespace: ns, body },
-        {
-          onSuccess: () => {
-            toast.success("Resource created successfully")
-            setCreateDialogOpen(false)
-            setCreateYaml("")
-          },
-        }
-      )
+      return JSON.parse(createYaml)
     } catch {
       toast.error("Invalid JSON. Please provide valid resource JSON.")
+      return null
     }
-  }, [createYaml, namespace, createMutation])
+  }, [createYaml])
+
+  // "Preview Changes" — run dry-run, then open the preview dialog.
+  const handlePreviewCreate = useCallback(() => {
+    const body = parseCreateBody()
+    if (!body) return
+
+    const ns =
+      (body.metadata as Record<string, unknown> | undefined)?.namespace as string | undefined ??
+      namespace
+
+    dryRunCreateMutation.mutate(
+      { namespace: ns, body },
+      {
+        onSuccess: () => {
+          setDryRunDialogOpen(true)
+        },
+        onError: () => {
+          // The API interceptor already showed an error toast; still open the
+          // dialog so the user can see the validation failure.
+          setDryRunDialogOpen(true)
+        },
+      }
+    )
+  }, [parseCreateBody, namespace, dryRunCreateMutation])
+
+  // "Apply" inside the preview dialog — performs the actual (non-dry-run) create.
+  const handleApplyCreate = useCallback(() => {
+    const body = parseCreateBody()
+    if (!body) return
+
+    const ns =
+      (body.metadata as Record<string, unknown> | undefined)?.namespace as string | undefined ??
+      namespace
+
+    createMutation.mutate(
+      { namespace: ns, body },
+      {
+        onSuccess: () => {
+          toast.success("Resource created successfully")
+          setDryRunDialogOpen(false)
+          setCreateDialogOpen(false)
+          setCreateYaml("")
+          dryRunCreateMutation.reset()
+        },
+      }
+    )
+  }, [parseCreateBody, namespace, createMutation, dryRunCreateMutation])
+
+  // "Create" directly (bypass the dry-run preview).
+  const handleCreate = useCallback(() => {
+    const body = parseCreateBody()
+    if (!body) return
+
+    const ns =
+      (body.metadata as Record<string, unknown> | undefined)?.namespace as string | undefined ??
+      namespace
+
+    createMutation.mutate(
+      { namespace: ns, body },
+      {
+        onSuccess: () => {
+          toast.success("Resource created successfully")
+          setCreateDialogOpen(false)
+          setCreateYaml("")
+        },
+      }
+    )
+  }, [parseCreateBody, namespace, createMutation])
 
   const tableColumns: DataTableColumn<K8sItem>[] = useMemo(() => {
     const cols = config?.columns ?? [
@@ -141,12 +214,14 @@ export function ResourceListPage() {
       className: "w-[60px]",
       render: (item: K8sItem) => {
         const meta = item.metadata as { name?: string; namespace?: string } | undefined
+        const spec = item.spec as { replicas?: number } | undefined
         return (
           <ResourceActions
             clusterID={currentCluster}
             resource={resource}
             name={meta?.name ?? ""}
             namespace={meta?.namespace}
+            currentReplicas={spec?.replicas ?? 0}
             onDeleted={handleRefresh}
           />
         )
@@ -208,6 +283,14 @@ export function ResourceListPage() {
         </div>
       </div>
 
+      {/* kubectl hint — shows the equivalent get command for this view */}
+      <KubectlHint
+        action="get"
+        resource={resource}
+        namespace={namespaced ? namespace : undefined}
+        clusterContext={clusterContext}
+      />
+
       <DataTable
         columns={tableColumns}
         data={items}
@@ -217,12 +300,25 @@ export function ResourceListPage() {
         getRowKey={getRowKey}
       />
 
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      {/* ------------------------------------------------------------------ */}
+      {/* Create dialog                                                        */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={createDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open)
+          if (!open) {
+            setCreateYaml("")
+            dryRunCreateMutation.reset()
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create {config?.displayName ?? resource}</DialogTitle>
             <DialogDescription>
-              Paste the resource JSON below to create a new {resource.slice(0, -1)}.
+              Paste the resource JSON below. Use &quot;Preview Changes&quot; to validate
+              against the API server before applying, or &quot;Create&quot; to apply directly.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[400px]">
@@ -236,20 +332,56 @@ export function ResourceListPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setCreateDialogOpen(false)}
-              disabled={createMutation.isPending}
+              onClick={() => {
+                setCreateDialogOpen(false)
+                setCreateYaml("")
+                dryRunCreateMutation.reset()
+              }}
+              disabled={createMutation.isPending || dryRunCreateMutation.isPending}
             >
               {t("common.cancel")}
             </Button>
             <Button
+              variant="secondary"
+              onClick={handlePreviewCreate}
+              disabled={
+                createMutation.isPending ||
+                dryRunCreateMutation.isPending ||
+                !createYaml.trim()
+              }
+            >
+              {dryRunCreateMutation.isPending ? t("common.loading") : "Preview Changes"}
+            </Button>
+            <Button
               onClick={handleCreate}
-              disabled={createMutation.isPending || !createYaml.trim()}
+              disabled={
+                createMutation.isPending ||
+                dryRunCreateMutation.isPending ||
+                !createYaml.trim()
+              }
             >
               {createMutation.isPending ? t("common.loading") : t("common.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Dry-run preview dialog (create)                                      */}
+      {/* ------------------------------------------------------------------ */}
+      <DryRunDialog
+        open={dryRunDialogOpen}
+        onOpenChange={(open) => {
+          setDryRunDialogOpen(open)
+          if (!open) dryRunCreateMutation.reset()
+        }}
+        dryRunResult={dryRunCreateMutation.data}
+        isLoading={dryRunCreateMutation.isPending}
+        title={`Preview Create: ${config?.displayName ?? resource}`}
+        operation="create"
+        onApply={handleApplyCreate}
+        isApplying={createMutation.isPending}
+      />
     </div>
   )
 }

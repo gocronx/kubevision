@@ -214,6 +214,104 @@ func (s *ResourceService) PatchResource(
 	return res, nil
 }
 
+// DryRunResult holds the result of a dry-run operation.
+type DryRunResult struct {
+	// Current is the live resource before the change. Nil for create dry-runs.
+	Current *repository.Resource `json:"current,omitempty"`
+	// Proposed is what the resource would look like after the change.
+	Proposed *repository.Resource `json:"proposed"`
+	// Valid indicates whether the API server accepted the dry-run without errors.
+	Valid bool `json:"valid"`
+	// Errors contains validation messages when Valid is false.
+	Errors []string `json:"errors,omitempty"`
+}
+
+// DryRunCreateResource performs a server-side dry-run create. It returns the
+// resource as the API server would have stored it (with defaults filled in)
+// without actually creating it.
+func (s *ResourceService) DryRunCreateResource(
+	ctx context.Context,
+	clusterID uint,
+	resourceName string,
+	namespace string,
+	body []byte,
+) (*DryRunResult, error) {
+	// Validate the cluster exists.
+	cluster, err := s.clusterRepo.GetByID(ctx, clusterID)
+	if err != nil {
+		return nil, bizerr.New(bizerr.CodeNotFound, fmt.Sprintf("cluster %d not found", clusterID))
+	}
+
+	// Validate the resource type is registered.
+	if _, ok := s.registry.Get(resourceName); !ok {
+		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("unknown resource type: %s", resourceName))
+	}
+
+	// Parse the JSON body into an unstructured object.
+	var obj map[string]interface{}
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("invalid JSON body: %s", err.Error()))
+	}
+
+	proposed, err := s.k8sRepo.DryRunCreate(ctx, clusterKey(cluster), resourceName, namespace, obj)
+	if err != nil {
+		// Return a validation-failure result rather than a hard error so the
+		// caller can surface the message in the UI.
+		return &DryRunResult{
+			Valid:  false,
+			Errors: []string{err.Error()},
+		}, nil
+	}
+
+	return &DryRunResult{
+		Proposed: proposed,
+		Valid:    true,
+	}, nil
+}
+
+// DryRunUpdateResource performs a server-side dry-run update. It returns both
+// the current live resource and what it would look like after the update.
+func (s *ResourceService) DryRunUpdateResource(
+	ctx context.Context,
+	clusterID uint,
+	resourceName string,
+	namespace string,
+	name string,
+	body []byte,
+) (*DryRunResult, error) {
+	// Validate the cluster exists.
+	cluster, err := s.clusterRepo.GetByID(ctx, clusterID)
+	if err != nil {
+		return nil, bizerr.New(bizerr.CodeNotFound, fmt.Sprintf("cluster %d not found", clusterID))
+	}
+
+	// Validate the resource type is registered.
+	if _, ok := s.registry.Get(resourceName); !ok {
+		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("unknown resource type: %s", resourceName))
+	}
+
+	// Parse the JSON body into an unstructured object.
+	var obj map[string]interface{}
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("invalid JSON body: %s", err.Error()))
+	}
+
+	current, proposed, err := s.k8sRepo.DryRunUpdate(ctx, clusterKey(cluster), resourceName, namespace, name, obj)
+	if err != nil {
+		// Return a validation-failure result rather than a hard error.
+		return &DryRunResult{
+			Valid:  false,
+			Errors: []string{err.Error()},
+		}, nil
+	}
+
+	return &DryRunResult{
+		Current:  current,
+		Proposed: proposed,
+		Valid:    true,
+	}, nil
+}
+
 // clusterKey converts a model.Cluster to the string identifier used by the
 // cluster manager and informer manager. We use the cluster's Name field as the
 // key, which matches how ClusterService.Add() registers clusters.

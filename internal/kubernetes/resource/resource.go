@@ -257,4 +257,18 @@ func (r *Registry) registerBuiltins() {
 		Scope:  NamespaceScoped,
 		Cached: false,
 	}
+	r.resources["resourcequotas"] = Meta{
+		Name:   "resourcequotas",
+		GVR:    schema.GroupVersionResource{Group: "", Version: "v1", Resource: "resourcequotas"},
+		GVK:    schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ResourceQuota"},
+		Scope:  NamespaceScoped,
+		Cached: false,
+	}
+	r.resources["limitranges"] = Meta{
+		Name:   "limitranges",
+		GVR:    schema.GroupVersionResource{Group: "", Version: "v1", Resource: "limitranges"},
+		GVK:    schema.GroupVersionKind{Group: "", Version: "v1", Kind: "LimitRange"},
+		Scope:  NamespaceScoped,
+		Cached: false,
+	}
 }

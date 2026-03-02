@@ -267,6 +267,118 @@ func (h *ResourceHandler) Patch(c *gin.Context) {
 	response.Success(c, res)
 }
 
+// DryRunCreate handles POST /api/v1/clusters/:clusterID/resources/:resource/dry-run.
+// It performs a Kubernetes server-side dry-run create and returns what the resource
+// would look like after creation (with API server defaults applied) without
+// actually persisting anything.
+//
+// Query param: namespace. Body: JSON resource manifest.
+//
+// Response data shape:
+//
+//	{
+//	  "current": null,
+//	  "proposed": { ... resource object ... },
+//	  "valid": true,
+//	  "errors": []
+//	}
+func (h *ResourceHandler) DryRunCreate(c *gin.Context) {
+	clusterID, err := parseClusterID(c)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid clusterID")
+		return
+	}
+
+	resourceName := c.Param("resource")
+	if resourceName == "" {
+		response.Error(c, bizerr.CodeParamMissing, "resource type is required")
+		return
+	}
+
+	namespace := c.Query("namespace")
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
+		return
+	}
+	if len(body) == 0 {
+		response.Error(c, bizerr.CodeParamMissing, "request body is required")
+		return
+	}
+
+	result, err := h.resourceService.DryRunCreateResource(c.Request.Context(), clusterID, resourceName, namespace, body)
+	if err != nil {
+		if bizErr, ok := err.(*bizerr.BizError); ok {
+			response.ErrorWithBizErr(c, bizErr)
+			return
+		}
+		response.Error(c, bizerr.CodeInternal, "internal server error")
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// DryRunUpdate handles PUT /api/v1/clusters/:clusterID/resources/:resource/:name/dry-run.
+// It performs a Kubernetes server-side dry-run update and returns both the current
+// live resource and what the resource would look like after the update, without
+// actually applying the change.
+//
+// Query param: namespace. Body: JSON resource manifest.
+//
+// Response data shape:
+//
+//	{
+//	  "current": { ... current resource ... },
+//	  "proposed": { ... proposed resource ... },
+//	  "valid": true,
+//	  "errors": []
+//	}
+func (h *ResourceHandler) DryRunUpdate(c *gin.Context) {
+	clusterID, err := parseClusterID(c)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid clusterID")
+		return
+	}
+
+	resourceName := c.Param("resource")
+	if resourceName == "" {
+		response.Error(c, bizerr.CodeParamMissing, "resource type is required")
+		return
+	}
+
+	name := c.Param("name")
+	if name == "" {
+		response.Error(c, bizerr.CodeParamMissing, "resource name is required")
+		return
+	}
+
+	namespace := c.Query("namespace")
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
+		return
+	}
+	if len(body) == 0 {
+		response.Error(c, bizerr.CodeParamMissing, "request body is required")
+		return
+	}
+
+	result, err := h.resourceService.DryRunUpdateResource(c.Request.Context(), clusterID, resourceName, namespace, name, body)
+	if err != nil {
+		if bizErr, ok := err.(*bizerr.BizError); ok {
+			response.ErrorWithBizErr(c, bizErr)
+			return
+		}
+		response.Error(c, bizerr.CodeInternal, "internal server error")
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // parseClusterID extracts and validates the cluster :id URL parameter as a uint.
 func parseClusterID(c *gin.Context) (uint, error) {
 	raw := c.Param("id")

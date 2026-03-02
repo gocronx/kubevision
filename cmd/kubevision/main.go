@@ -58,6 +58,7 @@ func main() {
 	// Repositories
 	userRepo := repository.NewUserRepo(db)
 	clusterRepo := repository.NewClusterRepo(db)
+	favoriteRepo := repository.NewFavoriteRepo(db)
 
 	// Kubernetes components
 	clusterManager := cluster.NewManager()
@@ -83,11 +84,23 @@ func main() {
 	authService := service.NewAuthService(userRepo, jwtManager, logger)
 	clusterService := service.NewClusterService(clusterRepo, clusterManager, informerMgr, resourceRegistry, logger, cfg.EncryptKey)
 	resourceService := service.NewResourceService(k8sRepo, resourceRegistry, clusterRepo)
+	resourceActionService := service.NewResourceActionService(clusterRepo, clusterManager)
+	quotaService := service.NewQuotaService(k8sRepo, clusterRepo)
+	favoriteService := service.NewFavoriteService(favoriteRepo)
+	searchService := service.NewSearchService(informerMgr, clusterManager, resourceRegistry, clusterRepo)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	clusterHandler := handler.NewClusterHandler(clusterService)
 	resourceHandler := handler.NewResourceHandler(resourceService)
+	resourceActionHandler := handler.NewResourceActionHandler(resourceActionService)
+	quotaHandler := handler.NewQuotaHandler(quotaService)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteService)
+	searchHandler := handler.NewSearchHandler(searchService)
+
+	// Pod terminal and log streaming handlers.
+	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger)
+	logsHandler := ws.NewLogsHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(jwtManager, userRepo)
@@ -97,12 +110,18 @@ func main() {
 
 	// Route dependencies
 	routerDeps := &server.RouterDeps{
-		AuthHandler:     authHandler,
-		ClusterHandler:  clusterHandler,
-		ResourceHandler: resourceHandler,
-		WSHub:           wsHub,
-		AuthMiddleware:  authMiddleware,
-		Logger:          logger,
+		AuthHandler:           authHandler,
+		ClusterHandler:        clusterHandler,
+		ResourceHandler:       resourceHandler,
+		SearchHandler:         searchHandler,
+		ResourceActionHandler: resourceActionHandler,
+		FavoriteHandler:       favoriteHandler,
+		QuotaHandler:          quotaHandler,
+		WSHub:                 wsHub,
+		TerminalHandler:       terminalHandler,
+		LogsHandler:           logsHandler,
+		AuthMiddleware:        authMiddleware,
+		Logger:                logger,
 	}
 
 	// ----- HTTP Server -----

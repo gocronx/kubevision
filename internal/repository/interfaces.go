@@ -32,6 +32,14 @@ type K8sResourceRepo interface {
 
 	// Patch applies a strategic merge patch to a resource.
 	Patch(ctx context.Context, clusterID, kind, namespace, name string, patchData []byte) (*Resource, error)
+
+	// DryRunCreate performs a server-side dry-run create and returns what the
+	// API server would create (with defaults filled in) without persisting it.
+	DryRunCreate(ctx context.Context, clusterID, kind, namespace string, obj map[string]interface{}) (*Resource, error)
+
+	// DryRunUpdate performs a server-side dry-run update. It returns the live
+	// current resource alongside the dry-run result so the caller can diff them.
+	DryRunUpdate(ctx context.Context, clusterID, kind, namespace, name string, obj map[string]interface{}) (*Resource, *Resource, error)
 }
 
 // ListOptions holds optional query parameters for listing resources.
@@ -215,6 +223,7 @@ type FavoriteRepo interface {
 	Delete(ctx context.Context, id uint) error
 	ListByUser(ctx context.Context, userID uint) ([]model.Favorite, error)
 	UpdateSortOrder(ctx context.Context, id uint, sortOrder int) error
+	GetByUserAndResource(ctx context.Context, userID uint, clusterID, resourceType, resourceName, namespace string) (*model.Favorite, error)
 }
 
 // TerminalSessionRepo handles terminal session recording persistence.

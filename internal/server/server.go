@@ -2,8 +2,13 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"os/exec"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -64,9 +69,35 @@ func (s *Server) Start() error {
 	s.logger.Info("HTTP server starting", zap.String("addr", addr))
 
 	if err := s.http.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		var opErr *net.OpError
+		if errors.As(err, &opErr) && strings.Contains(opErr.Error(), "address already in use") {
+			s.logger.Error(fmt.Sprintf("Port %d is already in use. %s",
+				s.cfg.Server.Port, portOccupant(s.cfg.Server.Port)))
+			return fmt.Errorf("port %d already in use", s.cfg.Server.Port)
+		}
 		return fmt.Errorf("http listen: %w", err)
 	}
 	return nil
+}
+
+// portOccupant tries to identify the process occupying the given port.
+func portOccupant(port int) string {
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf("Run: netstat -ano | findstr :%d", port)
+	}
+	out, err := exec.Command("lsof", "-i", fmt.Sprintf(":%d", port), "-sTCP:LISTEN", "-P", "-n").Output()
+	if err != nil || len(out) == 0 {
+		return fmt.Sprintf("Run: lsof -i :%d to find the process, then kill it or use a different port.", port)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) < 2 {
+		return ""
+	}
+	fields := strings.Fields(lines[1])
+	if len(fields) >= 2 {
+		return fmt.Sprintf("Process \"%s\" (PID %s) is using port %d. Kill it with: kill %s", fields[0], fields[1], port, fields[1])
+	}
+	return ""
 }
 
 // Shutdown gracefully shuts down the HTTP server with a 5-second timeout.

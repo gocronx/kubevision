@@ -21,7 +21,20 @@
     "cluster": "集群",
     "nodes": "节点",
     "namespaces": "命名空间",
-    "events": "事件"
+    "events": "事件",
+    "quota": "资源配额",
+    "resourcequotas": "资源配额",
+    "limitranges": "限制范围",
+    "favorites": "收藏夹",
+    "policy": "策略"
+  },
+  "favorites": {
+    "empty": "暂无收藏",
+    "add": "添加到收藏",
+    "remove": "取消收藏",
+    "addedToast": "已添加到收藏",
+    "removedToast": "已取消收藏",
+    "errorToast": "收藏操作失败"
   },
   "common": {
     "create": "创建",
@@ -64,5 +77,45 @@
     "title": "404",
     "description": "您访问的页面不存在。",
     "back": "返回首页"
+  },
+  "kubectl": {
+    "title": "kubectl",
+    "copy": "复制命令",
+    "copied": "已复制!"
+  },
+  "quota": {
+    "title": "资源配额",
+    "description": "监控各命名空间的资源使用情况与限制",
+    "noQuotas": "未找到资源配额",
+    "noQuotasDefined": "未定义资源配额",
+    "noQuotasInNamespace": "命名空间 \"{{namespace}}\" 中未定义资源配额",
+    "noQuotasInCluster": "该集群中未定义资源配额"
+  },
+  "search": {
+    "title": "全局搜索",
+    "description": "在该集群的所有 Kubernetes 资源中搜索",
+    "placeholder": "搜索资源...",
+    "inputPlaceholder": "按名称、命名空间或标签搜索...",
+    "noResults": "未找到匹配的资源。",
+    "hint": "开始输入以搜索所有资源类型。",
+    "totalResults": "共 {{count}} 条结果",
+    "totalResults_other": "共 {{count}} 条结果"
+  },
+  "pod": {
+    "logs": "日志",
+    "terminal": "终端",
+    "container": "容器",
+    "shell": "Shell",
+    "reconnect": "重新连接",
+    "follow": "跟踪",
+    "pause": "暂停",
+    "download": "下载",
+    "timestamps": "时间戳",
+    "searchLogs": "搜索日志...",
+    "connected": "已连接",
+    "connecting": "连接中",
+    "disconnected": "已断开",
+    "sessionEnded": "会话已结束",
+    "streamEnded": "流已结束"
   }
 }

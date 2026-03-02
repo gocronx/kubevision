@@ -377,6 +377,20 @@ export function extractColumnValue(
     }
     case "count":
       return String((getNestedValue(item, "count") as number) ?? "-")
+    case "quotaStatus": {
+      // Summarise hard/used for the ResourceQuota list view.
+      // Format: "3 resources constrained"
+      const hard = getNestedValue(item, "status.hard") as Record<string, string> | undefined
+      if (!hard) return "-"
+      const count = Object.keys(hard).length
+      return `${count} resource${count !== 1 ? "s" : ""}`
+    }
+    case "limitsCount": {
+      // Count the number of limit items defined in a LimitRange.
+      const limits = getNestedValue(item, "spec.limits") as unknown[] | undefined
+      if (!limits) return "0"
+      return String(limits.length)
+    }
     default:
       return String(getNestedValue(item, columnKey) ?? "-")
   }

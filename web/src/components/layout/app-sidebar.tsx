@@ -18,6 +18,7 @@ import {
   Monitor,
   FolderOpen,
   Activity,
+  BarChart3,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -32,6 +33,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar"
+import { FavoritesPanel } from "@/components/specialized/favorites-panel"
 
 interface NavItem {
   titleKey: string
@@ -92,6 +94,14 @@ const navGroups: NavGroup[] = [
       { titleKey: "nav.events", icon: Activity, to: "/events" },
     ],
   },
+  {
+    labelKey: "nav.policy",
+    items: [
+      { titleKey: "nav.quota", icon: BarChart3, to: "/quota" },
+      { titleKey: "nav.resourcequotas", icon: BarChart3, to: "/resourcequotas" },
+      { titleKey: "nav.limitranges", icon: BarChart3, to: "/limitranges" },
+    ],
+  },
 ]
 
 export function AppSidebar() {
@@ -110,6 +120,9 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        {/* Favorites panel — shown at the top for quick access */}
+        <FavoritesPanel className="group-data-[collapsible=icon]:hidden" />
+
         {navGroups.map((group) => (
           <SidebarGroup key={group.labelKey}>
             <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>

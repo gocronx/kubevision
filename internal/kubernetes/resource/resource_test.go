@@ -228,8 +228,8 @@ func TestRegistry_All(t *testing.T) {
 	all := r.All()
 
 	// The registry has a known set of builtin resources. Verify we have a reasonable count.
-	// Based on the source code, there are 8 cached + 17 uncached = 25 total resources.
-	expectedCount := 25
+	// Based on the source code, there are 8 cached + 19 uncached = 27 total resources.
+	expectedCount := 27
 	if len(all) != expectedCount {
 		t.Errorf("All() returned %d resources, expected %d", len(all), expectedCount)
 	}
