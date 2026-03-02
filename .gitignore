@@ -47,3 +47,4 @@ coverage/
 # Config overrides (keep config.example.yaml tracked)
 config.yaml
 config.local.yaml
+.kubevision-secrets.yaml

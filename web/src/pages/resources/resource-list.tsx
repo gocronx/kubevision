@@ -14,6 +14,8 @@ import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ResourceActions } from "@/components/shared/resource-actions"
+import { FavoriteButton } from "@/components/shared/favorite-button"
+import { useFavorites } from "@/hooks/use-favorites"
 import { BatchActionBar } from "@/components/shared/batch-action-bar"
 import { KubectlHint } from "@/components/specialized/kubectl-hint"
 import { extractColumnValue, isNamespaced } from "@/lib/k8s-utils"
@@ -59,6 +61,8 @@ export function ResourceListPage() {
 
   // Dry-run preview dialog state.
   const [dryRunDialogOpen, setDryRunDialogOpen] = useState(false)
+
+  const { data: favorites = [] } = useFavorites()
 
   const config = resourceUIConfig[resource]
   const displayName = config?.displayName ?? resource
@@ -295,26 +299,46 @@ export function ResourceListPage() {
       key: "_actions",
       label: t("common.actions"),
       sortable: false,
-      className: "w-[60px]",
+      className: "w-[90px]",
       render: (item: K8sItem) => {
         const meta = item.metadata as { name?: string; namespace?: string } | undefined
         const spec = item.spec as { replicas?: number } | undefined
+        const itemName = meta?.name ?? ""
+        const itemNs = meta?.namespace ?? ""
+        const isFav = favorites.some(
+          (f) =>
+            String(f.clusterId) === String(currentCluster) &&
+            f.resourceType === resource &&
+            f.resourceName === itemName &&
+            (f.namespace ?? "") === itemNs
+        )
         return (
-          <ResourceActions
-            clusterID={currentCluster}
-            resource={resource}
-            name={meta?.name ?? ""}
-            namespace={meta?.namespace}
-            currentReplicas={spec?.replicas ?? 0}
-            readOnly={!userCanMutate}
-            onDeleted={handleRefresh}
-          />
+          <div className="flex items-center gap-0.5">
+            <FavoriteButton
+              clusterId={String(currentCluster)}
+              resourceType={resource}
+              resourceName={itemName}
+              namespace={itemNs}
+              isFavorited={isFav}
+              size="icon"
+              className="size-7"
+            />
+            <ResourceActions
+              clusterID={currentCluster}
+              resource={resource}
+              name={itemName}
+              namespace={meta?.namespace}
+              currentReplicas={spec?.replicas ?? 0}
+              readOnly={!userCanMutate}
+              onDeleted={handleRefresh}
+            />
+          </div>
         )
       },
     })
 
     return mapped
-  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect, userCanMutate])
+  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect, userCanMutate, favorites])
 
   const getRowKey = useCallback((item: K8sItem) => {
     const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined

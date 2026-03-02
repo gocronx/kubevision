@@ -153,13 +153,18 @@ func Load(path string) (*Config, error) {
 	// Apply environment variable overrides.
 	applyEnvOverrides(cfg)
 
-	// Auto-generate secrets if not provided.
+	// Load previously persisted secrets (auto-generated on first run).
+	loadSecrets(cfg)
+
+	// Auto-generate secrets if not provided and persist them so they survive restarts.
+	secretsChanged := false
 	if cfg.Auth.JWTSecret == "" {
 		secret, err := randomHex(32)
 		if err != nil {
 			return nil, fmt.Errorf("generate jwt secret: %w", err)
 		}
 		cfg.Auth.JWTSecret = secret
+		secretsChanged = true
 	}
 	if cfg.EncryptKey == "" {
 		key, err := randomHex(32)
@@ -167,9 +172,66 @@ func Load(path string) (*Config, error) {
 			return nil, fmt.Errorf("generate encrypt key: %w", err)
 		}
 		cfg.EncryptKey = key
+		secretsChanged = true
+	}
+
+	// Persist auto-generated secrets to a file so encrypted data can be
+	// decrypted after application restarts.
+	if secretsChanged {
+		if err := persistSecrets(cfg); err != nil {
+			return nil, fmt.Errorf("persist secrets: %w", err)
+		}
 	}
 
 	return cfg, nil
+}
+
+const secretsFile = ".kubevision-secrets.yaml"
+
+// secretsData is the minimal struct written to the secrets file.
+type secretsData struct {
+	Auth       struct {
+		JWTSecret string `yaml:"jwt_secret"`
+	} `yaml:"auth"`
+	EncryptKey string `yaml:"encrypt_key"`
+}
+
+func persistSecrets(cfg *Config) error {
+	// Try to load existing secrets first so we don't overwrite user-provided values.
+	existing := secretsData{}
+	if data, err := os.ReadFile(secretsFile); err == nil {
+		_ = yaml.Unmarshal(data, &existing)
+	}
+
+	if existing.Auth.JWTSecret == "" {
+		existing.Auth.JWTSecret = cfg.Auth.JWTSecret
+	}
+	if existing.EncryptKey == "" {
+		existing.EncryptKey = cfg.EncryptKey
+	}
+
+	out, err := yaml.Marshal(&existing)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(secretsFile, out, 0600)
+}
+
+func loadSecrets(cfg *Config) {
+	data, err := os.ReadFile(secretsFile)
+	if err != nil {
+		return
+	}
+	var s secretsData
+	if err := yaml.Unmarshal(data, &s); err != nil {
+		return
+	}
+	if cfg.Auth.JWTSecret == "" && s.Auth.JWTSecret != "" {
+		cfg.Auth.JWTSecret = s.Auth.JWTSecret
+	}
+	if cfg.EncryptKey == "" && s.EncryptKey != "" {
+		cfg.EncryptKey = s.EncryptKey
+	}
 }
 
 // applyEnvOverrides reads well-known environment variables and overrides config

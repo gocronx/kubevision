@@ -131,7 +131,7 @@ export function PodLogs({
     })
     if (tailOption) params.set("tailLines", tailOption)
 
-    const url = `${protocol}//${window.location.host}/api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/logs?${params}`
+    const url = `${protocol}//${window.location.host}/ws-api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/logs?${params}`
 
     const ws = new WebSocket(url)
     wsRef.current = ws

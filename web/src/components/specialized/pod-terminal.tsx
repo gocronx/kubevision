@@ -192,7 +192,7 @@ export function PodTerminal({
       container,
       command: shell,
     })
-    const url = `${protocol}//${window.location.host}/api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/exec?${params}`
+    const url = `${protocol}//${window.location.host}/ws-api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/exec?${params}`
 
     const ws = new WebSocket(url)
     wsRef.current = ws
