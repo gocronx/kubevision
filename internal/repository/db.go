@@ -78,7 +78,7 @@ func initDefaultAdmin(db *gorm.DB, logger *zap.Logger) {
 		admin := model.User{
 			Username:     "admin",
 			PasswordHash: hash,
-			Role:         "admin",
+			Role:         "super-admin",
 			IsActive:     true,
 		}
 		if err := db.Create(&admin).Error; err != nil {

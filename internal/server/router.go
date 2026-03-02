@@ -19,6 +19,7 @@ type RouterDeps struct {
 	ResourceActionHandler  *handler.ResourceActionHandler
 	FavoriteHandler        *handler.FavoriteHandler
 	QuotaHandler           *handler.QuotaHandler
+	OverviewHandler        *handler.OverviewHandler
 	AuditHandler           *handler.AuditHandler
 	APIKeyHandler          *handler.APIKeyHandler
 	WebhookHandler         *handler.WebhookHandler
@@ -167,6 +168,11 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				// Quota summary route (nested under cluster).
 				if deps.QuotaHandler != nil {
 					clusters.GET("/:id/quota-summary", deps.QuotaHandler.GetQuotaSummary)
+				}
+
+				// Cluster overview route (nested under cluster).
+				if deps.OverviewHandler != nil {
+					clusters.GET("/:id/overview", deps.OverviewHandler.GetOverview)
 				}
 
 				// Global search route (nested under cluster).

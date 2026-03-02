@@ -29,6 +29,7 @@ import {
   Users,
   Puzzle,
   Plug,
+  Plus,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useAuth } from "@/stores/auth-store"
@@ -52,7 +53,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { FavoritesPanel } from "@/components/specialized/favorites-panel"
+import { AddClusterDialog } from "@/components/shared/add-cluster-dialog"
 import { useCluster } from "@/hooks/use-cluster"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 
 interface NavItem {
   titleKey: string
@@ -145,6 +149,7 @@ export function AppSidebar() {
   const showAdminSection = canAccessAdmin(role)
   const showUserManagement = canManageUsers(role)
   const currentClusterName = clusters.find((c) => c.id === currentCluster)?.name ?? t("cluster.select")
+  const [showAddCluster, setShowAddCluster] = useState(false)
 
   return (
     <Sidebar collapsible="icon">
@@ -157,7 +162,7 @@ export function AppSidebar() {
             KubeVision
           </span>
         </div>
-        {clusters.length > 0 && (
+        {clusters.length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent group-data-[collapsible=icon]:hidden">
@@ -178,7 +183,18 @@ export function AppSidebar() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full group-data-[collapsible=icon]:hidden"
+            onClick={() => setShowAddCluster(true)}
+          >
+            <Plus className="mr-1.5 size-3.5" />
+            {t("cluster.add_submit")}
+          </Button>
         )}
+        <AddClusterDialog open={showAddCluster} onOpenChange={setShowAddCluster} />
       </SidebarHeader>
       <SidebarContent>
         {/* Favorites panel — shown at the top for quick access */}

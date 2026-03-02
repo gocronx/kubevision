@@ -125,7 +125,7 @@ func TestAuthHandler_Login_ValidCredentials(t *testing.T) {
 	assert.NotEmpty(t, data.AccessToken, "access token should not be empty")
 	assert.NotEmpty(t, data.RefreshToken, "refresh token should not be empty")
 	assert.Equal(t, "admin", data.User.Username)
-	assert.Equal(t, "admin", data.User.Role)
+	assert.Equal(t, "super-admin", data.User.Role)
 	assert.NotZero(t, data.User.ID)
 }
 
@@ -272,7 +272,7 @@ func TestAuthHandler_Refresh_ValidToken(t *testing.T) {
 	assert.NotEmpty(t, refreshData.AccessToken, "new access token should not be empty")
 	assert.NotEmpty(t, refreshData.RefreshToken, "new refresh token should not be empty")
 	assert.Equal(t, "admin", refreshData.User.Username)
-	assert.Equal(t, "admin", refreshData.User.Role)
+	assert.Equal(t, "super-admin", refreshData.User.Role)
 }
 
 func TestAuthHandler_Refresh_MissingToken(t *testing.T) {

@@ -78,7 +78,10 @@
     "pods": "Pods",
     "deployments": "Deployments",
     "services": "Services",
-    "nodes": "节点"
+    "nodes": "节点",
+    "no_cluster": "还没有注册集群",
+    "no_cluster_desc": "请先添加集群，开始使用 KubeVision。",
+    "add_cluster": "添加集群"
   },
   "notFound": {
     "title": "404",
@@ -109,7 +112,18 @@
     "totalResults_other": "共 {{count}} 条结果"
   },
   "cluster": {
-    "select": "选择集群"
+    "select": "选择集群",
+    "add_title": "添加集群",
+    "add_desc": "通过 kubeconfig 文件或 in-cluster 认证方式连接 Kubernetes 集群。",
+    "add_success": "集群添加成功",
+    "add_submit": "添加集群",
+    "name": "集群名称",
+    "display_name": "显示名称",
+    "auth_type": "认证方式",
+    "kubeconfig": "Kubeconfig",
+    "kubeconfig_placeholder": "在此粘贴 kubeconfig YAML 内容...",
+    "upload_file": "上传文件",
+    "file_loaded": "文件已加载"
   },
   "batch": {
     "selected": "已选 {{count}} 项",

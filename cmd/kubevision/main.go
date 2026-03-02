@@ -93,6 +93,7 @@ func main() {
 	resourceService := service.NewResourceService(k8sRepo, resourceRegistry, clusterRepo)
 	resourceActionService := service.NewResourceActionService(clusterRepo, clusterManager)
 	quotaService := service.NewQuotaService(k8sRepo, clusterRepo)
+	overviewService := service.NewOverviewService(k8sRepo, clusterRepo)
 	favoriteService := service.NewFavoriteService(favoriteRepo)
 	searchService := service.NewSearchService(informerMgr, clusterManager, resourceRegistry, clusterRepo)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, userRepo)
@@ -139,6 +140,7 @@ func main() {
 	resourceHandler := handler.NewResourceHandler(resourceService, resourceActionService)
 	resourceActionHandler := handler.NewResourceActionHandler(resourceActionService)
 	quotaHandler := handler.NewQuotaHandler(quotaService)
+	overviewHandler := handler.NewOverviewHandler(overviewService)
 	favoriteHandler := handler.NewFavoriteHandler(favoriteService)
 	searchHandler := handler.NewSearchHandler(searchService)
 	auditHandler := handler.NewAuditHandler(auditRepo)
@@ -178,6 +180,7 @@ func main() {
 		ResourceActionHandler:  resourceActionHandler,
 		FavoriteHandler:        favoriteHandler,
 		QuotaHandler:           quotaHandler,
+		OverviewHandler:        overviewHandler,
 		AuditHandler:           auditHandler,
 		APIKeyHandler:          apiKeyHandler,
 		WebhookHandler:         webhookHandler,

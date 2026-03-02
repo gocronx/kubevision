@@ -118,9 +118,11 @@ func AuthMiddleware(
 		}
 
 		// Inject user information into the request context.
+		// Use the role from the database (not the JWT claim) so that
+		// role changes take effect immediately without re-login.
 		c.Set(contextKeyUserID, claims.UserID)
 		c.Set(contextKeyUsername, claims.Username)
-		c.Set(contextKeyUserRole, claims.Role)
+		c.Set(contextKeyUserRole, user.Role)
 
 		c.Next()
 	}

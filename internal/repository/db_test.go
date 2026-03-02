@@ -73,7 +73,7 @@ func TestNewDB_DefaultAdminUserCreated(t *testing.T) {
 	require.NoError(t, err, "default admin user should exist")
 
 	assert.Equal(t, "admin", admin.Username)
-	assert.Equal(t, "admin", admin.Role)
+	assert.Equal(t, "super-admin", admin.Role)
 	assert.True(t, admin.IsActive, "admin account should be active")
 	assert.NotEmpty(t, admin.PasswordHash, "admin password hash should not be empty")
 }

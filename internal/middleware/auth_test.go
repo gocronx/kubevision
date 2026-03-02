@@ -559,6 +559,63 @@ func TestGetUserRole_WrongType(t *testing.T) {
 	}
 }
 
+// TestAuthMiddleware_DBRoleOverridesClaimRole verifies that when a user's role
+// has been updated in the database after the JWT was issued, the middleware
+// injects the current database role rather than the (stale) claim role.
+// This is the core invariant introduced by the change on line 123 of auth.go.
+func TestAuthMiddleware_DBRoleOverridesClaimRole(t *testing.T) {
+	jwtMgr := newTestJWTManager()
+	repo := newMockUserRepo()
+
+	// DB now has the user promoted to "admin".
+	repo.addUser(&model.User{
+		ID:           55,
+		Username:     "promoted",
+		Role:         "admin",
+		IsActive:     true,
+		TokenVersion: 1,
+	})
+
+	// JWT was issued when the user was still a "viewer" (stale claim).
+	claims := &auth.TokenClaims{
+		UserID:       55,
+		Username:     "promoted",
+		Role:         "viewer",
+		TokenVersion: 1,
+	}
+	tokenStr, err := jwtMgr.GenerateAccessToken(claims)
+	if err != nil {
+		t.Fatalf("failed to generate access token: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenStr)
+	w, handlerCalled := performRequest(jwtMgr, repo, req)
+
+	if !handlerCalled {
+		t.Error("downstream handler should have been called")
+	}
+
+	var resp apiResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.Code != bizerr.CodeSuccess {
+		t.Errorf("expected success code, got %d (message: %s)", resp.Code, resp.Message)
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		t.Fatalf("failed to decode data: %v", err)
+	}
+
+	// The injected role must reflect the current DB value ("admin"),
+	// NOT the stale JWT claim ("viewer").
+	if data["role"] != "admin" {
+		t.Errorf("expected DB role 'admin' to override stale JWT claim 'viewer', got %v", data["role"])
+	}
+}
+
 func TestAuth_NoopMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()

@@ -78,7 +78,10 @@
     "pods": "Pods",
     "deployments": "Deployments",
     "services": "Services",
-    "nodes": "Nodes"
+    "nodes": "Nodes",
+    "no_cluster": "No cluster registered",
+    "no_cluster_desc": "Add a cluster to get started with KubeVision.",
+    "add_cluster": "Add Cluster"
   },
   "notFound": {
     "title": "404",
@@ -109,7 +112,18 @@
     "totalResults_other": "{{count}} total matches"
   },
   "cluster": {
-    "select": "Select Cluster"
+    "select": "Select Cluster",
+    "add_title": "Add Cluster",
+    "add_desc": "Connect a Kubernetes cluster by providing a kubeconfig file or using in-cluster authentication.",
+    "add_success": "Cluster added successfully",
+    "add_submit": "Add Cluster",
+    "name": "Cluster Name",
+    "display_name": "Display Name",
+    "auth_type": "Authentication Type",
+    "kubeconfig": "Kubeconfig",
+    "kubeconfig_placeholder": "Paste kubeconfig YAML content here...",
+    "upload_file": "Upload File",
+    "file_loaded": "File loaded"
   },
   "batch": {
     "selected": "{{count}} selected",

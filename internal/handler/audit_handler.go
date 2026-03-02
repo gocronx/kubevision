@@ -26,7 +26,7 @@ func NewAuditHandler(auditRepo repository.AuditRepo) *AuditHandler {
 // Query params: action, cluster, since (RFC3339), offset, limit.
 func (h *AuditHandler) List(c *gin.Context) {
 	role := middleware.GetUserRole(c)
-	if role != "admin" && role != "ops" {
+	if role != "super-admin" && role != "admin" && role != "ops" {
 		response.Error(c, bizerr.CodeForbidden, "only admin and ops roles may view audit logs")
 		return
 	}
