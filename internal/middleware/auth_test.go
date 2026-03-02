@@ -101,7 +101,7 @@ func performRequest(jwtMgr *auth.JWTManager, repo *mockUserRepo, req *http.Reque
 	var capturedRole string
 
 	router := gin.New()
-	router.Use(AuthMiddleware(jwtMgr, repo))
+	router.Use(AuthMiddleware(jwtMgr, repo, nil))
 	router.GET("/protected", func(c *gin.Context) {
 		handlerCalled = true
 		capturedUserID = GetUserID(c)

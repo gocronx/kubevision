@@ -11,18 +11,26 @@ import (
 
 // RouterDeps holds all handler and middleware dependencies required to register routes.
 type RouterDeps struct {
-	AuthHandler           *handler.AuthHandler
-	ClusterHandler        *handler.ClusterHandler
-	ResourceHandler       *handler.ResourceHandler
-	SearchHandler         *handler.SearchHandler
-	ResourceActionHandler *handler.ResourceActionHandler
-	FavoriteHandler       *handler.FavoriteHandler
-	QuotaHandler          *handler.QuotaHandler
-	WSHub                 *ws.Hub
-	TerminalHandler       *ws.TerminalHandler
-	LogsHandler           *ws.LogsHandler
-	AuthMiddleware        gin.HandlerFunc
-	Logger                *zap.Logger
+	AuthHandler            *handler.AuthHandler
+	ClusterHandler         *handler.ClusterHandler
+	ResourceHandler        *handler.ResourceHandler
+	SearchHandler          *handler.SearchHandler
+	ResourceActionHandler  *handler.ResourceActionHandler
+	FavoriteHandler        *handler.FavoriteHandler
+	QuotaHandler           *handler.QuotaHandler
+	AuditHandler           *handler.AuditHandler
+	APIKeyHandler          *handler.APIKeyHandler
+	WebhookHandler         *handler.WebhookHandler
+	TerminalSessionHandler *handler.TerminalSessionHandler
+	CompareHandler         *handler.CompareHandler
+	TopologyHandler        *handler.TopologyHandler
+	WSHub                  *ws.Hub
+	TerminalHandler        *ws.TerminalHandler
+	LogsHandler            *ws.LogsHandler
+	AuthMiddleware         gin.HandlerFunc
+	RBACMiddleware         gin.HandlerFunc
+	AuditMiddleware        gin.HandlerFunc
+	Logger                 *zap.Logger
 }
 
 // RegisterRoutes sets up all API route groups on the given engine.
@@ -47,6 +55,11 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			if deps != nil && deps.AuthHandler != nil {
 				authGroup.POST("/login", deps.AuthHandler.Login)
 				authGroup.POST("/refresh", deps.AuthHandler.Refresh)
+
+				// 2FA verification endpoints — guarded by the short-lived
+				// tempToken issued during login rather than a full JWT.
+				authGroup.POST("/2fa/verify", deps.AuthHandler.Verify2FA)
+				authGroup.POST("/2fa/recovery", deps.AuthHandler.Recovery2FA)
 			}
 		}
 
@@ -57,10 +70,24 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 		} else {
 			protected.Use(middleware.Auth())
 		}
+		// Apply RBAC middleware after auth so the user role is available.
+		if deps != nil && deps.RBACMiddleware != nil {
+			protected.Use(deps.RBACMiddleware)
+		}
+		// Apply audit middleware to capture mutating operations.
+		if deps != nil && deps.AuditMiddleware != nil {
+			protected.Use(deps.AuditMiddleware)
+		}
 		{
 			// User profile.
 			if deps != nil && deps.AuthHandler != nil {
 				protected.GET("/users/me", deps.AuthHandler.Me)
+
+				// 2FA management — require a valid session JWT.
+				twoFA := protected.Group("/auth/2fa")
+				twoFA.POST("/setup", deps.AuthHandler.Setup2FA)
+				twoFA.POST("/enable", deps.AuthHandler.Enable2FA)
+				twoFA.POST("/disable", deps.AuthHandler.Disable2FA)
 			}
 
 			// Cluster management routes.
@@ -88,6 +115,12 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 					// PUT  .../resources/:resource/:name/dry-run -> preview an update
 					res.POST("/:resource/dry-run", deps.ResourceHandler.DryRunCreate)
 					res.PUT("/:resource/:name/dry-run", deps.ResourceHandler.DryRunUpdate)
+				}
+
+				// Batch operations (nested under cluster).
+				if deps.ResourceHandler != nil {
+					clusters.POST("/:id/resources/batch-delete", deps.ResourceHandler.BatchDelete)
+					clusters.POST("/:id/batch-restart", deps.ResourceHandler.BatchRestart)
 				}
 
 				// Quota summary route (nested under cluster).
@@ -126,6 +159,47 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				favs.POST("/toggle", deps.FavoriteHandler.Toggle)
 				favs.PUT("/reorder", deps.FavoriteHandler.Reorder)
 				favs.GET("/check", deps.FavoriteHandler.Check)
+			}
+
+			// Audit log routes.
+			if deps != nil && deps.AuditHandler != nil {
+				protected.GET("/audit-logs", deps.AuditHandler.List)
+			}
+
+			// API key routes.
+			if deps != nil && deps.APIKeyHandler != nil {
+				apiKeys := protected.Group("/api-keys")
+				apiKeys.GET("", deps.APIKeyHandler.List)
+				apiKeys.POST("", deps.APIKeyHandler.Generate)
+				apiKeys.DELETE("/:id", deps.APIKeyHandler.Revoke)
+			}
+
+			// Webhook routes.
+			if deps != nil && deps.WebhookHandler != nil {
+				webhooks := protected.Group("/webhooks")
+				webhooks.GET("", deps.WebhookHandler.List)
+				webhooks.POST("", deps.WebhookHandler.Create)
+				webhooks.PUT("/:id", deps.WebhookHandler.Update)
+				webhooks.DELETE("/:id", deps.WebhookHandler.Delete)
+				webhooks.POST("/:id/test", deps.WebhookHandler.Test)
+			}
+
+			// Terminal session recording routes.
+			if deps != nil && deps.TerminalSessionHandler != nil {
+				ts := protected.Group("/terminal-sessions")
+				ts.GET("", deps.TerminalSessionHandler.List)
+				ts.GET("/:id", deps.TerminalSessionHandler.Get)
+				ts.GET("/:id/play", deps.TerminalSessionHandler.Play)
+			}
+
+			// Cross-cluster resource comparison route.
+			if deps != nil && deps.CompareHandler != nil {
+				protected.POST("/compare", deps.CompareHandler.Compare)
+			}
+
+			// Topology route (nested under clusters).
+			if deps != nil && deps.TopologyHandler != nil && deps.ClusterHandler != nil {
+				protected.GET("/clusters/:id/namespaces/:namespace/topology", deps.TopologyHandler.GetTopology)
 			}
 
 			// Pod terminal and log streaming routes.

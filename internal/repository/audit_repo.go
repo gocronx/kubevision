@@ -42,7 +42,9 @@ func (r *auditRepo) List(ctx context.Context, filter AuditFilter) ([]model.Audit
 	}
 
 	var total int64
-	query.Count(&total)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	var logs []model.AuditLog
 	err := query.Order("created_at DESC").Offset(filter.Offset).Limit(filter.Limit).Find(&logs).Error

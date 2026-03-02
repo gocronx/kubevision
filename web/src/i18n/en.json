@@ -26,7 +26,11 @@
     "resourcequotas": "Resource Quotas",
     "limitranges": "Limit Ranges",
     "favorites": "Favorites",
-    "policy": "Policy"
+    "topology": "Topology",
+    "compare": "Compare Resources",
+    "policy": "Policy",
+    "settings": "Settings",
+    "settingsSecurity": "Security"
   },
   "favorites": {
     "empty": "No favorites yet",
@@ -49,6 +53,7 @@
     "noData": "No data",
     "name": "Name",
     "namespace": "Namespace",
+    "cluster": "Cluster",
     "status": "Status",
     "age": "Age",
     "actions": "Actions",
@@ -101,6 +106,101 @@
     "totalResults": "{{count}} total match",
     "totalResults_other": "{{count}} total matches"
   },
+  "cluster": {
+    "select": "Select Cluster"
+  },
+  "batch": {
+    "selected": "{{count}} selected",
+    "delete": "Delete",
+    "restart": "Restart",
+    "deleteTitle": "Batch Delete",
+    "deleteDescription": "Are you sure you want to delete {{count}} resources? This action cannot be undone.",
+    "confirmDelete": "Delete {{count}} items",
+    "deleteSuccess": "Successfully deleted {{count}} resources",
+    "deletePartial": "Deleted {{success}} of {{total}} resources",
+    "restartTitle": "Batch Restart",
+    "restartDescription": "Are you sure you want to restart {{count}} workloads?",
+    "confirmRestart": "Restart {{count}} items",
+    "restartSuccess": "Successfully restarted {{count}} workloads",
+    "restartPartial": "Restarted {{success}} of {{total}} workloads"
+  },
+  "topology": {
+    "title": "Resource Topology",
+    "noData": "Select a resource to view its topology",
+    "relationships": "Relationships",
+    "owns": "owns",
+    "selects": "selects"
+  },
+  "twofa": {
+    "title": "Two-Factor Authentication",
+    "description": "Enter the 6-digit code from your authenticator app",
+    "settingsDescription": "Add an extra layer of security using a TOTP authenticator app",
+    "code": "Verification Code",
+    "verify": "Verify",
+    "useRecovery": "Use a recovery code instead",
+    "useTotp": "Use authenticator app instead",
+    "recoveryTitle": "Recovery Code",
+    "recoveryDescription": "Enter one of your backup recovery codes",
+    "recoveryCode": "Recovery Code",
+    "enable": "Enable 2FA",
+    "disable": "Disable 2FA",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "setupStep1": "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)",
+    "orEnterManually": "Or enter this key manually:",
+    "enterCode": "Enter the 6-digit code to confirm",
+    "recoveryWarning": "Save these recovery codes in a safe place. Each code can only be used once.",
+    "copyAll": "Copy All",
+    "codesCopied": "Recovery codes copied to clipboard",
+    "doneSaved": "I've saved these codes",
+    "enabledSuccess": "Two-factor authentication enabled",
+    "disabledSuccess": "Two-factor authentication disabled",
+    "disableConfirmTitle": "Disable Two-Factor Authentication",
+    "disableConfirmDescription": "Enter your current authenticator code to confirm."
+  },
+  "settings": {
+    "security": "Security",
+    "securityDescription": "Manage your account security settings"
+  },
+  "admin": {
+    "title": "Admin",
+    "description": "Audit logs and API key management"
+  },
+  "audit": {
+    "title": "Audit Logs",
+    "filterAction": "Action",
+    "actionPlaceholder": "e.g. create",
+    "filterCluster": "Cluster",
+    "clusterPlaceholder": "cluster name",
+    "time": "Time",
+    "user": "User",
+    "action": "Action",
+    "resource": "Resource",
+    "cluster": "Cluster",
+    "status": "Status",
+    "duration": "Duration",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page {{page}}"
+  },
+  "apikeys": {
+    "title": "API Keys",
+    "description": "Manage personal API keys for programmatic access.",
+    "prefix": "Key Prefix",
+    "created": "Created",
+    "expires": "Expires",
+    "noExpiry": "Never",
+    "empty": "No API keys yet",
+    "generate": "Generate Key",
+    "generateDescription": "Generate a new API key. The key will only be shown once.",
+    "namePlaceholder": "e.g. CI Pipeline",
+    "showOnce": "Save this key now — it will not be shown again.",
+    "yourKey": "Your API Key",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke API Key",
+    "revokeDescription": "Are you sure you want to revoke \"{{name}}\"? This action cannot be undone.",
+    "revokedToast": "API key revoked successfully"
+  },
   "pod": {
     "logs": "Logs",
     "terminal": "Terminal",
@@ -117,5 +217,48 @@
     "disconnected": "Disconnected",
     "sessionEnded": "Session ended",
     "streamEnded": "Stream ended"
+  },
+  "webhook": {
+    "title": "Webhooks",
+    "description": "Configure HTTP webhooks to receive Kubernetes resource event notifications",
+    "create": "Create Webhook",
+    "edit": "Edit Webhook",
+    "test": "Test",
+    "active": "Active",
+    "inactive": "Inactive",
+    "url": "Endpoint URL",
+    "secret": "Signing Secret",
+    "secretPlaceholder": "Leave blank to keep existing secret",
+    "events": "Events",
+    "eventsHint": "Leave empty to match all event types",
+    "resources": "Resources",
+    "resourcesHint": "Leave empty to match all resource types",
+    "empty": "No webhooks configured yet",
+    "deleteTitle": "Delete Webhook",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+  },
+  "terminalSession": {
+    "title": "Terminal Sessions",
+    "description": "Browse and replay recorded interactive terminal sessions",
+    "user": "User",
+    "pod": "Pod",
+    "duration": "Duration",
+    "date": "Date",
+    "play": "Play",
+    "empty": "No terminal sessions recorded yet",
+    "showingPage": "Page {{page}} of {{total}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "compare": {
+    "title": "Compare Resources",
+    "description": "Compare Kubernetes resources side-by-side across clusters or namespaces",
+    "source": "Source",
+    "target": "Target",
+    "cluster": "Cluster",
+    "resourceType": "Resource Type",
+    "selectResource": "Select resource type",
+    "compare": "Compare",
+    "error": "Failed to fetch resources for comparison"
   }
 }

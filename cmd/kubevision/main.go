@@ -59,6 +59,11 @@ func main() {
 	userRepo := repository.NewUserRepo(db)
 	clusterRepo := repository.NewClusterRepo(db)
 	favoriteRepo := repository.NewFavoriteRepo(db)
+	roleRepo := repository.NewRoleRepo(db)
+	auditRepo := repository.NewAuditRepo(db)
+	apiKeyRepo := repository.NewAPIKeyRepo(db)
+	webhookRepo := repository.NewWebhookRepo(db)
+	terminalSessionRepo := repository.NewTerminalSessionRepo(db)
 
 	// Kubernetes components
 	clusterManager := cluster.NewManager()
@@ -81,47 +86,82 @@ func main() {
 	k8sRepo := repository.NewK8sResourceRepo(informerMgr, clusterManager, resourceRegistry)
 
 	// Services
-	authService := service.NewAuthService(userRepo, jwtManager, logger)
+	authService := service.NewAuthService(userRepo, jwtManager, cfg, logger)
 	clusterService := service.NewClusterService(clusterRepo, clusterManager, informerMgr, resourceRegistry, logger, cfg.EncryptKey)
 	resourceService := service.NewResourceService(k8sRepo, resourceRegistry, clusterRepo)
 	resourceActionService := service.NewResourceActionService(clusterRepo, clusterManager)
 	quotaService := service.NewQuotaService(k8sRepo, clusterRepo)
 	favoriteService := service.NewFavoriteService(favoriteRepo)
 	searchService := service.NewSearchService(informerMgr, clusterManager, resourceRegistry, clusterRepo)
+	apiKeyService := service.NewAPIKeyService(apiKeyRepo, userRepo)
+
+	// Audit service — start background flush / purge goroutines.
+	auditService := service.NewAuditService(auditRepo, cfg.Audit, logger)
+	if cfg.Audit.Enabled {
+		auditService.Start()
+	}
+
+	// P3: Webhook, terminal session recording, and compare services.
+	webhookService := service.NewWebhookService(webhookRepo, logger)
+	terminalSessionService := service.NewTerminalSessionService(terminalSessionRepo)
+	compareService := service.NewCompareService(k8sRepo)
+	topologyService := service.NewTopologyService(k8sRepo, clusterRepo)
+
+	// Register webhook service as an event listener so it dispatches on K8s events.
+	informerMgr.AddListener(webhookService)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	clusterHandler := handler.NewClusterHandler(clusterService)
-	resourceHandler := handler.NewResourceHandler(resourceService)
+	resourceHandler := handler.NewResourceHandler(resourceService, resourceActionService)
 	resourceActionHandler := handler.NewResourceActionHandler(resourceActionService)
 	quotaHandler := handler.NewQuotaHandler(quotaService)
 	favoriteHandler := handler.NewFavoriteHandler(favoriteService)
 	searchHandler := handler.NewSearchHandler(searchService)
+	auditHandler := handler.NewAuditHandler(auditRepo)
+	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
+
+	// P3: Webhook, terminal session, and compare handlers.
+	webhookHandler := handler.NewWebhookHandler(webhookService)
+	terminalSessionHandler := handler.NewTerminalSessionHandler(terminalSessionService)
+	compareHandler := handler.NewCompareHandler(compareService)
+	topologyHandler := handler.NewTopologyHandler(topologyService)
 
 	// Pod terminal and log streaming handlers.
-	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger)
+	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger).
+		WithSessionService(terminalSessionService)
 	logsHandler := ws.NewLogsHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger)
 
 	// Middleware
-	authMiddleware := middleware.AuthMiddleware(jwtManager, userRepo)
+	authMiddleware := middleware.AuthMiddleware(jwtManager, userRepo, apiKeyService)
+	rbacMiddleware := middleware.RBACMiddleware(roleRepo)
+	auditMiddleware := middleware.AuditMiddleware(auditService)
 
 	// Reconnect persisted clusters on startup.
 	clusterService.InitClusters(context.Background())
 
 	// Route dependencies
 	routerDeps := &server.RouterDeps{
-		AuthHandler:           authHandler,
-		ClusterHandler:        clusterHandler,
-		ResourceHandler:       resourceHandler,
-		SearchHandler:         searchHandler,
-		ResourceActionHandler: resourceActionHandler,
-		FavoriteHandler:       favoriteHandler,
-		QuotaHandler:          quotaHandler,
-		WSHub:                 wsHub,
-		TerminalHandler:       terminalHandler,
-		LogsHandler:           logsHandler,
-		AuthMiddleware:        authMiddleware,
-		Logger:                logger,
+		AuthHandler:            authHandler,
+		ClusterHandler:         clusterHandler,
+		ResourceHandler:        resourceHandler,
+		SearchHandler:          searchHandler,
+		ResourceActionHandler:  resourceActionHandler,
+		FavoriteHandler:        favoriteHandler,
+		QuotaHandler:           quotaHandler,
+		AuditHandler:           auditHandler,
+		APIKeyHandler:          apiKeyHandler,
+		WebhookHandler:         webhookHandler,
+		TerminalSessionHandler: terminalSessionHandler,
+		CompareHandler:         compareHandler,
+		TopologyHandler:        topologyHandler,
+		WSHub:                  wsHub,
+		TerminalHandler:        terminalHandler,
+		LogsHandler:            logsHandler,
+		AuthMiddleware:         authMiddleware,
+		RBACMiddleware:         rbacMiddleware,
+		AuditMiddleware:        auditMiddleware,
+		Logger:                 logger,
 	}
 
 	// ----- HTTP Server -----
@@ -148,6 +188,14 @@ func main() {
 
 	// Stop all informers.
 	informerMgr.StopAll()
+
+	// Stop the WebSocket hub event loop.
+	wsHub.Stop()
+
+	// Stop audit service (flushes remaining entries).
+	if cfg.Audit.Enabled {
+		auditService.Stop()
+	}
 
 	if err := srv.Shutdown(); err != nil {
 		logger.Error("shutdown error", zap.Error(err))

@@ -10,6 +10,7 @@ const (
 	CodeUnauthorized   = 40100
 	CodeTokenExpired   = 40101
 	Code2FARequired    = 40102
+	Code2FAFailed      = 40103
 	CodeForbidden      = 40300
 	CodeNotFound       = 40400
 	CodeConflict       = 40900
@@ -26,6 +27,7 @@ var codeMessages = map[int]string{
 	CodeUnauthorized:   "unauthorized",
 	CodeTokenExpired:   "token expired",
 	Code2FARequired:    "two-factor authentication required",
+	Code2FAFailed:      "two-factor authentication failed",
 	CodeForbidden:      "forbidden",
 	CodeNotFound:       "resource not found",
 	CodeConflict:       "resource conflict",
@@ -91,6 +93,7 @@ var (
 	ErrUnauthorized   = NewWithCode(CodeUnauthorized)
 	ErrTokenExpired   = NewWithCode(CodeTokenExpired)
 	Err2FARequired    = NewWithCode(Code2FARequired)
+	Err2FAFailed      = NewWithCode(Code2FAFailed)
 	ErrForbidden      = NewWithCode(CodeForbidden)
 	ErrNotFound       = NewWithCode(CodeNotFound)
 	ErrConflict       = NewWithCode(CodeConflict)

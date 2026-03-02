@@ -8,6 +8,7 @@ import (
 	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
 	"github.com/kubevision/kubevision/internal/pkg/response"
 	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/kubevision/kubevision/internal/service"
 )
 
 const (
@@ -16,12 +17,57 @@ const (
 	contextKeyUserRole = "userRole"
 )
 
-// AuthMiddleware returns a Gin middleware that validates JWT tokens from the
-// Authorization header. It verifies the token signature, expiration, and
-// compares the token version against the database to support token revocation.
-func AuthMiddleware(jwtManager *auth.JWTManager, userRepo repository.UserRepo) gin.HandlerFunc {
+// AuthMiddleware returns a Gin middleware that validates requests via either:
+//  1. X-API-Key header — validated against the API key store.
+//  2. Authorization: Bearer <jwt> header — standard JWT validation.
+//
+// On success it injects userID, username, and userRole into the Gin context.
+func AuthMiddleware(
+	jwtManager *auth.JWTManager,
+	userRepo repository.UserRepo,
+	apiKeyService *service.APIKeyService,
+) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. Extract the Bearer token from the Authorization header.
+		// ── Path 1: API Key authentication ──────────────────────────────────
+		if apiKey := c.GetHeader("X-API-Key"); apiKey != "" {
+			if apiKeyService == nil {
+				response.Error(c, bizerr.CodeUnauthorized, "API key authentication not configured")
+				c.Abort()
+				return
+			}
+
+			record, err := apiKeyService.Validate(c.Request.Context(), apiKey)
+			if err != nil {
+				if bizErr, ok := err.(*bizerr.BizError); ok {
+					response.ErrorWithBizErr(c, bizErr)
+				} else {
+					response.Error(c, bizerr.CodeUnauthorized, "invalid API key")
+				}
+				c.Abort()
+				return
+			}
+
+			// Load full user to get current role and active status.
+			user, err := userRepo.GetByID(c.Request.Context(), record.UserID)
+			if err != nil {
+				response.Error(c, bizerr.CodeUnauthorized, "user not found")
+				c.Abort()
+				return
+			}
+			if !user.IsActive {
+				response.Error(c, bizerr.CodeForbidden, "account is disabled")
+				c.Abort()
+				return
+			}
+
+			c.Set(contextKeyUserID, user.ID)
+			c.Set(contextKeyUsername, user.Username)
+			c.Set(contextKeyUserRole, user.Role)
+			c.Next()
+			return
+		}
+
+		// ── Path 2: JWT Bearer token authentication ──────────────────────────
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			response.Error(c, bizerr.CodeUnauthorized, "missing authorization header")
@@ -43,7 +89,7 @@ func AuthMiddleware(jwtManager *auth.JWTManager, userRepo repository.UserRepo) g
 			return
 		}
 
-		// 2. Parse and validate the JWT.
+		// Parse and validate the JWT.
 		claims, err := jwtManager.ParseToken(tokenStr)
 		if err != nil {
 			response.Error(c, bizerr.CodeTokenExpired, "invalid or expired token")
@@ -51,7 +97,7 @@ func AuthMiddleware(jwtManager *auth.JWTManager, userRepo repository.UserRepo) g
 			return
 		}
 
-		// 3. Verify token version against the database (supports token revocation).
+		// Verify token version against the database (supports token revocation).
 		user, err := userRepo.GetByID(c.Request.Context(), claims.UserID)
 		if err != nil {
 			response.Error(c, bizerr.CodeUnauthorized, "user not found")
@@ -71,12 +117,11 @@ func AuthMiddleware(jwtManager *auth.JWTManager, userRepo repository.UserRepo) g
 			return
 		}
 
-		// 4. Inject user information into the request context.
+		// Inject user information into the request context.
 		c.Set(contextKeyUserID, claims.UserID)
 		c.Set(contextKeyUsername, claims.Username)
 		c.Set(contextKeyUserRole, claims.Role)
 
-		// 5. Continue to the next handler.
 		c.Next()
 	}
 }

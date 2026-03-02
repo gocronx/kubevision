@@ -188,7 +188,7 @@ func TestGenerateAndParseRefreshToken(t *testing.T) {
 	t.Run("roundtrip: generate then parse returns original userID", func(t *testing.T) {
 		mgr := newTestJWTManager()
 
-		tokenStr, err := mgr.GenerateRefreshToken(42)
+		tokenStr, err := mgr.GenerateRefreshToken(42, 3)
 		if err != nil {
 			t.Fatalf("GenerateRefreshToken error: %v", err)
 		}
@@ -196,12 +196,15 @@ func TestGenerateAndParseRefreshToken(t *testing.T) {
 			t.Fatal("GenerateRefreshToken returned empty string")
 		}
 
-		userID, err := mgr.ParseRefreshToken(tokenStr)
+		claims, err := mgr.ParseRefreshToken(tokenStr)
 		if err != nil {
 			t.Fatalf("ParseRefreshToken error: %v", err)
 		}
-		if userID != 42 {
-			t.Errorf("ParseRefreshToken returned userID = %d, want 42", userID)
+		if claims.UserID != 42 {
+			t.Errorf("ParseRefreshToken returned userID = %d, want 42", claims.UserID)
+		}
+		if claims.TokenVersion != 3 {
+			t.Errorf("ParseRefreshToken returned tokenVersion = %d, want 3", claims.TokenVersion)
 		}
 	})
 
@@ -210,7 +213,7 @@ func TestGenerateAndParseRefreshToken(t *testing.T) {
 		userIDs := []uint{0, 1, 100, 999999}
 
 		for _, id := range userIDs {
-			tokenStr, err := mgr.GenerateRefreshToken(id)
+			tokenStr, err := mgr.GenerateRefreshToken(id, 0)
 			if err != nil {
 				t.Fatalf("GenerateRefreshToken(%d) error: %v", id, err)
 			}
@@ -218,8 +221,8 @@ func TestGenerateAndParseRefreshToken(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseRefreshToken for userID %d error: %v", id, err)
 			}
-			if got != id {
-				t.Errorf("ParseRefreshToken returned %d, want %d", got, id)
+			if got.UserID != id {
+				t.Errorf("ParseRefreshToken returned %d, want %d", got.UserID, id)
 			}
 		}
 	})
@@ -250,7 +253,7 @@ func TestParseRefreshTokenFailures(t *testing.T) {
 
 	t.Run("expired refresh token", func(t *testing.T) {
 		shortMgr := NewJWTManager(testSecret, testAccessTTL, 1*time.Millisecond)
-		tokenStr, err := shortMgr.GenerateRefreshToken(1)
+		tokenStr, err := shortMgr.GenerateRefreshToken(1, 0)
 		if err != nil {
 			t.Fatalf("GenerateRefreshToken error: %v", err)
 		}
@@ -265,7 +268,7 @@ func TestParseRefreshTokenFailures(t *testing.T) {
 
 	t.Run("wrong secret", func(t *testing.T) {
 		otherMgr := NewJWTManager("different-secret", testAccessTTL, testRefreshTTL)
-		tokenStr, err := mgr.GenerateRefreshToken(1)
+		tokenStr, err := mgr.GenerateRefreshToken(1, 0)
 		if err != nil {
 			t.Fatalf("GenerateRefreshToken error: %v", err)
 		}

@@ -5,6 +5,7 @@ interface User {
   id: number
   username: string
   role: string
+  totpEnabled?: boolean
 }
 
 interface AuthState {

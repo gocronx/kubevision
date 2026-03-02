@@ -12,6 +12,7 @@ import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ResourceActions } from "@/components/shared/resource-actions"
+import { BatchActionBar } from "@/components/shared/batch-action-bar"
 import { KubectlHint } from "@/components/specialized/kubectl-hint"
 import { extractColumnValue, isNamespaced } from "@/lib/k8s-utils"
 import {
@@ -46,6 +47,7 @@ export function ResourceListPage() {
 
   const [namespace, setNamespace] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
 
   // Create dialog state.
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -174,12 +176,88 @@ export function ResourceListPage() {
     )
   }, [parseCreateBody, namespace, createMutation])
 
+  // Batch selection helpers
+  const selectedItems = useMemo(() => {
+    return items
+      .filter((item) => {
+        const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
+        const key = meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
+        return selectedKeys.has(key)
+      })
+      .map((item) => {
+        const meta = item.metadata as { name?: string; namespace?: string } | undefined
+        return {
+          resource,
+          name: meta?.name ?? "",
+          namespace: meta?.namespace ?? "",
+        }
+      })
+  }, [items, selectedKeys, resource])
+
+  const handleToggleSelect = useCallback((key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }, [])
+
+  const handleToggleAll = useCallback(() => {
+    setSelectedKeys((prev) => {
+      if (prev.size === items.length && items.length > 0) {
+        return new Set()
+      }
+      const allKeys = items.map((item) => {
+        const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
+        return meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
+      })
+      return new Set(allKeys)
+    })
+  }, [items])
+
   const tableColumns: DataTableColumn<K8sItem>[] = useMemo(() => {
     const cols = config?.columns ?? [
       { key: "name", label: "Name", sortable: true },
     ]
 
-    const mapped: DataTableColumn<K8sItem>[] = cols.map((col) => ({
+    // Checkbox column for batch selection
+    const selectCol: DataTableColumn<K8sItem> = {
+      key: "_select",
+      label: "",
+      sortable: false,
+      className: "w-[40px]",
+      headerRender: () => (
+        <input
+          type="checkbox"
+          checked={selectedKeys.size > 0 && selectedKeys.size === items.length}
+          ref={(el) => {
+            if (el) el.indeterminate = selectedKeys.size > 0 && selectedKeys.size < items.length
+          }}
+          onChange={handleToggleAll}
+          className="size-4 rounded border-muted-foreground"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      render: (item: K8sItem) => {
+        const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
+        const key = meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
+        return (
+          <input
+            type="checkbox"
+            checked={selectedKeys.has(key)}
+            onChange={() => handleToggleSelect(key)}
+            className="size-4 rounded border-muted-foreground"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )
+      },
+    }
+
+    const mapped: DataTableColumn<K8sItem>[] = [selectCol, ...cols.map((col) => ({
       key: col.key,
       label: col.label,
       sortable: col.sortable,
@@ -204,7 +282,7 @@ export function ResourceListPage() {
 
         return <span>{value}</span>
       },
-    }))
+    }))]
 
     // Add actions column
     mapped.push({
@@ -229,7 +307,7 @@ export function ResourceListPage() {
     })
 
     return mapped
-  }, [config, resource, t, currentCluster, handleRefresh])
+  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect])
 
   const getRowKey = useCallback((item: K8sItem) => {
     const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
@@ -289,6 +367,15 @@ export function ResourceListPage() {
         resource={resource}
         namespace={namespaced ? namespace : undefined}
         clusterContext={clusterContext}
+      />
+
+      {/* Batch action bar — visible when items are selected */}
+      <BatchActionBar
+        clusterID={currentCluster}
+        resource={resource}
+        selectedItems={selectedItems}
+        onClearSelection={() => setSelectedKeys(new Set())}
+        onComplete={handleRefresh}
       />
 
       <DataTable

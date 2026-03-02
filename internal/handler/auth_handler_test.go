@@ -55,7 +55,11 @@ func setupAuthHandler(t *testing.T) (*AuthHandler, *auth.JWTManager) {
 	userRepo := repository.NewUserRepo(db)
 	jwtManager := auth.NewJWTManager(testJWTSecret, testAccessTokenTTL, testRefreshTokenTTL)
 	logger, _ := zap.NewDevelopment()
-	authService := service.NewAuthService(userRepo, jwtManager, logger)
+	cfg := &config.Config{
+		Database:   config.DatabaseConfig{Driver: "sqlite"},
+		EncryptKey: "test-encrypt-key-32-bytes-padding",
+	}
+	authService := service.NewAuthService(userRepo, jwtManager, cfg, logger)
 	handler := NewAuthHandler(authService)
 	return handler, jwtManager
 }

@@ -61,7 +61,23 @@ K8s API ──→ Informer ──→ WS Hub ──→ 浏览器
 - 🌍 **国际化** — 内置中文和英文
 - ⚙️ **泛型 CRUD** — List、Get、Create、Update、Delete、Patch
 - 🏷️ **命名空间过滤** — 下拉快速切换命名空间
-- 🛡️ **RBAC 五级角色** — admin / ops / dev / readonly / custom
+- 🖥️ **Pod 终端和日志** — xterm.js 终端，实时日志流带搜索
+- 🚀 **Deployment 操作** — 扩缩容、重启、回滚，支持版本历史
+- 🔍 **全局搜索** — Cmd+K 跨资源搜索，带相关性评分
+- 📋 **Dry-Run 预览** — 应用前预览变更，并排 Diff 视图
+- 💡 **kubectl 提示** — 每个 UI 操作自动生成对应的 kubectl 命令
+- ⭐ **资源收藏** — 固定常用资源，支持拖拽排序
+- 📊 **资源配额** — CPU/内存/Pod 使用量可视化进度条
+- 🛡️ **RBAC 五级角色** — super-admin / admin / editor / viewer / custom，中间件级别强制执行
+- 🔑 **2FA (TOTP)** — 基于时间的一次性密码，QR 码设置 + 恢复码
+- 📝 **审计日志** — 异步批量写入所有变更操作，支持保留策略
+- 🗝️ **API Key 认证** — 生成和撤销 API Key，用于编程访问
+- 🗺️ **资源拓扑图** — 可视化所有权和选择器关系图
+- ⚡ **批量操作** — 多选删除和重启，带确认对话框
+- 🔀 **跨集群 Diff** — 并排对比不同集群中的同名资源
+- 🔔 **Webhook** — 事件驱动通知到外部端点
+- 🎬 **终端录屏** — Pod 终端会话录制与回放
+- 🐘 **PostgreSQL** — 生产级数据库驱动，兼容 SQLite
 
 <br>
 
@@ -172,6 +188,11 @@ docker run -p 8080:8080 kubevision:latest
   POST   /api/v1/auth/login                          登录
   POST   /api/v1/auth/refresh                        刷新 Token
   GET    /api/v1/users/me                             当前用户
+  POST   /api/v1/auth/2fa/verify                     验证 TOTP 码
+  POST   /api/v1/auth/2fa/recovery                   使用恢复码
+  POST   /api/v1/auth/2fa/setup                      生成 TOTP 密钥（需登录）
+  POST   /api/v1/auth/2fa/enable                     启用 2FA（需登录）
+  POST   /api/v1/auth/2fa/disable                    禁用 2FA（需登录）
 
 集群
   GET    /api/v1/clusters                             集群列表
@@ -185,9 +206,53 @@ docker run -p 8080:8080 kubevision:latest
   PUT    /api/v1/clusters/:id/resources/:res/:name    更新
   DELETE /api/v1/clusters/:id/resources/:res/:name    删除
   PATCH  /api/v1/clusters/:id/resources/:res/:name    Patch
+  POST   /api/v1/clusters/:id/resources/:res/dry-run  Dry-run 创建预览
+  PUT    /api/v1/clusters/:id/resources/:res/:name/dry-run  Dry-run 更新预览
+  POST   /api/v1/clusters/:id/resources/batch-delete  批量删除
+  POST   /api/v1/clusters/:id/batch-restart           批量重启
+
+工作负载操作
+  PUT    /api/v1/clusters/:id/namespaces/:ns/:kind/:name/scale     扩缩容
+  POST   /api/v1/clusters/:id/namespaces/:ns/:kind/:name/restart   重启
+  GET    /api/v1/clusters/:id/namespaces/:ns/deployments/:name/history  发布历史
+  POST   /api/v1/clusters/:id/namespaces/:ns/deployments/:name/rollback 回滚
+
+拓扑
+  GET    /api/v1/clusters/:id/namespaces/:ns/topology  资源关系图
+
+搜索
+  GET    /api/v1/clusters/:id/search                 全局搜索
+
+收藏
+  GET    /api/v1/favorites                            收藏列表
+  POST   /api/v1/favorites                            添加收藏
+  DELETE /api/v1/favorites/:id                        删除收藏
+
+审计与安全
+  GET    /api/v1/audit-logs                           审计日志列表
+  GET    /api/v1/api-keys                             API Key 列表
+  POST   /api/v1/api-keys                             生成 API Key
+  DELETE /api/v1/api-keys/:id                         撤销 API Key
+
+Webhook
+  GET    /api/v1/webhooks                             Webhook 列表
+  POST   /api/v1/webhooks                             创建 Webhook
+  PUT    /api/v1/webhooks/:id                         更新 Webhook
+  DELETE /api/v1/webhooks/:id                         删除 Webhook
+  POST   /api/v1/webhooks/:id/test                    测试 Webhook
+
+终端录屏
+  GET    /api/v1/terminal-sessions                    录屏列表
+  GET    /api/v1/terminal-sessions/:id                录屏详情
+  GET    /api/v1/terminal-sessions/:id/play           录屏回放
+
+跨集群
+  POST   /api/v1/compare                              资源对比
 
 实时
   GET    /api/v1/ws/watch                             WebSocket 事件推送
+  GET    /api/v1/clusters/:id/.../pods/:name/exec     Pod 终端（WS）
+  GET    /api/v1/clusters/:id/.../pods/:name/logs     Pod 日志流（WS）
 
 健康检查
   GET    /healthz                                     健康检查
@@ -212,7 +277,7 @@ kubevision/
 │   │   ├── cluster/               多集群连接管理
 │   │   ├── informer/              Informer 生命周期 + EventListener
 │   │   └── resource/              资源注册表（26 种）
-│   ├── auth/                      JWT + bcrypt
+│   ├── auth/                      JWT + bcrypt + TOTP
 │   └── pkg/                       统一响应、业务错误码
 ├── web/src/
 │   ├── components/ui/             shadcn/ui（17 个组件）
@@ -264,13 +329,34 @@ kubernetes:
 | 阶段 | 范围 | 状态 |
 |------|------|------|
 | **P1** | 单集群、泛型 CRUD、Informer + WebSocket、JWT 认证、基础 UI | 已完成 |
-| **P2** | Pod 终端/日志、Deployment 操作、多集群、全局搜索、Dry-run Diff | 计划中 |
-| **P3** | RBAC、2FA (TOTP)、审计、资源拓扑图、跨集群对比、Webhook 通知 | 计划中 |
+| **P2** | Pod 终端/日志、Deployment 操作、全局搜索、Dry-run Diff、kubectl 提示、收藏、资源配额 | 已完成 |
+| **P3** | RBAC、2FA (TOTP)、审计日志、资源拓扑图、批量操作、跨集群 Diff、Webhook、终端录屏、PostgreSQL | 已完成 |
 | **P4** | 插件系统（Prometheus/Grafana/ArgoCD）、OAuth/OIDC、CRD 动态发现、Helm Chart | 计划中 |
+
+<br>
+
+## 🧪 测试
+
+```
+12 个测试包 · 466 个测试用例 · 57 个测试文件
+```
+
+| 层级 | 包 | 覆盖范围 |
+|------|---|---------|
+| **中间件** | auth、rbac、audit、logger | JWT 验证、RBAC 规则、审计捕获、请求日志 |
+| **Handler** | auth、cluster、resource、apikey、audit、compare、topology、webhook、terminal_session、ws/hub | 全部 HTTP 端点 + WebSocket Hub |
+| **Service** | auth、apikey、audit、cluster、compare、terminal_session、topology、webhook | 业务逻辑 + Mock 仓库 |
+| **Repository** | user、role、cluster、apikey、audit、webhook、terminal_session | GORM CRUD + 内存 SQLite |
+| **Server** | router、server | 路由注册、健康检查 |
+| **其他** | config、auth/jwt、auth/totp、resource registry、errors、response | 解析、签名、加密、工具函数 |
+
+```bash
+go test ./... -count=1      # 运行全部测试
+go test ./... -cover         # 带覆盖率
+```
 
 <br>
 
 ## 🤝 参与贡献
 
 欢迎贡献代码！请先提 Issue 讨论你想做的改动。
-

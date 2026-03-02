@@ -33,6 +33,15 @@ api.interceptors.response.use(
       window.location.href = "/login"
       return Promise.reject(new Error("Token expired"))
     }
+    // 40102 = 2FA required — return the full body so callers can handle it.
+    if (body.code === 40102) {
+      return Promise.reject({ is2FARequired: true, data: body.data })
+    }
+    // 40300 = permission denied.
+    if (body.code === 40300) {
+      toast.error("Permission denied")
+      return Promise.reject(new Error(body.message || "Permission denied"))
+    }
     if (body.code >= 40000) {
       toast.error(body.message || "Request failed")
       return Promise.reject(new Error(body.message))

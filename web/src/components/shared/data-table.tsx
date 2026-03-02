@@ -8,6 +8,7 @@ export interface DataTableColumn<T = Record<string, unknown>> {
   label: string
   sortable?: boolean
   render?: (item: T, index: number) => ReactNode
+  headerRender?: () => ReactNode
   className?: string
 }
 
@@ -149,7 +150,7 @@ export function DataTable<T = Record<string, unknown>>({
                 onClick={col.sortable ? () => handleSort(col.key) : undefined}
               >
                 <div className="flex items-center gap-1">
-                  {col.label}
+                  {col.headerRender ? col.headerRender() : col.label}
                   {col.sortable && getSortIcon(col.key)}
                 </div>
               </th>

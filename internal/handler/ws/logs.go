@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -138,8 +139,12 @@ func (h *LogsHandler) HandleLogs(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
+	// writeMu serialises all WebSocket writes for this session.
+	// gorilla/websocket requires exactly one concurrent writer.
+	var writeMu sync.Mutex
+
 	// Ping loop keeps the WebSocket alive while logs stream.
-	go h.pingLoop(ctx, conn)
+	go h.pingLoop(ctx, conn, &writeMu)
 
 	// Drain incoming client messages; a close frame cancels the context.
 	go func() {
@@ -177,7 +182,7 @@ func (h *LogsHandler) HandleLogs(c *gin.Context) {
 		select {
 		case <-ctx.Done():
 			pr.Close()
-			h.sendLogMsg(conn, logMsgClose, "session ended")
+			h.sendLogMsg(conn, &writeMu, logMsgClose, "session ended")
 			return
 		default:
 		}
@@ -186,7 +191,7 @@ func (h *LogsHandler) HandleLogs(c *gin.Context) {
 			break
 		}
 
-		h.sendLogMsg(conn, logMsgLine, scanner.Text())
+		h.sendLogMsg(conn, &writeMu, logMsgLine, scanner.Text())
 	}
 
 	// Wait for the streaming goroutine and surface any error.
@@ -195,15 +200,16 @@ func (h *LogsHandler) HandleLogs(c *gin.Context) {
 			zap.String("pod", podName),
 			zap.Error(err),
 		)
-		h.sendLogMsg(conn, logMsgError, err.Error())
+		h.sendLogMsg(conn, &writeMu, logMsgError, err.Error())
 	}
 
-	h.sendLogMsg(conn, logMsgClose, "stream ended")
+	h.sendLogMsg(conn, &writeMu, logMsgClose, "stream ended")
 	h.logger.Info("log stream ended", zap.String("pod", podName))
 }
 
 // pingLoop sends WebSocket ping frames to keep the connection alive.
-func (h *LogsHandler) pingLoop(ctx context.Context, conn *websocket.Conn) {
+// writeMu must be the same mutex used by sendLogMsg for this session.
+func (h *LogsHandler) pingLoop(ctx context.Context, conn *websocket.Conn, writeMu *sync.Mutex) {
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 	for {
@@ -211,8 +217,11 @@ func (h *LogsHandler) pingLoop(ctx context.Context, conn *websocket.Conn) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			writeMu.Lock()
 			_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			err := conn.WriteMessage(websocket.PingMessage, nil)
+			writeMu.Unlock()
+			if err != nil {
 				return
 			}
 		}
@@ -220,9 +229,12 @@ func (h *LogsHandler) pingLoop(ctx context.Context, conn *websocket.Conn) {
 }
 
 // sendLogMsg writes a log message to the WebSocket connection.
-func (h *LogsHandler) sendLogMsg(conn *websocket.Conn, msgType logMsgType, data string) {
+// writeMu serialises this write against concurrent callers (e.g. pingLoop).
+func (h *LogsHandler) sendLogMsg(conn *websocket.Conn, writeMu *sync.Mutex, msgType logMsgType, data string) {
 	msg := logMessage{Type: msgType, Data: data}
 	raw, _ := json.Marshal(msg)
+	writeMu.Lock()
+	defer writeMu.Unlock()
 	_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 	_ = conn.WriteMessage(websocket.TextMessage, raw)
 }

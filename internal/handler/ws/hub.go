@@ -63,6 +63,7 @@ type Hub struct {
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
+	stopCh     chan struct{}
 	logger     *zap.Logger
 }
 
@@ -73,16 +74,26 @@ func NewHub(logger *zap.Logger) *Hub {
 		broadcast:  make(chan []byte, 1024),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		stopCh:     make(chan struct{}),
 		logger:     logger,
 	}
+}
+
+// Stop signals the Run goroutine to exit. It is safe to call once during shutdown.
+func (h *Hub) Stop() {
+	close(h.stopCh)
 }
 
 // Run is the main event loop for the Hub. It must be started as a goroutine.
 // It processes client registration, unregistration, and message broadcasting
 // in a single goroutine to avoid needing locks on the clients map.
+// It exits when Stop() is called.
 func (h *Hub) Run() {
 	for {
 		select {
+		case <-h.stopCh:
+			return
+
 		case client := <-h.register:
 			h.clients[client] = true
 			h.logger.Debug("websocket client registered",

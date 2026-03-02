@@ -19,8 +19,16 @@ import {
   FolderOpen,
   Activity,
   BarChart3,
+  ChevronsUpDown,
+  Check,
+  Settings,
+  ShieldCheck,
+  Webhook,
+  TerminalSquare,
+  GitCompareArrows,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { useAuth } from "@/stores/auth-store"
 import {
   Sidebar,
   SidebarContent,
@@ -33,7 +41,14 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { FavoritesPanel } from "@/components/specialized/favorites-panel"
+import { useCluster } from "@/hooks/use-cluster"
 
 interface NavItem {
   titleKey: string
@@ -92,6 +107,8 @@ const navGroups: NavGroup[] = [
       { titleKey: "nav.nodes", icon: Monitor, to: "/nodes" },
       { titleKey: "nav.namespaces", icon: FolderOpen, to: "/namespaces" },
       { titleKey: "nav.events", icon: Activity, to: "/events" },
+      { titleKey: "nav.topology", icon: Activity, to: "/topology" },
+      { titleKey: "nav.compare", icon: GitCompareArrows, to: "/compare" },
     ],
   },
   {
@@ -102,10 +119,20 @@ const navGroups: NavGroup[] = [
       { titleKey: "nav.limitranges", icon: BarChart3, to: "/limitranges" },
     ],
   },
+  {
+    labelKey: "nav.settings",
+    items: [
+      { titleKey: "nav.settingsSecurity", icon: Settings, to: "/settings/security" },
+    ],
+  },
 ]
 
 export function AppSidebar() {
   const { t } = useTranslation()
+  const { currentCluster, clusters, setCurrentCluster } = useCluster()
+  const { user } = useAuth()
+  const isAdminOrOps = user?.role === "admin" || user?.role === "ops"
+  const currentClusterName = clusters.find((c) => c.id === currentCluster)?.name ?? t("cluster.select")
 
   return (
     <Sidebar collapsible="icon">
@@ -118,6 +145,28 @@ export function AppSidebar() {
             KubeVision
           </span>
         </div>
+        {clusters.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent group-data-[collapsible=icon]:hidden">
+                <Server className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1 truncate text-left">{currentClusterName}</span>
+                <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {clusters.map((cluster) => (
+                <DropdownMenuItem
+                  key={cluster.id}
+                  onClick={() => setCurrentCluster(cluster.id)}
+                >
+                  <Check className={`size-4 ${cluster.id === currentCluster ? "opacity-100" : "opacity-0"}`} />
+                  {cluster.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </SidebarHeader>
       <SidebarContent>
         {/* Favorites panel — shown at the top for quick access */}
@@ -146,6 +195,41 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter>
+        {/* Admin links — shown only to admin and ops roles */}
+        {isAdminOrOps && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <NavLink to="/admin">
+                {({ isActive }) => (
+                  <SidebarMenuButton isActive={isActive} tooltip={t("admin.title")}>
+                    <ShieldCheck />
+                    <span>{t("admin.title")}</span>
+                  </SidebarMenuButton>
+                )}
+              </NavLink>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <NavLink to="/admin/webhooks">
+                {({ isActive }) => (
+                  <SidebarMenuButton isActive={isActive} tooltip={t("webhook.title")}>
+                    <Webhook />
+                    <span>{t("webhook.title")}</span>
+                  </SidebarMenuButton>
+                )}
+              </NavLink>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <NavLink to="/admin/terminal-sessions">
+                {({ isActive }) => (
+                  <SidebarMenuButton isActive={isActive} tooltip={t("terminalSession.title")}>
+                    <TerminalSquare />
+                    <span>{t("terminalSession.title")}</span>
+                  </SidebarMenuButton>
+                )}
+              </NavLink>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         <div className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
           KubeVision v0.1.0
         </div>

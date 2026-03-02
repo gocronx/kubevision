@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubevision/kubevision/internal/auth"
+	"github.com/kubevision/kubevision/internal/config"
 	"github.com/kubevision/kubevision/internal/model"
 	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
 )
@@ -100,6 +101,12 @@ func newTestLogger() *zap.Logger {
 	return logger
 }
 
+func newTestConfig() *config.Config {
+	cfg := config.Default()
+	cfg.EncryptKey = "test-encrypt-key-32-bytes-padding"
+	return cfg
+}
+
 func mustHashPassword(t *testing.T, password string) string {
 	t.Helper()
 	hash, err := auth.HashPassword(password)
@@ -117,7 +124,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("correct credentials returns tokens and user info", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
 			ID:           1,
@@ -128,10 +135,14 @@ func TestAuthService_Login(t *testing.T) {
 			TokenVersion: 0,
 		})
 
-		resp, err := svc.Login(context.Background(), "admin", "correctpassword")
+		result, err := svc.Login(context.Background(), "admin", "correctpassword")
 		if err != nil {
 			t.Fatalf("Login returned unexpected error: %v", err)
 		}
+		if result.FullTokens == nil {
+			t.Fatal("expected FullTokens to be set")
+		}
+		resp := result.FullTokens
 
 		if resp.AccessToken == "" {
 			t.Error("expected non-empty access token")
@@ -170,7 +181,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("wrong password returns unauthorized error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
 			ID:           1,
@@ -180,9 +191,9 @@ func TestAuthService_Login(t *testing.T) {
 			IsActive:     true,
 		})
 
-		resp, err := svc.Login(context.Background(), "admin", "wrongpassword")
-		if resp != nil {
-			t.Error("expected nil response for wrong password")
+		result, err := svc.Login(context.Background(), "admin", "wrongpassword")
+		if result != nil {
+			t.Error("expected nil result for wrong password")
 		}
 		if err == nil {
 			t.Fatal("expected error for wrong password, got nil")
@@ -200,11 +211,11 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("non-existent user returns unauthorized error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
-		resp, err := svc.Login(context.Background(), "nonexistent", "anypassword")
-		if resp != nil {
-			t.Error("expected nil response for non-existent user")
+		result, err := svc.Login(context.Background(), "nonexistent", "anypassword")
+		if result != nil {
+			t.Error("expected nil result for non-existent user")
 		}
 		if err == nil {
 			t.Fatal("expected error for non-existent user, got nil")
@@ -222,7 +233,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("disabled user returns forbidden error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
 			ID:           2,
@@ -232,9 +243,9 @@ func TestAuthService_Login(t *testing.T) {
 			IsActive:     false,
 		})
 
-		resp, err := svc.Login(context.Background(), "disabled_user", "password123")
-		if resp != nil {
-			t.Error("expected nil response for disabled user")
+		result, err := svc.Login(context.Background(), "disabled_user", "password123")
+		if result != nil {
+			t.Error("expected nil result for disabled user")
 		}
 		if err == nil {
 			t.Fatal("expected error for disabled user, got nil")
@@ -253,7 +264,7 @@ func TestAuthService_Login(t *testing.T) {
 		repo := newMockUserRepo()
 		repo.updateErr = errors.New("db connection error")
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
 			ID:           3,
@@ -264,15 +275,56 @@ func TestAuthService_Login(t *testing.T) {
 		})
 
 		// Login should still succeed even if Update fails (it just logs the error).
-		resp, err := svc.Login(context.Background(), "user3", "pass")
+		result, err := svc.Login(context.Background(), "user3", "pass")
 		if err != nil {
 			t.Fatalf("Login should succeed even if Update fails: %v", err)
 		}
-		if resp == nil {
-			t.Fatal("expected non-nil response")
+		if result == nil || result.FullTokens == nil {
+			t.Fatal("expected non-nil FullTokens")
 		}
-		if resp.User.Username != "user3" {
-			t.Errorf("expected username 'user3', got %q", resp.User.Username)
+		if result.FullTokens.User.Username != "user3" {
+			t.Errorf("expected username 'user3', got %q", result.FullTokens.User.Username)
+		}
+	})
+
+	t.Run("user with 2FA enabled returns temp token", func(t *testing.T) {
+		repo := newMockUserRepo()
+		jwtMgr := newTestJWTManager()
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
+
+		repo.addUser(&model.User{
+			ID:           4,
+			Username:     "mfa_user",
+			PasswordHash: mustHashPassword(t, "pass"),
+			Role:         "dev",
+			IsActive:     true,
+			TOTPEnabled:  true,
+			TOTPSecretEnc: "dummyencryptedsecret",
+		})
+
+		result, err := svc.Login(context.Background(), "mfa_user", "pass")
+		if err != nil {
+			t.Fatalf("Login returned unexpected error: %v", err)
+		}
+		if result.FullTokens != nil {
+			t.Error("expected FullTokens to be nil when 2FA is required")
+		}
+		if result.TwoFARequired == nil {
+			t.Fatal("expected TwoFARequired to be set")
+		}
+		if result.TwoFARequired.TempToken == "" {
+			t.Error("expected non-empty temp token")
+		}
+		// Verify the temp token is parseable.
+		claims, err := jwtMgr.ParseTempToken(result.TwoFARequired.TempToken)
+		if err != nil {
+			t.Fatalf("failed to parse temp token: %v", err)
+		}
+		if claims.UserID != 4 {
+			t.Errorf("temp token UserID = %d, want 4", claims.UserID)
+		}
+		if !claims.Pending2FA {
+			t.Error("temp token should have Pending2FA=true")
 		}
 	})
 }
@@ -285,7 +337,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	t.Run("valid refresh token returns new token pair", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
 			ID:           1,
@@ -297,7 +349,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 		})
 
 		// Generate a valid refresh token.
-		refreshToken, err := jwtMgr.GenerateRefreshToken(1)
+		refreshToken, err := jwtMgr.GenerateRefreshToken(1, 0)
 		if err != nil {
 			t.Fatalf("failed to generate refresh token: %v", err)
 		}
@@ -336,7 +388,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	t.Run("invalid refresh token returns token expired error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		resp, err := svc.RefreshToken(context.Background(), "invalid-token-string")
 		if resp != nil {
@@ -358,10 +410,10 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	t.Run("refresh token for non-existent user returns unauthorized error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		// Generate a token for user ID 999 which does not exist in the repo.
-		refreshToken, err := jwtMgr.GenerateRefreshToken(999)
+		refreshToken, err := jwtMgr.GenerateRefreshToken(999, 0)
 		if err != nil {
 			t.Fatalf("failed to generate refresh token: %v", err)
 		}
@@ -386,7 +438,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	t.Run("refresh token for disabled user returns forbidden error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
 			ID:           5,
@@ -396,7 +448,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 			IsActive:     false,
 		})
 
-		refreshToken, err := jwtMgr.GenerateRefreshToken(5)
+		refreshToken, err := jwtMgr.GenerateRefreshToken(5, 0)
 		if err != nil {
 			t.Fatalf("failed to generate refresh token: %v", err)
 		}
@@ -421,11 +473,11 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	t.Run("refresh token signed with different secret returns error", func(t *testing.T) {
 		repo := newMockUserRepo()
 		jwtMgr := newTestJWTManager()
-		svc := NewAuthService(repo, jwtMgr, newTestLogger())
+		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		// Generate token with a different secret.
 		otherJWT := auth.NewJWTManager("other-secret", 15*time.Minute, 7*24*time.Hour)
-		refreshToken, err := otherJWT.GenerateRefreshToken(1)
+		refreshToken, err := otherJWT.GenerateRefreshToken(1, 0)
 		if err != nil {
 			t.Fatalf("failed to generate refresh token: %v", err)
 		}

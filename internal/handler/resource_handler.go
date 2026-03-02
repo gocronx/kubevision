@@ -12,16 +12,21 @@ import (
 )
 
 // ResourceHandler handles HTTP requests for Kubernetes resource operations
-// (list, get, create, update, delete, patch).
+// (list, get, create, update, delete, patch, batch operations).
 type ResourceHandler struct {
-	resourceService *service.ResourceService
+	resourceService       *service.ResourceService
+	resourceActionService *service.ResourceActionService
 }
 
-// NewResourceHandler creates a new ResourceHandler with the given ResourceService.
-func NewResourceHandler(resourceService *service.ResourceService) *ResourceHandler {
-	return &ResourceHandler{
+// NewResourceHandler creates a new ResourceHandler with the given services.
+func NewResourceHandler(resourceService *service.ResourceService, resourceActionService ...*service.ResourceActionService) *ResourceHandler {
+	h := &ResourceHandler{
 		resourceService: resourceService,
 	}
+	if len(resourceActionService) > 0 {
+		h.resourceActionService = resourceActionService[0]
+	}
+	return h
 }
 
 // List handles GET /api/v1/clusters/:clusterID/resources/:resource.
@@ -377,6 +382,117 @@ func (h *ResourceHandler) DryRunUpdate(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+// BatchDelete handles POST /api/v1/clusters/:clusterID/resources/batch-delete.
+// Body: JSON array of {resource, name, namespace} items.
+func (h *ResourceHandler) BatchDelete(c *gin.Context) {
+	clusterID, err := parseClusterID(c)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid clusterID")
+		return
+	}
+
+	var items []struct {
+		Resource  string `json:"resource"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	if err := c.ShouldBindJSON(&items); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid request body")
+		return
+	}
+	if len(items) == 0 {
+		response.Error(c, bizerr.CodeParamMissing, "at least one item is required")
+		return
+	}
+	if len(items) > 50 {
+		response.Error(c, bizerr.CodeParamInvalid, "maximum 50 items per batch")
+		return
+	}
+
+	type batchResult struct {
+		Resource  string `json:"resource"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+		Success   bool   `json:"success"`
+		Error     string `json:"error,omitempty"`
+	}
+
+	results := make([]batchResult, 0, len(items))
+	for _, item := range items {
+		err := h.resourceService.DeleteResource(c.Request.Context(), clusterID, item.Resource, item.Namespace, item.Name)
+		r := batchResult{
+			Resource:  item.Resource,
+			Name:      item.Name,
+			Namespace: item.Namespace,
+			Success:   err == nil,
+		}
+		if err != nil {
+			r.Error = err.Error()
+		}
+		results = append(results, r)
+	}
+
+	response.Success(c, results)
+}
+
+// BatchRestart handles POST /api/v1/clusters/:clusterID/batch-restart.
+// Body: JSON array of {kind, name, namespace} items.
+func (h *ResourceHandler) BatchRestart(c *gin.Context) {
+	if h.resourceActionService == nil {
+		response.Error(c, bizerr.CodeInternal, "restart service not available")
+		return
+	}
+
+	clusterID, err := parseClusterID(c)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid clusterID")
+		return
+	}
+
+	var items []struct {
+		Kind      string `json:"kind"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	if err := c.ShouldBindJSON(&items); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid request body")
+		return
+	}
+	if len(items) == 0 {
+		response.Error(c, bizerr.CodeParamMissing, "at least one item is required")
+		return
+	}
+	if len(items) > 50 {
+		response.Error(c, bizerr.CodeParamInvalid, "maximum 50 items per batch")
+		return
+	}
+
+	type batchResult struct {
+		Kind      string `json:"kind"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+		Success   bool   `json:"success"`
+		Error     string `json:"error,omitempty"`
+	}
+
+	results := make([]batchResult, 0, len(items))
+	for _, item := range items {
+		err := h.resourceActionService.Restart(c.Request.Context(), clusterID, item.Kind, item.Namespace, item.Name)
+		r := batchResult{
+			Kind:      item.Kind,
+			Name:      item.Name,
+			Namespace: item.Namespace,
+			Success:   err == nil,
+		}
+		if err != nil {
+			r.Error = err.Error()
+		}
+		results = append(results, r)
+	}
+
+	response.Success(c, results)
 }
 
 // parseClusterID extracts and validates the cluster :id URL parameter as a uint.

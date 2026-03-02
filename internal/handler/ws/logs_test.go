@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -141,7 +142,8 @@ func TestLogsHandler_SendLogMsg(t *testing.T) {
 	<-connReady
 
 	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
-	handler.sendLogMsg(serverConn, logMsgLine, "container log line here")
+	var mu sync.Mutex
+	handler.sendLogMsg(serverConn, &mu, logMsgLine, "container log line here")
 
 	clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	_, raw, err := clientConn.ReadMessage()
@@ -164,7 +166,8 @@ func TestLogsHandler_SendLogMsg_ErrorType(t *testing.T) {
 	serverConn := <-serverConnCh
 
 	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
-	handler.sendLogMsg(serverConn, logMsgError, "pod terminated unexpectedly")
+	var mu sync.Mutex
+	handler.sendLogMsg(serverConn, &mu, logMsgError, "pod terminated unexpectedly")
 
 	clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	_, raw, err := clientConn.ReadMessage()
@@ -187,7 +190,8 @@ func TestLogsHandler_SendLogMsg_CloseType(t *testing.T) {
 	serverConn := <-serverConnCh
 
 	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
-	handler.sendLogMsg(serverConn, logMsgClose, "stream ended")
+	var mu sync.Mutex
+	handler.sendLogMsg(serverConn, &mu, logMsgClose, "stream ended")
 
 	clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	_, raw, err := clientConn.ReadMessage()
@@ -219,7 +223,8 @@ func TestLogsHandler_PingLoop_ExitsOnContextCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		handler.pingLoop(ctx, serverConn)
+		var mu sync.Mutex
+		handler.pingLoop(ctx, serverConn, &mu)
 	}()
 
 	// Cancel the context and verify the goroutine exits promptly.
@@ -252,7 +257,8 @@ func TestLogsHandler_PingLoop_ExitsOnSecondContextCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		handler.pingLoop(ctx, serverConn)
+		var mu sync.Mutex
+		handler.pingLoop(ctx, serverConn, &mu)
 	}()
 
 	cancel()

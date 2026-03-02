@@ -1,8 +1,10 @@
 package ws
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -14,7 +16,9 @@ import (
 	"github.com/kubevision/kubevision/internal/auth"
 	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
 	kubexec "github.com/kubevision/kubevision/internal/kubernetes/exec"
+	"github.com/kubevision/kubevision/internal/model"
 	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/kubevision/kubevision/internal/service"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -41,11 +45,12 @@ type termMessage struct {
 
 // TerminalHandler handles WebSocket-based pod exec (interactive terminal) sessions.
 type TerminalHandler struct {
-	clusterManager *cluster.Manager
-	clusterRepo    repository.ClusterRepo
-	jwtManager     *auth.JWTManager
-	userRepo       repository.UserRepo
-	logger         *zap.Logger
+	clusterManager  *cluster.Manager
+	clusterRepo     repository.ClusterRepo
+	jwtManager      *auth.JWTManager
+	userRepo        repository.UserRepo
+	sessionService  *service.TerminalSessionService
+	logger          *zap.Logger
 }
 
 // NewTerminalHandler creates a new TerminalHandler.
@@ -65,6 +70,13 @@ func NewTerminalHandler(
 	}
 }
 
+// WithSessionService attaches the TerminalSessionService so recordings are
+// persisted when sessions end.
+func (h *TerminalHandler) WithSessionService(svc *service.TerminalSessionService) *TerminalHandler {
+	h.sessionService = svc
+	return h
+}
+
 // HandleExec is the Gin handler for:
 //
 //	GET /api/v1/clusters/:id/namespaces/:namespace/pods/:name/exec
@@ -81,7 +93,8 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 		h.writeErrorAndClose(c, "missing token query parameter")
 		return
 	}
-	if _, err := h.authenticateToken(c, tokenStr); err != nil {
+	claims, err := h.authenticateToken(c, tokenStr)
+	if err != nil {
 		h.writeErrorAndClose(c, "unauthorized: "+err.Error())
 		return
 	}
@@ -99,6 +112,9 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 		h.writeErrorAndClose(c, "cluster not found: "+err.Error())
 		return
 	}
+
+	// Resolve cluster name for recording metadata.
+	clusterName, _ := resolveClusterName(c.Request.Context(), clusterIDStr, h.clusterRepo)
 
 	// --- Upgrade to WebSocket ---
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -127,14 +143,32 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 	defer cancel()
 
 	// sizeQueue feeds terminal resize events to the SPDY stream.
+	// Closing it on exit unblocks any goroutine waiting in Next().
 	sizeQueue := newTermSizeQueue()
+	defer sizeQueue.Close()
 
 	// wsReader pipes WebSocket input messages to the exec stdin.
 	stdinReader, stdinWriter := io.Pipe()
 	defer stdinWriter.Close()
 
-	// stdoutWriter writes exec output back to the WebSocket.
-	stdoutWriter := &wsWriter{conn: conn, msgType: termMsgOutput, mu: &sync.Mutex{}}
+	// recordingBuf accumulates asciinema v2 output events for later persistence.
+	var recordingBuf bytes.Buffer
+	sessionStartTime := time.Now()
+
+	// Write asciinema v2 header.
+	header := fmt.Sprintf(`{"version":2,"width":220,"height":50,"timestamp":%d,"title":"%s/%s"}`,
+		sessionStartTime.Unix(), namespace, podName)
+	recordingBuf.WriteString(header + "\n")
+
+	// recordingWriter intercepts output bytes and appends asciinema v2 events.
+	recWriter := &recordingWriter{
+		conn:       conn,
+		msgType:    termMsgOutput,
+		mu:         &sync.Mutex{},
+		startTime:  sessionStartTime,
+		recordBuf:  &recordingBuf,
+		recordMu:   &sync.Mutex{},
+	}
 
 	// Start reading WebSocket messages (input + resize) in a goroutine.
 	go h.readLoop(ctx, conn, stdinWriter, sizeQueue, cancel)
@@ -147,11 +181,13 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 		Container:         container,
 		Command:           []string{shell},
 		Stdin:             stdinReader,
-		Stdout:            stdoutWriter,
-		Stderr:            stdoutWriter, // merge stderr into the same stream
+		Stdout:            recWriter,
+		Stderr:            recWriter, // merge stderr into the same stream
 		TTY:               true,
 		TerminalSizeQueue: sizeQueue,
 	})
+
+	sessionDuration := time.Since(sessionStartTime)
 
 	if execErr != nil && ctx.Err() == nil {
 		h.logger.Warn("terminal exec ended with error",
@@ -164,6 +200,28 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 	// Notify the client that the session is closed.
 	h.sendTermMsg(conn, termMsgClose, "session ended")
 	h.logger.Info("terminal session ended", zap.String("pod", podName))
+
+	// Persist the recording asynchronously to avoid blocking the WebSocket close.
+	if h.sessionService != nil && recordingBuf.Len() > 0 {
+		recording := recordingBuf.String()
+		userID := claims.UserID
+		go func() {
+			saveCtx, saveCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer saveCancel()
+			sess := &model.TerminalSession{
+				UserID:     userID,
+				Cluster:    clusterName,
+				Namespace:  namespace,
+				Pod:        podName,
+				Container:  container,
+				Recording:  recording,
+				DurationMs: sessionDuration.Milliseconds(),
+			}
+			if err := h.sessionService.Save(saveCtx, sess); err != nil {
+				h.logger.Warn("failed to save terminal session recording", zap.Error(err))
+			}
+		}()
+	}
 }
 
 // readLoop reads messages from the browser WebSocket and dispatches them as either
@@ -286,6 +344,12 @@ func (q *termSizeQueue) push(size remotecommand.TerminalSize) {
 	}
 }
 
+// Close closes the underlying channel so that any goroutine blocked in Next()
+// receives a nil and can exit cleanly.
+func (q *termSizeQueue) Close() {
+	close(q.ch)
+}
+
 // Next implements remotecommand.TerminalSizeQueue. It blocks until a size is
 // available, which is the expected behaviour for the SPDY executor.
 func (q *termSizeQueue) Next() *remotecommand.TerminalSize {
@@ -322,5 +386,55 @@ func (w *wsWriter) Write(p []byte) (int, error) {
 	if err := w.conn.WriteMessage(websocket.TextMessage, raw); err != nil {
 		return 0, err
 	}
+	return len(p), nil
+}
+
+// --------------------------------------------------------------------------
+// recordingWriter wraps wsWriter and also appends each output chunk to an
+// asciinema v2 recording buffer.
+// --------------------------------------------------------------------------
+
+// asciinemaEvent is the JSON line format for asciinema v2 recordings.
+// Each event is: [elapsed_seconds, "o", "data"]
+type asciinemaEvent = [3]interface{}
+
+type recordingWriter struct {
+	conn      *websocket.Conn
+	msgType   termMsgType
+	mu        *sync.Mutex
+	startTime time.Time
+	recordBuf *bytes.Buffer
+	recordMu  *sync.Mutex
+}
+
+func (w *recordingWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	// Send to WebSocket.
+	msg := termMessage{Type: w.msgType, Data: string(p)}
+	raw, err := json.Marshal(msg)
+	if err != nil {
+		return 0, err
+	}
+	w.mu.Lock()
+	_ = w.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	wsErr := w.conn.WriteMessage(websocket.TextMessage, raw)
+	w.mu.Unlock()
+	if wsErr != nil {
+		return 0, wsErr
+	}
+
+	// Append to recording buffer as asciinema v2 event.
+	elapsed := time.Since(w.startTime).Seconds()
+	event := asciinemaEvent{elapsed, "o", string(p)}
+	eventJSON, _ := json.Marshal(event)
+
+	w.recordMu.Lock()
+	w.recordBuf.Write(eventJSON)
+	w.recordBuf.WriteByte('\n')
+	w.recordMu.Unlock()
+
 	return len(p), nil
 }

@@ -26,7 +26,11 @@
     "resourcequotas": "资源配额",
     "limitranges": "限制范围",
     "favorites": "收藏夹",
-    "policy": "策略"
+    "topology": "拓扑图",
+    "compare": "资源对比",
+    "policy": "策略",
+    "settings": "设置",
+    "settingsSecurity": "安全"
   },
   "favorites": {
     "empty": "暂无收藏",
@@ -49,6 +53,7 @@
     "noData": "暂无数据",
     "name": "名称",
     "namespace": "命名空间",
+    "cluster": "集群",
     "status": "状态",
     "age": "存活时间",
     "actions": "操作",
@@ -101,6 +106,101 @@
     "totalResults": "共 {{count}} 条结果",
     "totalResults_other": "共 {{count}} 条结果"
   },
+  "cluster": {
+    "select": "选择集群"
+  },
+  "batch": {
+    "selected": "已选 {{count}} 项",
+    "delete": "删除",
+    "restart": "重启",
+    "deleteTitle": "批量删除",
+    "deleteDescription": "确定要删除 {{count}} 个资源吗？此操作不可撤销。",
+    "confirmDelete": "删除 {{count}} 项",
+    "deleteSuccess": "成功删除 {{count}} 个资源",
+    "deletePartial": "成功删除 {{success}}/{{total}} 个资源",
+    "restartTitle": "批量重启",
+    "restartDescription": "确定要重启 {{count}} 个工作负载吗？",
+    "confirmRestart": "重启 {{count}} 项",
+    "restartSuccess": "成功重启 {{count}} 个工作负载",
+    "restartPartial": "成功重启 {{success}}/{{total}} 个工作负载"
+  },
+  "topology": {
+    "title": "资源拓扑",
+    "noData": "选择资源以查看拓扑关系",
+    "relationships": "关系",
+    "owns": "管理",
+    "selects": "选择"
+  },
+  "twofa": {
+    "title": "双因素认证",
+    "description": "请输入身份验证器应用中的 6 位验证码",
+    "settingsDescription": "使用 TOTP 身份验证器应用添加额外的安全保护",
+    "code": "验证码",
+    "verify": "验证",
+    "useRecovery": "改用恢复码",
+    "useTotp": "改用身份验证器应用",
+    "recoveryTitle": "恢复码",
+    "recoveryDescription": "请输入一个备用恢复码",
+    "recoveryCode": "恢复码",
+    "enable": "启用双因素认证",
+    "disable": "禁用双因素认证",
+    "statusEnabled": "已启用",
+    "statusDisabled": "未启用",
+    "setupStep1": "使用身份验证器应用（Google Authenticator、Authy 等）扫描此二维码",
+    "orEnterManually": "或手动输入此密钥：",
+    "enterCode": "输入 6 位验证码以确认",
+    "recoveryWarning": "请将这些恢复码保存在安全的地方。每个恢复码只能使用一次。",
+    "copyAll": "复制全部",
+    "codesCopied": "恢复码已复制到剪贴板",
+    "doneSaved": "我已保存这些恢复码",
+    "enabledSuccess": "双因素认证已启用",
+    "disabledSuccess": "双因素认证已禁用",
+    "disableConfirmTitle": "禁用双因素认证",
+    "disableConfirmDescription": "请输入当前身份验证器中的验证码以确认。"
+  },
+  "settings": {
+    "security": "安全",
+    "securityDescription": "管理账户安全设置"
+  },
+  "admin": {
+    "title": "管理",
+    "description": "审计日志与 API 密钥管理"
+  },
+  "audit": {
+    "title": "审计日志",
+    "filterAction": "操作类型",
+    "actionPlaceholder": "如 create",
+    "filterCluster": "集群",
+    "clusterPlaceholder": "集群名称",
+    "time": "时间",
+    "user": "用户",
+    "action": "操作",
+    "resource": "资源",
+    "cluster": "集群",
+    "status": "状态",
+    "duration": "耗时",
+    "prev": "上一页",
+    "next": "下一页",
+    "page": "第 {{page}} 页"
+  },
+  "apikeys": {
+    "title": "API 密钥",
+    "description": "管理用于程序化访问的个人 API 密钥。",
+    "prefix": "密钥前缀",
+    "created": "创建时间",
+    "expires": "过期时间",
+    "noExpiry": "永不过期",
+    "empty": "暂无 API 密钥",
+    "generate": "生成密钥",
+    "generateDescription": "生成新的 API 密钥，密钥仅在此处显示一次。",
+    "namePlaceholder": "如 CI 流水线",
+    "showOnce": "请立即保存此密钥，之后将无法再次查看。",
+    "yourKey": "您的 API 密钥",
+    "revoke": "吊销",
+    "revokeTitle": "吊销 API 密钥",
+    "revokeDescription": "确定要吊销 \"{{name}}\" 吗？此操作不可撤销。",
+    "revokedToast": "API 密钥已成功吊销"
+  },
   "pod": {
     "logs": "日志",
     "terminal": "终端",
@@ -117,5 +217,48 @@
     "disconnected": "已断开",
     "sessionEnded": "会话已结束",
     "streamEnded": "流已结束"
+  },
+  "webhook": {
+    "title": "Webhooks",
+    "description": "配置 HTTP Webhook 以接收 Kubernetes 资源事件通知",
+    "create": "创建 Webhook",
+    "edit": "编辑 Webhook",
+    "test": "测试",
+    "active": "启用",
+    "inactive": "禁用",
+    "url": "目标 URL",
+    "secret": "签名密钥",
+    "secretPlaceholder": "留空保持现有密钥",
+    "events": "事件类型",
+    "eventsHint": "留空则匹配所有事件类型",
+    "resources": "资源类型",
+    "resourcesHint": "留空则匹配所有资源类型",
+    "empty": "暂无 Webhook 配置",
+    "deleteTitle": "删除 Webhook",
+    "deleteConfirm": "确定要删除 \"{{name}}\" 吗？此操作不可撤销。"
+  },
+  "terminalSession": {
+    "title": "终端录制",
+    "description": "浏览并回放已录制的终端会话",
+    "user": "用户",
+    "pod": "Pod",
+    "duration": "时长",
+    "date": "日期",
+    "play": "播放",
+    "empty": "暂无终端录制记录",
+    "showingPage": "第 {{page}} / {{total}} 页",
+    "prev": "上一页",
+    "next": "下一页"
+  },
+  "compare": {
+    "title": "资源对比",
+    "description": "跨集群或命名空间对比 Kubernetes 资源",
+    "source": "来源",
+    "target": "目标",
+    "cluster": "集群",
+    "resourceType": "资源类型",
+    "selectResource": "选择资源类型",
+    "compare": "开始对比",
+    "error": "获取资源失败，无法对比"
   }
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/kubevision/kubevision/internal/config"
 	"github.com/kubevision/kubevision/internal/model"
 	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -22,9 +23,8 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 	switch cfg.Database.Driver {
 	case "sqlite":
 		db, err = gorm.Open(sqlite.Open(cfg.Database.DSN), &gorm.Config{})
-	case "postgresql":
-		// TODO: gorm.io/driver/postgres
-		return nil, fmt.Errorf("postgresql driver not yet implemented")
+	case "postgres", "postgresql":
+		db, err = gorm.Open(postgres.Open(cfg.Database.DSN), &gorm.Config{})
 	default:
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.Database.Driver)
 	}
@@ -83,7 +83,7 @@ func initDefaultAdmin(db *gorm.DB, logger *zap.Logger) {
 		if err := db.Create(&admin).Error; err != nil {
 			logger.Warn("failed to create default admin", zap.Error(err))
 		} else {
-			logger.Info("default admin user created (password: admin)")
+			logger.Info("default admin user created (password: admin123)")
 		}
 	}
 }

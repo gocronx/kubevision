@@ -61,7 +61,23 @@ K8s API ──→ Informer ──→ WS Hub ──→ Browser
 - 🌍 **i18n Ready** — English & Chinese built-in
 - ⚙️ **Generic CRUD** — List, Get, Create, Update, Delete, Patch
 - 🏷️ **Namespace Filtering** — Quick namespace switch with dropdown
-- 🛡️ **RBAC (5 Roles)** — admin / ops / dev / readonly / custom
+- 🖥️ **Pod Terminal & Logs** — xterm.js terminal, real-time log streaming with search
+- 🚀 **Deployment Ops** — Scale, restart, rollback with revision history
+- 🔍 **Global Search** — Cmd+K search across all resources with relevance scoring
+- 📋 **Dry-Run Diff** — Preview changes before applying, side-by-side diff view
+- 💡 **kubectl Hints** — Auto-generated kubectl commands for every UI action
+- ⭐ **Favorites** — Pin resources for quick access, drag-and-drop reorder
+- 📊 **Resource Quotas** — Visual progress bars for CPU/Memory/Pods usage
+- 🛡️ **RBAC** — 5 built-in roles (super-admin, admin, editor, viewer, custom) with middleware enforcement
+- 🔑 **2FA (TOTP)** — Time-based one-time passwords with QR setup and recovery codes
+- 📝 **Audit Logging** — Async batch writes for all mutating operations with retention policy
+- 🗝️ **API Key Auth** — Generate and revoke API keys for programmatic access
+- 🗺️ **Resource Topology** — Visual graph of ownership and selector relationships
+- ⚡ **Batch Operations** — Multi-select delete and restart with confirmation dialogs
+- 🔀 **Cross-cluster Diff** — Compare resources across clusters side-by-side
+- 🔔 **Webhooks** — Event-driven notifications to external endpoints
+- 🎬 **Terminal Recording** — Session recording and playback for pod terminals
+- 🐘 **PostgreSQL** — Production-ready database driver alongside SQLite
 
 <br>
 
@@ -172,6 +188,11 @@ Auth
   POST   /api/v1/auth/login                          Login
   POST   /api/v1/auth/refresh                        Refresh token
   GET    /api/v1/users/me                             Current user
+  POST   /api/v1/auth/2fa/verify                     Verify TOTP code
+  POST   /api/v1/auth/2fa/recovery                   Use recovery code
+  POST   /api/v1/auth/2fa/setup                      Generate TOTP secret (protected)
+  POST   /api/v1/auth/2fa/enable                     Enable 2FA (protected)
+  POST   /api/v1/auth/2fa/disable                    Disable 2FA (protected)
 
 Clusters
   GET    /api/v1/clusters                             List clusters
@@ -185,9 +206,53 @@ Resources (generic CRUD)
   PUT    /api/v1/clusters/:id/resources/:res/:name    Update
   DELETE /api/v1/clusters/:id/resources/:res/:name    Delete
   PATCH  /api/v1/clusters/:id/resources/:res/:name    Patch
+  POST   /api/v1/clusters/:id/resources/:res/dry-run  Dry-run create
+  PUT    /api/v1/clusters/:id/resources/:res/:name/dry-run  Dry-run update
+  POST   /api/v1/clusters/:id/resources/batch-delete  Batch delete
+  POST   /api/v1/clusters/:id/batch-restart           Batch restart
+
+Workload Actions
+  PUT    /api/v1/clusters/:id/namespaces/:ns/:kind/:name/scale     Scale
+  POST   /api/v1/clusters/:id/namespaces/:ns/:kind/:name/restart   Restart
+  GET    /api/v1/clusters/:id/namespaces/:ns/deployments/:name/history  Rollout history
+  POST   /api/v1/clusters/:id/namespaces/:ns/deployments/:name/rollback Rollback
+
+Topology
+  GET    /api/v1/clusters/:id/namespaces/:ns/topology  Resource graph
+
+Search
+  GET    /api/v1/clusters/:id/search                 Global search
+
+Favorites
+  GET    /api/v1/favorites                            List favorites
+  POST   /api/v1/favorites                            Add favorite
+  DELETE /api/v1/favorites/:id                        Remove favorite
+
+Audit & Security
+  GET    /api/v1/audit-logs                           List audit logs
+  GET    /api/v1/api-keys                             List API keys
+  POST   /api/v1/api-keys                             Generate API key
+  DELETE /api/v1/api-keys/:id                         Revoke API key
+
+Webhooks
+  GET    /api/v1/webhooks                             List webhooks
+  POST   /api/v1/webhooks                             Create webhook
+  PUT    /api/v1/webhooks/:id                         Update webhook
+  DELETE /api/v1/webhooks/:id                         Delete webhook
+  POST   /api/v1/webhooks/:id/test                    Test webhook
+
+Terminal Sessions
+  GET    /api/v1/terminal-sessions                    List recordings
+  GET    /api/v1/terminal-sessions/:id                Get recording
+  GET    /api/v1/terminal-sessions/:id/play           Playback recording
+
+Cross-cluster
+  POST   /api/v1/compare                              Compare resources
 
 Real-time
   GET    /api/v1/ws/watch                             WebSocket events
+  GET    /api/v1/clusters/:id/.../pods/:name/exec     Pod terminal (WS)
+  GET    /api/v1/clusters/:id/.../pods/:name/logs     Pod log stream (WS)
 
 Health
   GET    /healthz                                     Health check
@@ -264,9 +329,31 @@ All settings can be overridden via environment variables:
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **P1** | Single cluster, generic CRUD, Informer + WebSocket, JWT auth, base UI | Done |
-| **P2** | Pod terminal/logs, Deployment ops, multi-cluster, global search, dry-run diff | Planned |
-| **P3** | RBAC, 2FA (TOTP), audit, topology, cross-cluster diff, webhook notifications | Planned |
+| **P2** | Pod terminal/logs, Deployment ops, multi-cluster, global search, dry-run diff | Done |
+| **P3** | RBAC, 2FA (TOTP), audit, topology, batch ops, cross-cluster diff, webhooks, terminal recording | Done |
 | **P4** | Plugin system (Prometheus/Grafana/ArgoCD), OAuth/OIDC, CRD discovery, Helm chart | Planned |
+
+<br>
+
+## 🧪 Tests
+
+```
+12 test packages · 466 tests · 57 test files
+```
+
+| Layer | Packages | Coverage |
+|-------|----------|----------|
+| **Middleware** | auth, rbac, audit, logger | JWT, RBAC rules, audit capture, request logging |
+| **Handler** | auth, cluster, resource, apikey, audit, compare, topology, webhook, terminal_session, ws/hub | All HTTP endpoints + WebSocket hub |
+| **Service** | auth, apikey, audit, cluster, compare, terminal_session, topology, webhook | Business logic with mock repos |
+| **Repository** | user, role, cluster, apikey, audit, webhook, terminal_session | GORM CRUD with in-memory SQLite |
+| **Server** | router, server | Route registration, health check |
+| **Other** | config, auth/jwt, auth/totp, resource registry, errors, response | Parsing, signing, crypto, helpers |
+
+```bash
+go test ./... -count=1      # Run all tests
+go test ./... -cover         # With coverage
+```
 
 <br>
 
