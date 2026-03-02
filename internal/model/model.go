@@ -15,7 +15,7 @@ type User struct {
 	Username         string         `gorm:"uniqueIndex;size:64;not null" json:"username"`
 	Email            string         `gorm:"size:255" json:"email"`
 	PasswordHash     string         `gorm:"size:255;not null" json:"-"`
-	Role             string         `gorm:"size:32;default:readonly" json:"role"` // admin|ops|dev|readonly|custom
+	Role             string         `gorm:"size:32;default:viewer" json:"role"` // super-admin|admin|editor|viewer|custom
 	AuthProvider     string         `gorm:"size:32;default:local" json:"authProvider"`
 	TokenVersion     int            `gorm:"default:0" json:"-"`
 	TOTPSecretEnc    string         `gorm:"size:512" json:"-"`

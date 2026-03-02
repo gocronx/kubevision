@@ -27,8 +27,8 @@ func RBACMiddleware(roleRepo repository.RoleRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role := GetUserRole(c)
 
-		// Admin bypasses all checks.
-		if role == "admin" {
+		// Super-admin and admin bypass all checks.
+		if role == "super-admin" || role == "admin" {
 			c.Next()
 			return
 		}

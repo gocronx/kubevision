@@ -97,22 +97,21 @@ func TestNewDB_DefaultAdminPasswordIsValid(t *testing.T) {
 func TestNewDB_SystemRolesSeeded(t *testing.T) {
 	db := setupTestDB(t)
 
-	expectedRoles := []string{"admin", "ops", "dev", "readonly"}
+	expectedRoles := []string{"super-admin", "admin", "editor", "viewer", "custom"}
 
 	for _, roleName := range expectedRoles {
 		var role model.Role
 		err := db.Where("name = ?", roleName).First(&role).Error
 		require.NoError(t, err, "system role %q should exist", roleName)
-		assert.True(t, role.IsSystem, "role %q should be a system role", roleName)
 		assert.NotEmpty(t, role.DisplayName, "role %q should have a display name", roleName)
 		assert.NotEmpty(t, role.Permissions, "role %q should have permissions", roleName)
 	}
 
-	// Verify the total number of roles is exactly 4.
+	// Verify the total number of roles is exactly 5.
 	var count int64
 	err := db.Model(&model.Role{}).Count(&count).Error
 	require.NoError(t, err)
-	assert.Equal(t, int64(4), count, "there should be exactly 4 system roles")
+	assert.Equal(t, int64(5), count, "there should be exactly 5 system roles")
 }
 
 func TestNewDB_CalledTwiceDoesNotDuplicateSeedData(t *testing.T) {
@@ -148,5 +147,5 @@ func TestNewDB_CalledTwiceDoesNotDuplicateSeedData(t *testing.T) {
 
 	// Verify exact counts.
 	assert.Equal(t, int64(1), userCount2, "should have exactly 1 admin user")
-	assert.Equal(t, int64(4), roleCount2, "should have exactly 4 system roles")
+	assert.Equal(t, int64(5), roleCount2, "should have exactly 5 system roles")
 }

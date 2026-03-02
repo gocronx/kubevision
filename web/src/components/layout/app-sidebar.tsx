@@ -26,9 +26,11 @@ import {
   Webhook,
   TerminalSquare,
   GitCompareArrows,
+  Users,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useAuth } from "@/stores/auth-store"
+import { canAccessAdmin, canManageUsers } from "@/lib/permissions"
 import {
   Sidebar,
   SidebarContent,
@@ -131,7 +133,9 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const { currentCluster, clusters, setCurrentCluster } = useCluster()
   const { user } = useAuth()
-  const isAdminOrOps = user?.role === "admin" || user?.role === "ops"
+  const role = user?.role ?? ""
+  const showAdminSection = canAccessAdmin(role)
+  const showUserManagement = canManageUsers(role)
   const currentClusterName = clusters.find((c) => c.id === currentCluster)?.name ?? t("cluster.select")
 
   return (
@@ -195,8 +199,8 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter>
-        {/* Admin links — shown only to admin and ops roles */}
-        {isAdminOrOps && (
+        {/* Admin links — shown only to super-admin and admin roles */}
+        {showAdminSection && (
           <SidebarMenu>
             <SidebarMenuItem>
               <NavLink to="/admin">
@@ -228,6 +232,19 @@ export function AppSidebar() {
                 )}
               </NavLink>
             </SidebarMenuItem>
+            {/* User management — super-admin only */}
+            {showUserManagement && (
+              <SidebarMenuItem>
+                <NavLink to="/admin/users">
+                  {({ isActive }) => (
+                    <SidebarMenuButton isActive={isActive} tooltip={t("users.title")}>
+                      <Users />
+                      <span>{t("users.title")}</span>
+                    </SidebarMenuButton>
+                  )}
+                </NavLink>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         )}
         <div className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">

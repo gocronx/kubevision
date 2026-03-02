@@ -35,6 +35,11 @@ interface ResourceActionsProps {
   namespace?: string
   /** Current replica count — passed to the scale dialog as the starting value. */
   currentReplicas?: number
+  /**
+   * When true the component renders a read-only view of the detail link only;
+   * all mutating actions (edit, scale, restart, rollback, delete) are hidden.
+   */
+  readOnly?: boolean
   onEdit?: () => void
   onDeleted?: () => void
 }
@@ -45,6 +50,7 @@ export function ResourceActions({
   name,
   namespace,
   currentReplicas = 0,
+  readOnly = false,
   onEdit,
   onDeleted,
 }: ResourceActionsProps) {
@@ -59,9 +65,9 @@ export function ResourceActions({
   const [restartDialogOpen, setRestartDialogOpen] = useState(false)
   const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false)
 
-  const canScale = SCALABLE_KINDS.has(resource)
-  const canRestart = RESTARTABLE_KINDS.has(resource)
-  const canRollback = ROLLBACKABLE_KINDS.has(resource)
+  const canScale = !readOnly && SCALABLE_KINDS.has(resource)
+  const canRestart = !readOnly && RESTARTABLE_KINDS.has(resource)
+  const canRollback = !readOnly && ROLLBACKABLE_KINDS.has(resource)
   const hasLifecycleActions = canScale || canRestart || canRollback
 
   function handleDelete() {
@@ -75,6 +81,11 @@ export function ResourceActions({
         },
       }
     )
+  }
+
+  // Read-only roles get no action button at all.
+  if (readOnly) {
+    return null
   }
 
   return (
@@ -91,7 +102,7 @@ export function ResourceActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {/* Edit (always available) */}
+          {/* Edit */}
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation()

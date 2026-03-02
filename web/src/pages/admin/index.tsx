@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
+import { canAccessAdmin } from "@/lib/permissions"
 import { useAuditLogs, type AuditLog, type AuditLogFilter } from "@/hooks/use-audit"
 import { useApiKeys, useGenerateApiKey, useRevokeApiKey, type APIKey, type GeneratedAPIKey } from "@/hooks/use-apikeys"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -400,8 +401,8 @@ export function AdminPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
 
-  // Only admin and ops roles can access this page.
-  if (user?.role !== "admin" && user?.role !== "ops") {
+  // Only super-admin and admin roles can access this page.
+  if (!canAccessAdmin(user?.role ?? "")) {
     return (
       <div className="flex items-center justify-center h-full py-16 text-muted-foreground">
         {t("common.forbidden", "Access denied")}

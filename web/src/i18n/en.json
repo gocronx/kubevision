@@ -260,5 +260,32 @@
     "selectResource": "Select resource type",
     "compare": "Compare",
     "error": "Failed to fetch resources for comparison"
+  },
+  "users": {
+    "title": "User Management",
+    "description": "Manage system users, roles, and access",
+    "role": "Role",
+    "active": "Active",
+    "inactive": "Inactive",
+    "createdAt": "Created",
+    "empty": "No users found",
+    "create": "Create User",
+    "edit": "Edit User",
+    "deleteTitle": "Delete User",
+    "deleteConfirm": "Are you sure you want to delete user \"{{username}}\"? This action cannot be undone.",
+    "createdToast": "User created successfully",
+    "updatedToast": "User updated successfully",
+    "deletedToast": "User deleted successfully",
+    "resetPassword": "Reset Password",
+    "newPassword": "New Password",
+    "passwordResetToast": "Password reset successfully",
+    "superAdminNote": "The super-admin role cannot be changed",
+    "changePassword": "Change Password",
+    "changePasswordDescription": "Update your password. You will be signed out after a successful change.",
+    "oldPassword": "Current Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordChangedToast": "Password changed. Please sign in again.",
+    "passwordMismatch": "New passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters"
   }
 }

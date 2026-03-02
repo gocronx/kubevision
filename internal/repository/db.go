@@ -89,12 +89,43 @@ func initDefaultAdmin(db *gorm.DB, logger *zap.Logger) {
 }
 
 // initSystemRoles seeds the built-in system roles if they do not already exist.
+//
+// Permission format: "<resource>:<action>" where "*" is a wildcard.
+// Resources are derived from the last non-parameter URL segment by the RBAC
+// middleware (e.g. /clusters/:id/resources/:resource → "resources").
+//
+// Role hierarchy:
+//   - super-admin: full access, RBAC bypass in middleware, user management visible in UI
+//   - admin:       full access, RBAC bypass in middleware, user management hidden in UI
+//   - editor:      CRUD on K8s resources + cluster views; cannot touch users/webhooks/audit/api-keys
+//   - viewer:      read-only on K8s resources + cluster views
+//   - custom:      minimal read-only baseline; permissions can be edited by admins
 func initSystemRoles(db *gorm.DB, logger *zap.Logger) {
 	roles := []model.Role{
+		{Name: "super-admin", DisplayName: "Super Administrator", IsSystem: true, Permissions: `["*:*"]`},
 		{Name: "admin", DisplayName: "Administrator", IsSystem: true, Permissions: `["*:*"]`},
-		{Name: "ops", DisplayName: "Operations", IsSystem: true, Permissions: `["*:get","*:list","*:create","*:update","*:delete","*:exec","*:logs"]`},
-		{Name: "dev", DisplayName: "Developer", IsSystem: true, Permissions: `["*:get","*:list","pods:exec","pods:logs"]`},
-		{Name: "readonly", DisplayName: "Read Only", IsSystem: true, Permissions: `["*:get","*:list"]`},
+		{
+			Name:        "editor",
+			DisplayName: "Editor",
+			IsSystem:    true,
+			// Can CRUD K8s resources, use cluster tools, and manage favorites.
+			// Cannot access users, webhooks, audit-logs, api-keys, or terminal-sessions.
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create"]`,
+		},
+		{
+			Name:        "viewer",
+			DisplayName: "Viewer",
+			IsSystem:    true,
+			// Read-only access to K8s resources and cluster views.
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","history:list"]`,
+		},
+		{
+			Name:        "custom",
+			DisplayName: "Custom",
+			IsSystem:    false,
+			// Minimal read-only baseline; admins can update this role's Permissions JSON.
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list"]`,
+		},
 	}
 	silent := db.Session(&gorm.Session{Logger: gormlogger.Discard})
 	for _, role := range roles {

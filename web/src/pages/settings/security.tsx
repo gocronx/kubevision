@@ -1,6 +1,7 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { ShieldCheck, ShieldOff, Copy, CheckCircle, Loader2, Eye, EyeOff } from "lucide-react"
+import { ShieldCheck, ShieldOff, Copy, CheckCircle, Loader2, Eye, EyeOff, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import {
@@ -9,6 +10,7 @@ import {
   useDisable2FA,
   type Setup2FAResponse,
 } from "@/hooks/use-2fa"
+import { useChangePassword } from "@/hooks/use-users"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,6 +32,110 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
 type SetupStep = "idle" | "qrcode" | "verify" | "recovery"
+
+// ---------------------------------------------------------------------------
+// Change Password Card
+// ---------------------------------------------------------------------------
+
+function ChangePasswordCard() {
+  const { t } = useTranslation()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const changePasswordMutation = useChangePassword()
+
+  const [oldPassword, setOldPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
+  async function handleSubmit() {
+    if (newPassword !== confirmPassword) {
+      toast.error(t("users.passwordMismatch"))
+      return
+    }
+    if (newPassword.length < 6) {
+      toast.error(t("users.passwordTooShort"))
+      return
+    }
+    try {
+      await changePasswordMutation.mutateAsync({ oldPassword, newPassword })
+      toast.success(t("users.passwordChangedToast"))
+      // Token version was bumped — log out and redirect to login.
+      logout()
+      navigate("/login")
+    } catch {
+      // toasted by api interceptor
+    }
+    setOldPassword("")
+    setNewPassword("")
+    setConfirmPassword("")
+  }
+
+  const isValid =
+    oldPassword.trim().length > 0 &&
+    newPassword.trim().length > 0 &&
+    confirmPassword.trim().length > 0
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Lock className="size-5 text-muted-foreground" />
+          <div>
+            <CardTitle className="text-base">
+              {t("users.changePassword")}
+            </CardTitle>
+            <CardDescription>
+              {t("users.changePasswordDescription")}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1">
+          <Label htmlFor="cp-old">{t("users.oldPassword")}</Label>
+          <Input
+            id="cp-old"
+            type="password"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="cp-new">{t("users.newPassword")}</Label>
+          <Input
+            id="cp-new"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="cp-confirm">{t("users.confirmPassword")}</Label>
+          <Input
+            id="cp-confirm"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
+        <Button
+          onClick={handleSubmit}
+          disabled={!isValid || changePasswordMutation.isPending}
+        >
+          {changePasswordMutation.isPending && <Loader2 className="animate-spin" />}
+          {t("users.changePassword")}
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Security Settings Page
+// ---------------------------------------------------------------------------
 
 export function SecuritySettingsPage() {
   const { t } = useTranslation()
@@ -298,6 +404,9 @@ export function SecuritySettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Change password */}
+      <ChangePasswordCard />
 
       {/* Disable 2FA confirmation dialog */}
       <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>

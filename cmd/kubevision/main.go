@@ -86,6 +86,7 @@ func main() {
 	k8sRepo := repository.NewK8sResourceRepo(informerMgr, clusterManager, resourceRegistry)
 
 	// Services
+	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, jwtManager, cfg, logger)
 	clusterService := service.NewClusterService(clusterRepo, clusterManager, informerMgr, resourceRegistry, logger, cfg.EncryptKey)
 	resourceService := service.NewResourceService(k8sRepo, resourceRegistry, clusterRepo)
@@ -112,6 +113,7 @@ func main() {
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
+	userHandler := handler.NewUserHandler(userService)
 	clusterHandler := handler.NewClusterHandler(clusterService)
 	resourceHandler := handler.NewResourceHandler(resourceService, resourceActionService)
 	resourceActionHandler := handler.NewResourceActionHandler(resourceActionService)
@@ -143,6 +145,7 @@ func main() {
 	// Route dependencies
 	routerDeps := &server.RouterDeps{
 		AuthHandler:            authHandler,
+		UserHandler:            userHandler,
 		ClusterHandler:         clusterHandler,
 		ResourceHandler:        resourceHandler,
 		SearchHandler:          searchHandler,

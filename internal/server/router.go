@@ -12,6 +12,7 @@ import (
 // RouterDeps holds all handler and middleware dependencies required to register routes.
 type RouterDeps struct {
 	AuthHandler            *handler.AuthHandler
+	UserHandler            *handler.UserHandler
 	ClusterHandler         *handler.ClusterHandler
 	ResourceHandler        *handler.ResourceHandler
 	SearchHandler          *handler.SearchHandler
@@ -88,6 +89,24 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				twoFA.POST("/setup", deps.AuthHandler.Setup2FA)
 				twoFA.POST("/enable", deps.AuthHandler.Enable2FA)
 				twoFA.POST("/disable", deps.AuthHandler.Disable2FA)
+			}
+
+			// Change own password — any authenticated user.
+			if deps != nil && deps.UserHandler != nil {
+				protected.PUT("/users/me/password", deps.UserHandler.ChangePassword)
+			}
+
+			// User management routes — admin+ only.
+			// The RBAC middleware already enforces admin bypass; non-admin roles
+			// must have explicit "users:*" permissions in their role record.
+			if deps != nil && deps.UserHandler != nil {
+				users := protected.Group("/users")
+				users.GET("", deps.UserHandler.List)
+				users.POST("", deps.UserHandler.Create)
+				users.GET("/:id", deps.UserHandler.Get)
+				users.PUT("/:id", deps.UserHandler.Update)
+				users.DELETE("/:id", deps.UserHandler.Delete)
+				users.PUT("/:id/reset-password", deps.UserHandler.ResetPassword)
 			}
 
 			// Cluster management routes.

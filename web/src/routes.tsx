@@ -11,6 +11,7 @@ import { SecuritySettingsPage } from "@/pages/settings/security"
 import { AdminPage } from "@/pages/admin/index"
 import { WebhooksPage } from "@/pages/admin/webhooks"
 import { TerminalSessionsPage } from "@/pages/admin/terminal-sessions"
+import { UsersPage } from "@/pages/admin/users"
 import { ComparePage } from "@/pages/compare/index"
 import { NotFoundPage } from "@/pages/not-found"
 
@@ -34,6 +35,7 @@ export function AppRoutes() {
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/webhooks" element={<WebhooksPage />} />
         <Route path="admin/terminal-sessions" element={<TerminalSessionsPage />} />
+        <Route path="admin/users" element={<UsersPage />} />
         <Route path="compare" element={<ComparePage />} />
         <Route path=":resource" element={<ResourceListPage />} />
         <Route path=":resource/:name" element={<ResourceDetailPage />} />

@@ -260,5 +260,32 @@
     "selectResource": "选择资源类型",
     "compare": "开始对比",
     "error": "获取资源失败，无法对比"
+  },
+  "users": {
+    "title": "用户管理",
+    "description": "管理系统用户、角色与访问权限",
+    "role": "角色",
+    "active": "启用",
+    "inactive": "禁用",
+    "createdAt": "创建时间",
+    "empty": "暂无用户",
+    "create": "创建用户",
+    "edit": "编辑用户",
+    "deleteTitle": "删除用户",
+    "deleteConfirm": "确定要删除用户 \"{{username}}\" 吗？此操作不可撤销。",
+    "createdToast": "用户创建成功",
+    "updatedToast": "用户更新成功",
+    "deletedToast": "用户删除成功",
+    "resetPassword": "重置密码",
+    "newPassword": "新密码",
+    "passwordResetToast": "密码重置成功",
+    "superAdminNote": "超级管理员角色不可更改",
+    "changePassword": "修改密码",
+    "changePasswordDescription": "更新您的密码。修改成功后将自动退出登录。",
+    "oldPassword": "当前密码",
+    "confirmPassword": "确认新密码",
+    "passwordChangedToast": "密码已修改，请重新登录。",
+    "passwordMismatch": "两次输入的新密码不一致",
+    "passwordTooShort": "密码长度至少为 6 位"
   }
 }

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { resourceUIConfig } from "@/config/resource-ui-config"
 import { useResourceList, useCreateResource, useDryRunCreate } from "@/hooks/use-resource"
 import { useCluster } from "@/hooks/use-cluster"
+import { useAuth } from "@/stores/auth-store"
+import { canMutateResources } from "@/lib/permissions"
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -38,6 +40,8 @@ export function ResourceListPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { currentCluster, clusters } = useCluster()
+  const { user } = useAuth()
+  const userCanMutate = canMutateResources(user?.role ?? "")
 
   // Resolve the human-readable cluster name for the --context flag.
   const clusterContext = useMemo(
@@ -224,7 +228,7 @@ export function ResourceListPage() {
       { key: "name", label: "Name", sortable: true },
     ]
 
-    // Checkbox column for batch selection
+    // Checkbox column for batch selection — only shown when the user can mutate resources.
     const selectCol: DataTableColumn<K8sItem> = {
       key: "_select",
       label: "",
@@ -257,7 +261,9 @@ export function ResourceListPage() {
       },
     }
 
-    const mapped: DataTableColumn<K8sItem>[] = [selectCol, ...cols.map((col) => ({
+    const leadingCols = userCanMutate ? [selectCol] : []
+
+    const mapped: DataTableColumn<K8sItem>[] = [...leadingCols, ...cols.map((col) => ({
       key: col.key,
       label: col.label,
       sortable: col.sortable,
@@ -300,6 +306,7 @@ export function ResourceListPage() {
             name={meta?.name ?? ""}
             namespace={meta?.namespace}
             currentReplicas={spec?.replicas ?? 0}
+            readOnly={!userCanMutate}
             onDeleted={handleRefresh}
           />
         )
@@ -307,7 +314,7 @@ export function ResourceListPage() {
     })
 
     return mapped
-  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect])
+  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect, userCanMutate])
 
   const getRowKey = useCallback((item: K8sItem) => {
     const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
@@ -332,13 +339,15 @@ export function ResourceListPage() {
             <RefreshCw className="size-4" />
             {t("common.refresh")}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            <Plus className="size-4" />
-            {t("common.create")}
-          </Button>
+          {userCanMutate && (
+            <Button
+              size="sm"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <Plus className="size-4" />
+              {t("common.create")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -369,14 +378,16 @@ export function ResourceListPage() {
         clusterContext={clusterContext}
       />
 
-      {/* Batch action bar — visible when items are selected */}
-      <BatchActionBar
-        clusterID={currentCluster}
-        resource={resource}
-        selectedItems={selectedItems}
-        onClearSelection={() => setSelectedKeys(new Set())}
-        onComplete={handleRefresh}
-      />
+      {/* Batch action bar — visible when items are selected, hidden for read-only roles */}
+      {userCanMutate && (
+        <BatchActionBar
+          clusterID={currentCluster}
+          resource={resource}
+          selectedItems={selectedItems}
+          onClearSelection={() => setSelectedKeys(new Set())}
+          onComplete={handleRefresh}
+        />
+      )}
 
       <DataTable
         columns={tableColumns}
