@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import api from "@/lib/api"
+import api, { getWithMeta } from "@/lib/api"
+import type { ApiMeta } from "@/lib/api"
 
 interface ResourceListOptions {
   namespace?: string
@@ -8,14 +9,9 @@ interface ResourceListOptions {
   enabled?: boolean
 }
 
-interface ResourceListMetadata {
-  continue?: string
-  remainingItemCount?: number
-}
-
-interface ResourceListResponse {
+interface ResourceListResult {
   items: Record<string, unknown>[]
-  metadata?: ResourceListMetadata
+  meta?: ApiMeta
 }
 
 interface ResourceMutationVariables {
@@ -66,7 +62,7 @@ export function useResourceList(
 ) {
   const { namespace, labelSelector, limit, enabled = true } = options
 
-  return useQuery<ResourceListResponse>({
+  return useQuery<ResourceListResult>({
     queryKey: ["resources", clusterID, resource, namespace ?? "", labelSelector ?? ""],
     queryFn: async () => {
       const params: Record<string, string | number> = {}
@@ -74,16 +70,22 @@ export function useResourceList(
       if (labelSelector) params.labelSelector = labelSelector
       if (limit) params.limit = limit
 
-      const res = await api.get(
+      const res = await getWithMeta<Record<string, unknown>[]>(
         `/clusters/${clusterID}/resources/${resource}`,
         { params }
       )
-      // api interceptor unwraps ApiResponse.data
-      const data = res as unknown as ResourceListResponse
-      return {
-        items: data.items ?? [],
-        metadata: data.metadata,
-      }
+      // Backend returns { name, namespace, apiVersion, kind, raw: { metadata, spec, status, ... } }
+      // Frontend expects standard K8s structure { metadata, spec, status, ... }
+      // Normalize: spread raw onto top level so both access patterns work.
+      const rawItems = Array.isArray(res.data) ? res.data : []
+      const items = rawItems.map((item) => {
+        const raw = item.raw as Record<string, unknown> | undefined
+        if (raw && typeof raw === "object") {
+          return { ...raw, ...item }
+        }
+        return item
+      })
+      return { items, meta: res.meta }
     },
     enabled: enabled && !!clusterID && !!resource,
   })
@@ -108,7 +110,12 @@ export function useResource(
         `/clusters/${clusterID}/resources/${resource}/${name}`,
         { params }
       )
-      return res as unknown as Record<string, unknown>
+      const item = res as unknown as Record<string, unknown>
+      const raw = item.raw as Record<string, unknown> | undefined
+      if (raw && typeof raw === "object") {
+        return { ...raw, ...item }
+      }
+      return item
     },
     enabled: !!clusterID && !!resource && !!name,
   })

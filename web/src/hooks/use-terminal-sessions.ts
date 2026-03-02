@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import api from "@/lib/api"
+import api, { getWithMeta } from "@/lib/api"
 
 export interface TerminalSessionMeta {
   id: number
@@ -19,26 +19,17 @@ export interface TerminalSessionPlayData {
   durationMs: number
 }
 
-interface TerminalSessionListResponse {
-  items: TerminalSessionMeta[]
-  total: number
-}
-
 const SESSIONS_QUERY_KEY = ["terminal-sessions"] as const
 
 export function useTerminalSessions(offset = 0, limit = 50) {
   return useQuery<{ items: TerminalSessionMeta[]; total: number }>({
     queryKey: [...SESSIONS_QUERY_KEY, offset, limit],
     queryFn: async () => {
-      const res = await api.get(`/terminal-sessions?offset=${offset}&limit=${limit}`)
-      // The api interceptor returns the data directly; for paginated endpoints
-      // the data is the array and meta.total is in the meta field.
-      // We rely on the raw response here.
-      const raw = res as unknown as TerminalSessionMeta[] | TerminalSessionListResponse
-      if (Array.isArray(raw)) {
-        return { items: raw, total: raw.length }
-      }
-      return { items: raw.items ?? [], total: raw.total ?? 0 }
+      const res = await getWithMeta<TerminalSessionMeta[]>(
+        `/terminal-sessions?offset=${offset}&limit=${limit}`
+      )
+      const items = Array.isArray(res.data) ? res.data : []
+      return { items, total: res.meta?.total ?? items.length }
     },
   })
 }

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import api from "@/lib/api"
+import { getWithMeta } from "@/lib/api"
 
 export interface AuditLog {
   id: number
@@ -42,11 +42,9 @@ export function useAuditLogs(filter: AuditLogFilter = {}) {
       params.set("offset", String(filter.offset ?? 0))
       params.set("limit", String(filter.limit ?? 50))
 
-      const res = await api.get(`/audit-logs?${params.toString()}`)
-      // The interceptor extracts body.data. For paginated endpoints the
-      // data is an array; we coerce accordingly.
-      const items = Array.isArray(res) ? (res as AuditLog[]) : []
-      return { items, total: items.length }
+      const res = await getWithMeta<AuditLog[]>(`/audit-logs?${params.toString()}`)
+      const items = Array.isArray(res.data) ? res.data : []
+      return { items, total: res.meta?.total ?? items.length }
     },
     placeholderData: (prev) => prev,
   })

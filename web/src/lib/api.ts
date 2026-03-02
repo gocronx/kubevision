@@ -5,6 +5,14 @@ interface ApiResponse<T = unknown> {
   code: number
   message: string
   data: T
+  meta?: ApiMeta
+}
+
+export interface ApiMeta {
+  total?: number
+  stale?: boolean
+  source?: string
+  requestId?: string
 }
 
 const api = axios.create({
@@ -24,6 +32,10 @@ api.interceptors.response.use(
   (res) => {
     const body = res.data as ApiResponse
     if (body.code === 0) {
+      // When __preserveMeta flag is set, return data+meta together
+      if ((res.config as Record<string, unknown>).__preserveMeta) {
+        return { data: body.data, meta: body.meta } as never
+      }
       return body.data as never
     }
     if (body.code === 40101) {
@@ -59,5 +71,20 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+/**
+ * GET request that preserves the `meta` field from paginated API responses.
+ * Use this for endpoints that return meta (total, stale, etc.).
+ */
+export async function getWithMeta<T = unknown>(
+  url: string,
+  config?: Parameters<typeof api.get>[1]
+): Promise<{ data: T; meta?: ApiMeta }> {
+  const res = await api.get(url, {
+    ...config,
+    __preserveMeta: true,
+  } as Parameters<typeof api.get>[1])
+  return res as unknown as { data: T; meta?: ApiMeta }
+}
 
 export default api
