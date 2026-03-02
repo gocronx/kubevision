@@ -1,8 +1,8 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Upload } from "lucide-react"
+import { Upload, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import api from "@/lib/api"
 
 interface AddClusterDialogProps {
@@ -23,6 +24,7 @@ interface AddClusterDialogProps {
 export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [authType, setAuthType] = useState<"kubeconfig" | "in-cluster">("kubeconfig")
@@ -43,6 +45,9 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
       queryClient.invalidateQueries({ queryKey: ["overview"] })
       resetAndClose()
     },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : t("cluster.add_error"))
+    },
   })
 
   function resetAndClose() {
@@ -61,7 +66,10 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v ? resetAndClose() : onOpenChange(v)}>
+    <Dialog open={open} onOpenChange={(v) => {
+      if (!v && !mutation.isPending) resetAndClose()
+      else if (v) onOpenChange(v)
+    }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("cluster.add_title")}</DialogTitle>
@@ -70,9 +78,14 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="cluster-name">{t("cluster.name")} *</Label>
+            <Label htmlFor="cluster-name">
+              {t("cluster.name")}
+              <span aria-hidden="true"> *</span>
+            </Label>
             <Input
               id="cluster-name"
+              required
+              aria-required="true"
               placeholder="e.g. production"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -89,12 +102,14 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>{t("cluster.auth_type")}</Label>
-            <div className="flex gap-2">
+          <fieldset className="space-y-1.5">
+            <legend className="text-sm font-medium leading-none">{t("cluster.auth_type")}</legend>
+            <div className="flex gap-2" role="radiogroup" aria-label={t("cluster.auth_type")}>
               <Button
                 type="button"
                 size="sm"
+                role="radio"
+                aria-checked={authType === "kubeconfig"}
                 variant={authType === "kubeconfig" ? "default" : "outline"}
                 onClick={() => setAuthType("kubeconfig")}
               >
@@ -103,29 +118,34 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
               <Button
                 type="button"
                 size="sm"
+                role="radio"
+                aria-checked={authType === "in-cluster"}
                 variant={authType === "in-cluster" ? "default" : "outline"}
                 onClick={() => setAuthType("in-cluster")}
               >
                 In-Cluster
               </Button>
             </div>
-          </div>
+          </fieldset>
 
           {authType === "kubeconfig" && (
             <div className="space-y-1.5">
-              <Label>{t("cluster.kubeconfig")} *</Label>
+              <Label htmlFor="cluster-kubeconfig">
+                {t("cluster.kubeconfig")}
+                <span aria-hidden="true"> *</span>
+              </Label>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => document.getElementById("kubeconfig-file")?.click()}
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="mr-1.5 size-3.5" />
                   {t("cluster.upload_file")}
                 </Button>
                 <input
-                  id="kubeconfig-file"
+                  ref={fileInputRef}
                   type="file"
                   accept=".yaml,.yml,.conf,*"
                   className="hidden"
@@ -137,17 +157,20 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
                   </span>
                 )}
               </div>
-              <textarea
-                className="mt-1.5 w-full rounded-md border bg-transparent px-3 py-2 text-xs font-mono min-h-[120px] focus:outline-none focus:ring-2 focus:ring-ring"
+              <Textarea
+                id="cluster-kubeconfig"
+                className="min-h-[120px] font-mono text-xs"
                 placeholder={t("cluster.kubeconfig_placeholder")}
                 value={kubeconfig}
                 onChange={(e) => setKubeconfig(e.target.value)}
+                required
+                aria-required="true"
               />
             </div>
           )}
 
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" onClick={resetAndClose}>
+            <Button variant="outline" onClick={resetAndClose} disabled={mutation.isPending}>
               {t("common.cancel")}
             </Button>
             <Button
@@ -158,6 +181,7 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
                 mutation.isPending
               }
             >
+              {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               {mutation.isPending ? t("common.loading") : t("cluster.add_submit")}
             </Button>
           </div>

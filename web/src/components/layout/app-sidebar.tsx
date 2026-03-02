@@ -10,6 +10,7 @@ import {
   Clock,
   Network,
   Globe,
+  Languages,
   FileText,
   KeyRound,
   HardDrive,
@@ -18,7 +19,9 @@ import {
   Monitor,
   FolderOpen,
   Activity,
+  Share2,
   BarChart3,
+  Gauge,
   ChevronsUpDown,
   Check,
   Settings,
@@ -50,12 +53,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { FavoritesPanel } from "@/components/specialized/favorites-panel"
 import { AddClusterDialog } from "@/components/shared/add-cluster-dialog"
 import { useCluster } from "@/hooks/use-cluster"
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import { useTranslation as useI18nTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 
 interface NavItem {
@@ -115,7 +120,7 @@ const navGroups: NavGroup[] = [
       { titleKey: "nav.nodes", icon: Monitor, to: "/nodes" },
       { titleKey: "nav.namespaces", icon: FolderOpen, to: "/namespaces" },
       { titleKey: "nav.events", icon: Activity, to: "/events" },
-      { titleKey: "nav.topology", icon: Activity, to: "/topology" },
+      { titleKey: "nav.topology", icon: Share2, to: "/topology" },
       { titleKey: "nav.compare", icon: GitCompareArrows, to: "/compare" },
     ],
   },
@@ -129,8 +134,7 @@ const navGroups: NavGroup[] = [
     labelKey: "nav.policy",
     items: [
       { titleKey: "nav.quota", icon: BarChart3, to: "/quota" },
-      { titleKey: "nav.resourcequotas", icon: BarChart3, to: "/resourcequotas" },
-      { titleKey: "nav.limitranges", icon: BarChart3, to: "/limitranges" },
+      { titleKey: "nav.limitranges", icon: Gauge, to: "/limitranges" },
     ],
   },
   {
@@ -140,6 +144,30 @@ const navGroups: NavGroup[] = [
     ],
   },
 ]
+
+function LanguageToggle() {
+  const { i18n } = useI18nTranslation()
+  const isZh = i18n.language === "zh"
+
+  const toggle = useCallback(() => {
+    const next = isZh ? "en" : "zh"
+    i18n.changeLanguage(next)
+    localStorage.setItem("language", next)
+  }, [i18n, isZh])
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-6 w-auto px-1.5 text-xs text-muted-foreground hover:text-foreground"
+      onClick={toggle}
+      title={isZh ? "Switch to English" : "切换为中文"}
+    >
+      <Languages className="size-3.5" />
+      <span className="ml-1 group-data-[collapsible=icon]:hidden">{isZh ? "EN" : "中文"}</span>
+    </Button>
+  )
+}
 
 export function AppSidebar() {
   const { t } = useTranslation()
@@ -165,7 +193,7 @@ export function AppSidebar() {
         {clusters.length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent group-data-[collapsible=icon]:hidden">
+              <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:hidden">
                 <Server className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1 truncate text-left">{currentClusterName}</span>
                 <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -181,6 +209,11 @@ export function AppSidebar() {
                   {cluster.name}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowAddCluster(true)}>
+                <Plus className="size-4" />
+                {t("cluster.add_title")}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
@@ -281,8 +314,11 @@ export function AppSidebar() {
             )}
           </SidebarMenu>
         )}
-        <div className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          KubeVision v0.1.0
+        <div className="flex items-center justify-between px-2 py-1 group-data-[collapsible=icon]:justify-center">
+          <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            KubeVision v0.1.0
+          </span>
+          <LanguageToggle />
         </div>
       </SidebarFooter>
     </Sidebar>

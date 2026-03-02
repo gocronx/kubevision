@@ -57,15 +57,34 @@ function StatCard({ title, icon: Icon, value, isLoading }: StatCardProps) {
       </CardHeader>
       <CardContent>
         {isLoading || value === undefined ? (
-          <>
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="mt-2 h-4 w-32" />
-          </>
+          <Skeleton className="h-8 w-20" />
         ) : (
           <div className="text-3xl font-bold">{value}</div>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton for the whole page
+// ---------------------------------------------------------------------------
+
+function OverviewSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="size-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-20" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }
 
@@ -85,10 +104,12 @@ export function OverviewPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold tracking-tight">{t("overview.title")}</h1>
 
-      {noClusters ? (
+      {clustersLoading ? (
+        <OverviewSkeleton />
+      ) : noClusters ? (
         <>
-          <Card className="flex flex-col items-center justify-center py-16">
-            <CardContent className="flex flex-col items-center gap-4 text-center">
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
               <div className="rounded-full bg-muted p-4">
                 <Server className="size-8 text-muted-foreground" />
               </div>
@@ -112,7 +133,7 @@ export function OverviewPage() {
               <span>
                 {error instanceof Error
                   ? error.message
-                  : "Failed to load cluster overview."}
+                  : t("overview.error")}
               </span>
             </div>
           )}

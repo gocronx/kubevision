@@ -15,16 +15,16 @@
     "configmaps": "ConfigMaps",
     "secrets": "Secrets",
     "storage": "存储",
-    "persistentvolumes": "持久卷",
-    "persistentvolumeclaims": "持久卷声明",
-    "storageclasses": "存储类",
+    "persistentvolumes": "PersistentVolumes",
+    "persistentvolumeclaims": "PersistentVolumeClaims",
+    "storageclasses": "StorageClasses",
     "cluster": "集群",
     "nodes": "节点",
     "namespaces": "命名空间",
     "events": "事件",
     "quota": "资源配额",
-    "resourcequotas": "资源配额",
-    "limitranges": "限制范围",
+    "resourcequotas": "ResourceQuotas",
+    "limitranges": "LimitRanges",
     "favorites": "收藏夹",
     "topology": "拓扑图",
     "compare": "资源对比",
@@ -65,7 +65,8 @@
     "logout": "退出登录",
     "login": "登录",
     "username": "用户名",
-    "password": "密码"
+    "password": "密码",
+    "forbidden": "无权访问"
   },
   "login": {
     "title": "KubeVision",
@@ -81,7 +82,8 @@
     "nodes": "节点",
     "no_cluster": "还没有注册集群",
     "no_cluster_desc": "请先添加集群，开始使用 KubeVision。",
-    "add_cluster": "添加集群"
+    "add_cluster": "添加集群",
+    "error": "加载集群概览失败。"
   },
   "notFound": {
     "title": "404",
@@ -123,7 +125,8 @@
     "kubeconfig": "Kubeconfig",
     "kubeconfig_placeholder": "在此粘贴 kubeconfig YAML 内容...",
     "upload_file": "上传文件",
-    "file_loaded": "文件已加载"
+    "file_loaded": "文件已加载",
+    "add_error": "添加集群失败。"
   },
   "batch": {
     "selected": "已选 {{count}} 项",
@@ -254,7 +257,7 @@
     "deleteConfirm": "确定要删除 \"{{name}}\" 吗？此操作不可撤销。"
   },
   "terminalSession": {
-    "title": "终端录制",
+    "title": "终端会话",
     "description": "浏览并回放已录制的终端会话",
     "user": "用户",
     "pod": "Pod",
