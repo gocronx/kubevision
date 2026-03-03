@@ -1,40 +1,19 @@
 import { NavLink } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import {
-  LayoutDashboard,
-  Box,
-  Server,
-  Layers,
-  Radio,
-  Play,
-  Clock,
-  Network,
-  Globe,
   Languages,
-  FileText,
-  KeyRound,
-  HardDrive,
-  Database,
-  Boxes,
-  Monitor,
-  FolderOpen,
-  Activity,
-  Share2,
-  BarChart3,
-  Gauge,
   ChevronsUpDown,
   Check,
-  Settings,
   ShieldCheck,
   Webhook,
   TerminalSquare,
-  GitCompareArrows,
   Users,
-  Puzzle,
   Plug,
   Plus,
+  Pin,
+  LayoutDashboard,
+  Server,
 } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 import { useAuth } from "@/stores/auth-store"
 import { canAccessAdmin, canManageUsers } from "@/lib/permissions"
 import {
@@ -50,6 +29,11 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar"
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -59,91 +43,11 @@ import {
 import { FavoritesPanel } from "@/components/specialized/favorites-panel"
 import { AddClusterDialog } from "@/components/shared/add-cluster-dialog"
 import { useCluster } from "@/hooks/use-cluster"
+import { useSidebarConfig } from "@/components/sidebar-config-provider"
+import { navGroups, getNavItemByRoute, getNavGroupByKey } from "@/lib/nav-items"
 import { useState, useCallback } from "react"
 import { useTranslation as useI18nTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
-
-interface NavItem {
-  titleKey: string
-  icon: LucideIcon
-  to: string
-}
-
-interface NavGroup {
-  labelKey: string
-  items: NavItem[]
-}
-
-const navGroups: NavGroup[] = [
-  {
-    labelKey: "nav.overview",
-    items: [
-      { titleKey: "nav.overview", icon: LayoutDashboard, to: "/overview" },
-    ],
-  },
-  {
-    labelKey: "nav.workloads",
-    items: [
-      { titleKey: "nav.pods", icon: Box, to: "/pods" },
-      { titleKey: "nav.deployments", icon: Server, to: "/deployments" },
-      { titleKey: "nav.statefulsets", icon: Layers, to: "/statefulsets" },
-      { titleKey: "nav.daemonsets", icon: Radio, to: "/daemonsets" },
-      { titleKey: "nav.jobs", icon: Play, to: "/jobs" },
-      { titleKey: "nav.cronjobs", icon: Clock, to: "/cronjobs" },
-    ],
-  },
-  {
-    labelKey: "nav.network",
-    items: [
-      { titleKey: "nav.services", icon: Network, to: "/services" },
-      { titleKey: "nav.ingresses", icon: Globe, to: "/ingresses" },
-    ],
-  },
-  {
-    labelKey: "nav.config",
-    items: [
-      { titleKey: "nav.configmaps", icon: FileText, to: "/configmaps" },
-      { titleKey: "nav.secrets", icon: KeyRound, to: "/secrets" },
-    ],
-  },
-  {
-    labelKey: "nav.storage",
-    items: [
-      { titleKey: "nav.persistentvolumes", icon: HardDrive, to: "/persistentvolumes" },
-      { titleKey: "nav.persistentvolumeclaims", icon: Database, to: "/persistentvolumeclaims" },
-      { titleKey: "nav.storageclasses", icon: Boxes, to: "/storageclasses" },
-    ],
-  },
-  {
-    labelKey: "nav.cluster",
-    items: [
-      { titleKey: "nav.nodes", icon: Monitor, to: "/nodes" },
-      { titleKey: "nav.namespaces", icon: FolderOpen, to: "/namespaces" },
-      { titleKey: "nav.events", icon: Activity, to: "/events" },
-      { titleKey: "nav.topology", icon: Share2, to: "/topology" },
-      { titleKey: "nav.compare", icon: GitCompareArrows, to: "/compare" },
-    ],
-  },
-  {
-    labelKey: "nav.customResources",
-    items: [
-      { titleKey: "nav.crds", icon: Puzzle, to: "/crds" },
-    ],
-  },
-  {
-    labelKey: "nav.policy",
-    items: [
-      { titleKey: "nav.quota", icon: BarChart3, to: "/quota" },
-      { titleKey: "nav.limitranges", icon: Gauge, to: "/limitranges" },
-    ],
-  },
-  {
-    labelKey: "nav.settings",
-    items: [
-      { titleKey: "nav.settingsSecurity", icon: Settings, to: "/settings/security" },
-    ],
-  },
-]
 
 function LanguageToggle() {
   const { i18n } = useI18nTranslation()
@@ -173,11 +77,28 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const { currentCluster, clusters, setCurrentCluster } = useCluster()
   const { user } = useAuth()
+  const { config, isItemHidden, isItemPinned, isGroupCollapsed, toggleGroupCollapsed } = useSidebarConfig()
   const role = user?.role ?? ""
   const showAdminSection = canAccessAdmin(role)
   const showUserManagement = canManageUsers(role)
   const currentClusterName = clusters.find((c) => c.id === currentCluster)?.name ?? t("cluster.select")
   const [showAddCluster, setShowAddCluster] = useState(false)
+
+  // Resolve pinned items from config
+  const pinnedItems = config.pinnedItems
+    .map((route) => getNavItemByRoute(route))
+    .filter((item) => item && !isItemHidden(item.to))
+
+  // Resolve ordered groups
+  const orderedGroups = config.groupOrder
+    .map((key) => getNavGroupByKey(key))
+    .filter(Boolean)
+  // Append any groups not in the order (safety net)
+  for (const g of navGroups) {
+    if (!config.groupOrder.includes(g.labelKey)) {
+      orderedGroups.push(g)
+    }
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -230,33 +151,78 @@ export function AppSidebar() {
         <AddClusterDialog open={showAddCluster} onOpenChange={setShowAddCluster} />
       </SidebarHeader>
       <SidebarContent>
-        {/* Favorites panel — shown at the top for quick access */}
+        {/* Favorites panel */}
         <FavoritesPanel className="group-data-[collapsible=icon]:hidden" />
 
-        {navGroups.map((group) => (
-          <SidebarGroup key={group.labelKey}>
-            <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+        {/* Pinned items — quick access section */}
+        {pinnedItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              <Pin className="mr-1 size-3" />
+              {t("sidebarConfig.pinned")}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <NavLink to={item.to}>
-                      {({ isActive }) => (
-                        <SidebarMenuButton isActive={isActive} tooltip={t(item.titleKey)}>
-                          <item.icon />
-                          <span>{t(item.titleKey)}</span>
-                        </SidebarMenuButton>
-                      )}
-                    </NavLink>
-                  </SidebarMenuItem>
-                ))}
+                {pinnedItems.map((item) => {
+                  if (!item) return null
+                  return (
+                    <SidebarMenuItem key={`pin-${item.to}`}>
+                      <NavLink to={item.to}>
+                        {({ isActive }) => (
+                          <SidebarMenuButton isActive={isActive} tooltip={t(item.titleKey)}>
+                            <item.icon />
+                            <span>{t(item.titleKey)}</span>
+                          </SidebarMenuButton>
+                        )}
+                      </NavLink>
+                    </SidebarMenuItem>
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        ))}
+        )}
+
+        {/* Navigation groups — ordered and filtered */}
+        {orderedGroups.map((group) => {
+          if (!group) return null
+          const visibleItems = group.items.filter((item) => !isItemHidden(item.to))
+          if (visibleItems.length === 0) return null
+          const collapsed = isGroupCollapsed(group.labelKey)
+
+          return (
+            <Collapsible key={group.labelKey} defaultOpen={!collapsed}>
+              <SidebarGroup>
+                <CollapsibleTrigger asChild>
+                  <SidebarGroupLabel className="cursor-pointer">
+                    {t(group.labelKey)}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {visibleItems.map((item) => (
+                        <SidebarMenuItem key={item.to}>
+                          <NavLink to={item.to}>
+                            {({ isActive }) => (
+                              <SidebarMenuButton isActive={isActive} tooltip={t(item.titleKey)}>
+                                <item.icon />
+                                <span>{t(item.titleKey)}</span>
+                              </SidebarMenuButton>
+                            )}
+                          </NavLink>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          )
+        })}
       </SidebarContent>
       <SidebarFooter>
-        {/* Admin links — shown only to super-admin and admin roles */}
+        {/* Admin links */}
         {showAdminSection && (
           <SidebarMenu>
             <SidebarMenuItem>
@@ -299,7 +265,6 @@ export function AppSidebar() {
                 )}
               </NavLink>
             </SidebarMenuItem>
-            {/* User management — super-admin only */}
             {showUserManagement && (
               <SidebarMenuItem>
                 <NavLink to="/admin/users">

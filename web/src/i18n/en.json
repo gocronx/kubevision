@@ -349,5 +349,15 @@
     "font_system": "System Default",
     "font_inter": "Inter",
     "font_jetbrains-mono": "JetBrains Mono"
+  },
+  "sidebarConfig": {
+    "title": "Customize Sidebar",
+    "description": "Show, hide, pin, or reorder sidebar navigation items",
+    "pinned": "Pinned",
+    "pin": "Pin to top",
+    "unpin": "Unpin",
+    "show": "Show",
+    "hide": "Hide",
+    "reset": "Reset to Default"
   }
 }

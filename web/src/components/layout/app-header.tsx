@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import {
@@ -8,6 +9,7 @@ import {
   Palette,
   Check,
   Type,
+  SlidersHorizontal,
 } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -27,6 +29,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/stores/auth-store"
 import { useAppearance } from "@/components/appearance-provider"
 import { GlobalSearch } from "@/components/shared/global-search"
+import { SidebarCustomizer } from "@/components/sidebar-customizer"
 import { COLOR_THEMES, type ColorTheme } from "@/components/color-theme-provider"
 import { FONTS } from "@/components/font-provider"
 
@@ -49,6 +52,7 @@ export function AppHeader() {
   const location = useLocation()
   const { user, logout } = useAuth()
   const { theme, setTheme, resolvedTheme, colorTheme, setColorTheme, font, setFont } = useAppearance()
+  const [showCustomizer, setShowCustomizer] = useState(false)
 
   const segments = location.pathname.split("/").filter(Boolean)
   const breadcrumb = segments.length > 0
@@ -142,12 +146,17 @@ export function AppHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>{user?.username ?? "User"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowCustomizer(true)}>
+              <SlidersHorizontal className="size-4" />
+              {t("sidebarConfig.title")}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={logout}>
               <LogOut className="size-4" />
               {t("common.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <SidebarCustomizer open={showCustomizer} onOpenChange={setShowCustomizer} />
       </div>
     </header>
   )

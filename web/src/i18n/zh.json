@@ -349,5 +349,15 @@
     "font_system": "系统默认",
     "font_inter": "Inter",
     "font_jetbrains-mono": "JetBrains Mono"
+  },
+  "sidebarConfig": {
+    "title": "自定义侧边栏",
+    "description": "显示、隐藏、置顶或调整侧边栏导航项的顺序",
+    "pinned": "已置顶",
+    "pin": "置顶",
+    "unpin": "取消置顶",
+    "show": "显示",
+    "hide": "隐藏",
+    "reset": "恢复默认"
   }
 }
