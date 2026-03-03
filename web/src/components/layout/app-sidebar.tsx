@@ -162,6 +162,30 @@ export function AppSidebar() {
           if (!group) return null
           const visibleItems = group.items.filter((item) => !isItemHidden(item.to))
           if (visibleItems.length === 0) return null
+
+          // Single-item groups render as a flat menu item without a collapsible wrapper.
+          if (visibleItems.length === 1) {
+            const item = visibleItems[0]
+            return (
+              <SidebarGroup key={group.labelKey}>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <NavLink to={item.to}>
+                        {({ isActive }) => (
+                          <SidebarMenuButton isActive={isActive} tooltip={t(item.titleKey)}>
+                            <item.icon className={item.iconClass} />
+                            <span>{t(item.titleKey)}</span>
+                          </SidebarMenuButton>
+                        )}
+                      </NavLink>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )
+          }
+
           const collapsed = isGroupCollapsed(group.labelKey)
 
           return (

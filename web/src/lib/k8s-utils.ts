@@ -377,6 +377,12 @@ export function extractColumnValue(
     }
     case "count":
       return String((getNestedValue(item, "count") as number) ?? "-")
+    case "lastSeen": {
+      const ts = (getNestedValue(item, "lastTimestamp") as string)
+        ?? (getNestedValue(item, "eventTime") as string)
+        ?? ""
+      return ts ? formatAge(ts) : "-"
+    }
     case "quotaStatus": {
       // Summarise hard/used for the ResourceQuota list view.
       // Format: "3 resources constrained"

@@ -161,22 +161,37 @@ interface ResourceBarProps {
   value: number
   total: number
   formatFn: (v: number) => string
+  /** Force a specific color variant instead of the dynamic threshold-based color. */
+  forceColor?: "red" | "blue" | "yellow"
 }
 
-function ResourceBar({ label, value, total, formatFn }: ResourceBarProps) {
+const forceBarColorMap: Record<string, string> = {
+  red: "[&>[data-slot=progress-indicator]]:bg-red-500",
+  blue: "[&>[data-slot=progress-indicator]]:bg-blue-500",
+  yellow: "[&>[data-slot=progress-indicator]]:bg-yellow-500",
+}
+const forceTextColorMap: Record<string, string> = {
+  red: "text-red-500",
+  blue: "text-blue-500",
+  yellow: "text-yellow-500",
+}
+
+function ResourceBar({ label, value, total, formatFn, forceColor }: ResourceBarProps) {
   const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0
+  const barClass = forceColor ? forceBarColorMap[forceColor] : getBarColorClass(pct)
+  const textClass = forceColor ? forceTextColorMap[forceColor] : getTextColorClass(pct)
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
-        <span className={`font-medium ${getTextColorClass(pct)}`}>
+        <span className={`font-medium ${textClass}`}>
           {pct.toFixed(0)}%
         </span>
       </div>
       <Progress
         value={pct}
         max={100}
-        className={`h-2 ${getBarColorClass(pct)}`}
+        className={`h-2 ${barClass}`}
       />
       <p className="text-xs text-muted-foreground">
         {formatFn(value)} / {formatFn(total)}
@@ -243,6 +258,7 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
             value={resources.cpu.limits}
             total={resources.cpu.allocatable}
             formatFn={formatCPU}
+            forceColor="red"
           />
         </div>
 
@@ -263,6 +279,7 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
             value={resources.memory.limits}
             total={resources.memory.allocatable}
             formatFn={formatMemory}
+            forceColor="red"
           />
         </div>
       </CardContent>

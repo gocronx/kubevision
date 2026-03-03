@@ -420,6 +420,7 @@ export function ResourceListPage() {
         emptyMessage={t("common.noData")}
         onRowClick={handleRowClick}
         getRowKey={getRowKey}
+        defaultSort={config?.defaultSort ?? null}
       />
 
       {/* ------------------------------------------------------------------ */}

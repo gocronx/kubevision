@@ -24,6 +24,8 @@ interface DataTableProps<T = Record<string, unknown>> {
   emptyMessage?: string
   onRowClick?: (item: T, index: number) => void
   getRowKey?: (item: T, index: number) => string
+  /** Initial sort order applied when the table first renders. */
+  defaultSort?: SortState | null
 }
 
 export function DataTable<T = Record<string, unknown>>({
@@ -33,8 +35,9 @@ export function DataTable<T = Record<string, unknown>>({
   emptyMessage = "No data",
   onRowClick,
   getRowKey,
+  defaultSort = null,
 }: DataTableProps<T>) {
-  const [sort, setSort] = useState<SortState | null>(null)
+  const [sort, setSort] = useState<SortState | null>(defaultSort)
 
   const handleSort = useCallback((key: string) => {
     setSort((prev) => {
@@ -202,6 +205,10 @@ function getColumnSortValue(item: unknown, key: string): string | number {
       return (meta?.namespace as string) ?? ""
     case "age": {
       const ts = meta?.creationTimestamp as string | undefined
+      return ts ? new Date(ts).getTime() : 0
+    }
+    case "lastSeen": {
+      const ts = (obj["lastTimestamp"] as string) ?? (obj["eventTime"] as string) ?? ""
       return ts ? new Date(ts).getTime() : 0
     }
     default: {

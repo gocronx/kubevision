@@ -32,6 +32,8 @@ export interface ResourceUIConfig {
   displayName: string
   columns: ColumnConfig[]
   iconColor: string
+  /** Default sort order when the table first loads. */
+  defaultSort?: { key: string; direction: "asc" | "desc" }
 }
 
 /** Maps resource category → Tailwind text color for icons in page content. */
@@ -254,8 +256,10 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
       { key: "object", label: "Object", sortable: true },
       { key: "message", label: "Message", sortable: false },
       { key: "count", label: "Count", sortable: true },
+      { key: "lastSeen", label: "Last Seen", sortable: true },
       { key: "age", label: "Age", sortable: true },
     ],
+    defaultSort: { key: "lastSeen", direction: "desc" },
   },
   resourcequotas: {
     icon: BarChart3,
