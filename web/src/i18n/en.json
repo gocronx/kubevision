@@ -333,5 +333,21 @@
     "unhealthy": "Unhealthy",
     "configure": "Configure Plugin",
     "configureDescription": "Set the connection URL and credentials for this plugin"
+  },
+  "appearance": {
+    "themeMode": "Theme",
+    "mode_light": "Light",
+    "mode_dark": "Dark",
+    "mode_system": "System",
+    "colorTheme": "Color Theme",
+    "color_default": "Default",
+    "color_ocean": "Ocean",
+    "color_aurora": "Aurora",
+    "color_ember": "Ember",
+    "color_nebula": "Nebula",
+    "font": "Font",
+    "font_system": "System Default",
+    "font_inter": "Inter",
+    "font_jetbrains-mono": "JetBrains Mono"
   }
 }

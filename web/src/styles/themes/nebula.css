@@ -1,0 +1,50 @@
+/* Nebula theme — Cloud/space, purple/violet */
+:root.color-nebula {
+  --primary: oklch(0.4 0.14 290);
+  --primary-foreground: oklch(0.985 0.005 290);
+  --secondary: oklch(0.96 0.018 290);
+  --secondary-foreground: oklch(0.28 0.08 290);
+  --muted: oklch(0.96 0.014 290);
+  --muted-foreground: oklch(0.5 0.04 290);
+  --accent: oklch(0.94 0.028 290);
+  --accent-foreground: oklch(0.28 0.08 290);
+  --ring: oklch(0.55 0.14 290);
+  --sidebar: oklch(0.975 0.012 290);
+  --sidebar-foreground: oklch(0.17 0.04 290);
+  --sidebar-primary: oklch(0.4 0.14 290);
+  --sidebar-primary-foreground: oklch(0.985 0.005 290);
+  --sidebar-accent: oklch(0.94 0.028 290);
+  --sidebar-accent-foreground: oklch(0.28 0.08 290);
+  --sidebar-border: oklch(0.9 0.02 290);
+  --sidebar-ring: oklch(0.55 0.14 290);
+  --chart-1: oklch(0.55 0.22 290);
+  --chart-2: oklch(0.6 0.16 310);
+  --chart-3: oklch(0.48 0.14 270);
+  --chart-4: oklch(0.65 0.18 320);
+  --chart-5: oklch(0.52 0.2 260);
+}
+
+:root.dark.color-nebula {
+  --primary: oklch(0.72 0.15 290);
+  --primary-foreground: oklch(0.15 0.03 290);
+  --secondary: oklch(0.25 0.04 290);
+  --secondary-foreground: oklch(0.92 0.02 290);
+  --muted: oklch(0.25 0.035 290);
+  --muted-foreground: oklch(0.68 0.06 290);
+  --accent: oklch(0.25 0.04 290);
+  --accent-foreground: oklch(0.92 0.02 290);
+  --ring: oklch(0.55 0.14 290);
+  --sidebar: oklch(0.18 0.035 290);
+  --sidebar-foreground: oklch(0.92 0.02 290);
+  --sidebar-primary: oklch(0.72 0.15 290);
+  --sidebar-primary-foreground: oklch(0.15 0.03 290);
+  --sidebar-accent: oklch(0.25 0.04 290);
+  --sidebar-accent-foreground: oklch(0.92 0.02 290);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.55 0.14 290);
+  --chart-1: oklch(0.6 0.22 290);
+  --chart-2: oklch(0.65 0.16 310);
+  --chart-3: oklch(0.55 0.18 270);
+  --chart-4: oklch(0.7 0.16 320);
+  --chart-5: oklch(0.58 0.2 260);
+}

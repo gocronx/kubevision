@@ -333,5 +333,21 @@
     "unhealthy": "异常",
     "configure": "配置插件",
     "configureDescription": "设置此插件的连接地址和凭证"
+  },
+  "appearance": {
+    "themeMode": "主题",
+    "mode_light": "浅色",
+    "mode_dark": "深色",
+    "mode_system": "跟随系统",
+    "colorTheme": "配色方案",
+    "color_default": "默认",
+    "color_ocean": "海洋",
+    "color_aurora": "极光",
+    "color_ember": "琥珀",
+    "color_nebula": "星云",
+    "font": "字体",
+    "font_system": "系统默认",
+    "font_inter": "Inter",
+    "font_jetbrains-mono": "JetBrains Mono"
   }
 }

@@ -2,7 +2,7 @@ import { BrowserRouter } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/stores/auth-store"
-import { ThemeProvider } from "next-themes"
+import { AppearanceProvider } from "@/components/appearance-provider"
 import { AppRoutes } from "@/routes"
 import { useWebSocket } from "@/hooks/use-websocket"
 
@@ -23,7 +23,7 @@ function WebSocketManager() {
 
 export function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <AppearanceProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <WebSocketManager />
@@ -33,6 +33,6 @@ export function App() {
           <Toaster position="top-right" />
         </AuthProvider>
       </QueryClientProvider>
-    </ThemeProvider>
+    </AppearanceProvider>
   )
 }

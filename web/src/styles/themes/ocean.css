@@ -1,0 +1,50 @@
+/* Ocean theme — Kubernetes blue / nautical */
+:root.color-ocean {
+  --primary: oklch(0.35 0.12 240);
+  --primary-foreground: oklch(0.985 0.005 240);
+  --secondary: oklch(0.96 0.015 240);
+  --secondary-foreground: oklch(0.25 0.08 240);
+  --muted: oklch(0.96 0.012 240);
+  --muted-foreground: oklch(0.5 0.04 240);
+  --accent: oklch(0.94 0.025 240);
+  --accent-foreground: oklch(0.25 0.08 240);
+  --ring: oklch(0.55 0.12 240);
+  --sidebar: oklch(0.975 0.012 240);
+  --sidebar-foreground: oklch(0.17 0.04 240);
+  --sidebar-primary: oklch(0.35 0.12 240);
+  --sidebar-primary-foreground: oklch(0.985 0.005 240);
+  --sidebar-accent: oklch(0.94 0.025 240);
+  --sidebar-accent-foreground: oklch(0.25 0.08 240);
+  --sidebar-border: oklch(0.9 0.02 240);
+  --sidebar-ring: oklch(0.55 0.12 240);
+  --chart-1: oklch(0.55 0.2 235);
+  --chart-2: oklch(0.6 0.15 210);
+  --chart-3: oklch(0.45 0.12 260);
+  --chart-4: oklch(0.7 0.14 195);
+  --chart-5: oklch(0.5 0.18 250);
+}
+
+:root.dark.color-ocean {
+  --primary: oklch(0.7 0.14 235);
+  --primary-foreground: oklch(0.15 0.03 240);
+  --secondary: oklch(0.25 0.04 240);
+  --secondary-foreground: oklch(0.92 0.02 240);
+  --muted: oklch(0.25 0.035 240);
+  --muted-foreground: oklch(0.68 0.06 240);
+  --accent: oklch(0.25 0.04 240);
+  --accent-foreground: oklch(0.92 0.02 240);
+  --ring: oklch(0.55 0.12 240);
+  --sidebar: oklch(0.18 0.035 240);
+  --sidebar-foreground: oklch(0.92 0.02 240);
+  --sidebar-primary: oklch(0.7 0.14 235);
+  --sidebar-primary-foreground: oklch(0.15 0.03 240);
+  --sidebar-accent: oklch(0.25 0.04 240);
+  --sidebar-accent-foreground: oklch(0.92 0.02 240);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.55 0.12 240);
+  --chart-1: oklch(0.6 0.2 235);
+  --chart-2: oklch(0.65 0.15 210);
+  --chart-3: oklch(0.55 0.18 260);
+  --chart-4: oklch(0.72 0.12 195);
+  --chart-5: oklch(0.58 0.2 250);
+}

@@ -1,0 +1,50 @@
+/* Ember theme — Warm engineering, amber/orange */
+:root.color-ember {
+  --primary: oklch(0.45 0.13 45);
+  --primary-foreground: oklch(0.985 0.005 45);
+  --secondary: oklch(0.96 0.018 40);
+  --secondary-foreground: oklch(0.3 0.07 45);
+  --muted: oklch(0.96 0.015 40);
+  --muted-foreground: oklch(0.52 0.04 40);
+  --accent: oklch(0.94 0.03 40);
+  --accent-foreground: oklch(0.3 0.07 45);
+  --ring: oklch(0.6 0.13 40);
+  --sidebar: oklch(0.975 0.012 40);
+  --sidebar-foreground: oklch(0.17 0.03 40);
+  --sidebar-primary: oklch(0.45 0.13 45);
+  --sidebar-primary-foreground: oklch(0.985 0.005 45);
+  --sidebar-accent: oklch(0.94 0.03 40);
+  --sidebar-accent-foreground: oklch(0.3 0.07 45);
+  --sidebar-border: oklch(0.9 0.02 40);
+  --sidebar-ring: oklch(0.6 0.13 40);
+  --chart-1: oklch(0.65 0.2 40);
+  --chart-2: oklch(0.6 0.16 25);
+  --chart-3: oklch(0.55 0.12 60);
+  --chart-4: oklch(0.7 0.18 50);
+  --chart-5: oklch(0.58 0.2 15);
+}
+
+:root.dark.color-ember {
+  --primary: oklch(0.75 0.14 40);
+  --primary-foreground: oklch(0.15 0.03 40);
+  --secondary: oklch(0.25 0.04 40);
+  --secondary-foreground: oklch(0.92 0.02 40);
+  --muted: oklch(0.25 0.035 40);
+  --muted-foreground: oklch(0.68 0.06 40);
+  --accent: oklch(0.25 0.04 40);
+  --accent-foreground: oklch(0.92 0.02 40);
+  --ring: oklch(0.6 0.13 40);
+  --sidebar: oklch(0.18 0.035 40);
+  --sidebar-foreground: oklch(0.92 0.02 40);
+  --sidebar-primary: oklch(0.75 0.14 40);
+  --sidebar-primary-foreground: oklch(0.15 0.03 40);
+  --sidebar-accent: oklch(0.25 0.04 40);
+  --sidebar-accent-foreground: oklch(0.92 0.02 40);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.6 0.13 40);
+  --chart-1: oklch(0.7 0.2 40);
+  --chart-2: oklch(0.65 0.16 25);
+  --chart-3: oklch(0.6 0.14 60);
+  --chart-4: oklch(0.75 0.16 50);
+  --chart-5: oklch(0.62 0.2 15);
+}

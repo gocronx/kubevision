@@ -1,6 +1,14 @@
 import { useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Sun, Moon, LogOut } from "lucide-react"
+import {
+  Sun,
+  Moon,
+  Monitor,
+  LogOut,
+  Palette,
+  Check,
+  Type,
+} from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -10,18 +18,37 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/stores/auth-store"
-import { useTheme } from "@/hooks/use-theme"
+import { useAppearance } from "@/components/appearance-provider"
 import { GlobalSearch } from "@/components/shared/global-search"
+import { COLOR_THEMES, type ColorTheme } from "@/components/color-theme-provider"
+import { FONTS } from "@/components/font-provider"
+
+const THEME_MODE_ICONS = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+} as const
+
+const COLOR_DOTS: Record<ColorTheme, string> = {
+  default: "bg-neutral-500",
+  ocean: "bg-blue-500",
+  aurora: "bg-teal-500",
+  ember: "bg-amber-500",
+  nebula: "bg-violet-500",
+}
 
 export function AppHeader() {
   const { t } = useTranslation()
   const location = useLocation()
   const { user, logout } = useAuth()
-  const { setTheme, resolvedTheme } = useTheme()
+  const { theme, setTheme, resolvedTheme, colorTheme, setColorTheme, font, setFont } = useAppearance()
 
   const segments = location.pathname.split("/").filter(Boolean)
   const breadcrumb = segments.length > 0
@@ -29,10 +56,7 @@ export function AppHeader() {
     : "Overview"
 
   const isDark = resolvedTheme === "dark"
-
-  function toggleTheme() {
-    setTheme(isDark ? "light" : "dark")
-  }
+  const ThemeModeIcon = isDark ? Sun : Moon
 
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
@@ -46,11 +70,67 @@ export function AppHeader() {
         <span className="text-sm text-muted-foreground">{breadcrumb}</span>
       </div>
       <div className="flex items-center gap-2">
-        {/* Global search — always visible; Cmd+K / Ctrl+K also opens it */}
         <GlobalSearch />
-        <Button variant="ghost" size="icon" onClick={toggleTheme}>
-          {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
+
+        {/* Appearance dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <ThemeModeIcon className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {/* Theme mode */}
+            <DropdownMenuLabel>{t("appearance.themeMode")}</DropdownMenuLabel>
+            {(["light", "dark", "system"] as const).map((mode) => {
+              const Icon = THEME_MODE_ICONS[mode]
+              return (
+                <DropdownMenuItem key={mode} onClick={() => setTheme(mode)}>
+                  <Icon className="size-4" />
+                  {t(`appearance.mode_${mode}`)}
+                  {theme === mode && <Check className="ml-auto size-3.5" />}
+                </DropdownMenuItem>
+              )
+            })}
+
+            <DropdownMenuSeparator />
+
+            {/* Color theme — submenu */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Palette className="size-4" />
+                {t("appearance.colorTheme")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {COLOR_THEMES.map((ct) => (
+                  <DropdownMenuItem key={ct} onClick={() => setColorTheme(ct)}>
+                    <span className={`size-3 rounded-full ${COLOR_DOTS[ct]}`} />
+                    {t(`appearance.color_${ct}`)}
+                    {colorTheme === ct && <Check className="ml-auto size-3.5" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {/* Font — submenu */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Type className="size-4" />
+                {t("appearance.font")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {FONTS.map((f) => (
+                  <DropdownMenuItem key={f} onClick={() => setFont(f)}>
+                    {t(`appearance.font_${f}`)}
+                    {font === f && <Check className="ml-auto size-3.5" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">

@@ -1,0 +1,50 @@
+/* Aurora theme — Northern lights, teal/green, eye-care friendly */
+:root.color-aurora {
+  --primary: oklch(0.42 0.1 160);
+  --primary-foreground: oklch(0.985 0.005 160);
+  --secondary: oklch(0.96 0.015 155);
+  --secondary-foreground: oklch(0.28 0.06 160);
+  --muted: oklch(0.96 0.012 155);
+  --muted-foreground: oklch(0.5 0.04 160);
+  --accent: oklch(0.94 0.025 155);
+  --accent-foreground: oklch(0.28 0.06 160);
+  --ring: oklch(0.55 0.1 155);
+  --sidebar: oklch(0.975 0.01 155);
+  --sidebar-foreground: oklch(0.17 0.03 160);
+  --sidebar-primary: oklch(0.42 0.1 160);
+  --sidebar-primary-foreground: oklch(0.985 0.005 160);
+  --sidebar-accent: oklch(0.94 0.025 155);
+  --sidebar-accent-foreground: oklch(0.28 0.06 160);
+  --sidebar-border: oklch(0.9 0.018 155);
+  --sidebar-ring: oklch(0.55 0.1 155);
+  --chart-1: oklch(0.6 0.16 155);
+  --chart-2: oklch(0.55 0.12 180);
+  --chart-3: oklch(0.48 0.1 140);
+  --chart-4: oklch(0.65 0.14 170);
+  --chart-5: oklch(0.52 0.15 130);
+}
+
+:root.dark.color-aurora {
+  --primary: oklch(0.72 0.13 155);
+  --primary-foreground: oklch(0.15 0.03 160);
+  --secondary: oklch(0.25 0.035 155);
+  --secondary-foreground: oklch(0.92 0.02 155);
+  --muted: oklch(0.25 0.03 155);
+  --muted-foreground: oklch(0.68 0.05 155);
+  --accent: oklch(0.25 0.035 155);
+  --accent-foreground: oklch(0.92 0.02 155);
+  --ring: oklch(0.55 0.1 155);
+  --sidebar: oklch(0.18 0.03 160);
+  --sidebar-foreground: oklch(0.92 0.02 155);
+  --sidebar-primary: oklch(0.72 0.13 155);
+  --sidebar-primary-foreground: oklch(0.15 0.03 160);
+  --sidebar-accent: oklch(0.25 0.035 155);
+  --sidebar-accent-foreground: oklch(0.92 0.02 155);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.55 0.1 155);
+  --chart-1: oklch(0.65 0.16 155);
+  --chart-2: oklch(0.6 0.12 180);
+  --chart-3: oklch(0.55 0.14 140);
+  --chart-4: oklch(0.7 0.12 170);
+  --chart-5: oklch(0.58 0.15 130);
+}

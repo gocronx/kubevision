@@ -69,7 +69,7 @@ export function LoginPage() {
 
   function handleLoginSuccess(data: LoginResponse) {
     login(data.accessToken, data.user, data.refreshToken)
-    toast.success(t("login.success", "Login successful"))
+    toast.success(t("login.success", "Login successful"), { duration: 1500 })
     navigate(from, { replace: true })
   }
 
