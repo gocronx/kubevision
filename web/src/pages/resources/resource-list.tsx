@@ -350,7 +350,7 @@ export function ResourceListPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {config?.icon && (
-            <config.icon className="size-6 text-muted-foreground" />
+            <config.icon className={`size-6 ${config.iconColor}`} />
           )}
           <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
         </div>

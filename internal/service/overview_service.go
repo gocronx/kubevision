@@ -37,15 +37,17 @@ type EventSummary struct {
 
 // OverviewResponse holds the aggregated resource counts for a cluster overview.
 type OverviewResponse struct {
-	Pods         int            `json:"pods"`
-	RunningPods  int            `json:"runningPods"`
-	Deployments  int            `json:"deployments"`
-	Services     int            `json:"services"`
-	Nodes        int            `json:"nodes"`
-	ReadyNodes   int            `json:"readyNodes"`
-	Namespaces   int            `json:"namespaces"`
-	Resources    ResourceUsage  `json:"resources"`
-	RecentEvents []EventSummary `json:"recentEvents"`
+	Pods              int            `json:"pods"`
+	RunningPods       int            `json:"runningPods"`
+	Deployments       int            `json:"deployments"`
+	ReadyDeployments  int            `json:"readyDeployments"`
+	Services          int            `json:"services"`
+	Nodes             int            `json:"nodes"`
+	ReadyNodes        int            `json:"readyNodes"`
+	Namespaces        int            `json:"namespaces"`
+	ActiveNamespaces  int            `json:"activeNamespaces"`
+	Resources         ResourceUsage  `json:"resources"`
+	RecentEvents      []EventSummary `json:"recentEvents"`
 }
 
 // OverviewService aggregates cluster-level resource counts.
@@ -109,6 +111,25 @@ func (s *OverviewService) GetOverview(
 		phase := getNestedString(pod.Raw, "status", "phase")
 		if phase == "Running" {
 			runningPods++
+		}
+	}
+
+	// Count ready deployments (availableReplicas >= desired replicas)
+	readyDeployments := 0
+	for _, dep := range lists["deployments"].Items {
+		desired := getNestedFloat(dep.Raw, "spec", "replicas")
+		available := getNestedFloat(dep.Raw, "status", "availableReplicas")
+		if desired >= 0 && available >= desired {
+			readyDeployments++
+		}
+	}
+
+	// Count active namespaces
+	activeNamespaces := 0
+	for _, ns := range lists["namespaces"].Items {
+		phase := getNestedString(ns.Raw, "status", "phase")
+		if phase == "Active" {
+			activeNamespaces++
 		}
 	}
 
@@ -216,15 +237,17 @@ func (s *OverviewService) GetOverview(
 	}
 
 	return &OverviewResponse{
-		Pods:         int(lists["pods"].Total),
-		RunningPods:  runningPods,
-		Deployments:  int(lists["deployments"].Total),
-		Services:     int(lists["services"].Total),
-		Nodes:        int(lists["nodes"].Total),
-		ReadyNodes:   readyNodes,
-		Namespaces:   int(lists["namespaces"].Total),
-		Resources:    resources,
-		RecentEvents: recentEvents,
+		Pods:             int(lists["pods"].Total),
+		RunningPods:      runningPods,
+		Deployments:      int(lists["deployments"].Total),
+		ReadyDeployments: readyDeployments,
+		Services:         int(lists["services"].Total),
+		Nodes:            int(lists["nodes"].Total),
+		ReadyNodes:       readyNodes,
+		Namespaces:       int(lists["namespaces"].Total),
+		ActiveNamespaces: activeNamespaces,
+		Resources:        resources,
+		RecentEvents:     recentEvents,
 	}, nil
 }
 
@@ -268,6 +291,36 @@ func parseMemoryQuantity(val string) int64 {
 	}
 	v, _ := strconv.ParseFloat(val, 64)
 	return int64(v)
+}
+
+// getNestedFloat safely extracts a numeric value from a nested map path.
+// JSON numbers from unstructured K8s resources are typically float64.
+func getNestedFloat(obj map[string]any, keys ...string) float64 {
+	current := obj
+	for i, key := range keys {
+		v, ok := current[key]
+		if !ok {
+			return -1
+		}
+		if i == len(keys)-1 {
+			switch n := v.(type) {
+			case float64:
+				return n
+			case int64:
+				return float64(n)
+			case int:
+				return float64(n)
+			default:
+				return -1
+			}
+		}
+		next, ok := v.(map[string]any)
+		if !ok {
+			return -1
+		}
+		current = next
+	}
+	return -1
 }
 
 // getNestedString safely extracts a string value from a nested map path.

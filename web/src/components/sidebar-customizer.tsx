@@ -89,7 +89,7 @@ function CustomizerBody() {
                   key={item.to}
                   className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
                 >
-                  <Icon className="size-4 text-muted-foreground" />
+                  <Icon className={cn("size-4", item.iconClass ?? "text-muted-foreground")} />
                   <span className="flex-1">{t(item.titleKey)}</span>
                   <button
                     onClick={() => toggleItemPinned(item.to)}
@@ -164,7 +164,7 @@ function CustomizerBody() {
                         hidden && "opacity-40",
                       )}
                     >
-                      <Icon className="size-4 text-muted-foreground" />
+                      <Icon className={cn("size-4", item.iconClass ?? "text-muted-foreground")} />
                       <span className="flex-1">{t(item.titleKey)}</span>
                       {/* Pin toggle — only for visible items */}
                       {!hidden && (

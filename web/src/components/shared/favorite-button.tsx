@@ -107,7 +107,7 @@ export function FavoriteButton({
           "size-4 transition-colors",
           optimisticFavorited
             ? "fill-yellow-400 text-yellow-400"
-            : "text-muted-foreground"
+            : "text-amber-400"
         )}
       />
     </Button>

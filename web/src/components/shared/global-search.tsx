@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge"
 import { useSearch, useSearchShortcut } from "@/hooks/use-search"
 import type { SearchResultItem } from "@/hooks/use-search"
 import { useCluster } from "@/hooks/use-cluster"
+import { resourceIconClass } from "@/lib/nav-items"
 import { Button } from "@/components/ui/button"
 
 // ---------------------------------------------------------------------------
@@ -63,7 +64,7 @@ const resourceIcons: Record<string, LucideIcon> = {
 
 function ResourceIcon({ resourceType }: { resourceType: string }) {
   const Icon = resourceIcons[resourceType] ?? Package
-  return <Icon className="size-4 shrink-0 text-muted-foreground" />
+  return <Icon className={`size-4 shrink-0 ${resourceIconClass[resourceType] ?? "text-muted-foreground"}`} />
 }
 
 // ---------------------------------------------------------------------------

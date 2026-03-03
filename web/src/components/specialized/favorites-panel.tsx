@@ -234,7 +234,7 @@ export function FavoritesPanel({ className }: FavoritesPanelProps) {
                           tooltip={`${fav.displayName}${fav.namespace ? ` (${fav.namespace})` : ""}`}
                           className="pr-7 relative"
                         >
-                          <Icon className="size-4 shrink-0 text-muted-foreground" />
+                          <Icon className="size-4 shrink-0 text-blue-500" />
                           <div className="flex flex-col min-w-0">
                             <span className="truncate text-sm font-medium">
                               {fav.displayName}

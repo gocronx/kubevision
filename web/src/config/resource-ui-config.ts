@@ -31,6 +31,17 @@ export interface ResourceUIConfig {
   category: string
   displayName: string
   columns: ColumnConfig[]
+  iconColor: string
+}
+
+/** Maps resource category → Tailwind text color for icons in page content. */
+const catColor: Record<string, string> = {
+  workloads: "text-green-500",
+  network: "text-sky-500",
+  config: "text-amber-500",
+  storage: "text-purple-500",
+  cluster: "text-indigo-500",
+  policy: "text-orange-500",
 }
 
 export const resourceUIConfig: Record<string, ResourceUIConfig> = {
@@ -38,6 +49,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Box,
     category: "workloads",
     displayName: "Pods",
+    iconColor: catColor.workloads,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -51,6 +63,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Server,
     category: "workloads",
     displayName: "Deployments",
+    iconColor: catColor.workloads,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -64,6 +77,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Layers,
     category: "workloads",
     displayName: "StatefulSets",
+    iconColor: catColor.workloads,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -75,6 +89,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Radio,
     category: "workloads",
     displayName: "DaemonSets",
+    iconColor: catColor.workloads,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -88,6 +103,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Play,
     category: "workloads",
     displayName: "Jobs",
+    iconColor: catColor.workloads,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -100,6 +116,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Clock,
     category: "workloads",
     displayName: "CronJobs",
+    iconColor: catColor.workloads,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -113,6 +130,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Network,
     category: "network",
     displayName: "Services",
+    iconColor: catColor.network,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -126,6 +144,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Globe,
     category: "network",
     displayName: "Ingresses",
+    iconColor: catColor.network,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -138,6 +157,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: FileText,
     category: "config",
     displayName: "ConfigMaps",
+    iconColor: catColor.config,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -149,6 +169,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: KeyRound,
     category: "config",
     displayName: "Secrets",
+    iconColor: catColor.config,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -161,6 +182,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: HardDrive,
     category: "storage",
     displayName: "Persistent Volumes",
+    iconColor: catColor.storage,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "capacity", label: "Capacity", sortable: true },
@@ -174,6 +196,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Database,
     category: "storage",
     displayName: "PVCs",
+    iconColor: catColor.storage,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -187,6 +210,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Boxes,
     category: "storage",
     displayName: "Storage Classes",
+    iconColor: catColor.storage,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "provisioner", label: "Provisioner", sortable: true },
@@ -199,6 +223,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Monitor,
     category: "cluster",
     displayName: "Nodes",
+    iconColor: catColor.cluster,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "status", label: "Status", sortable: true },
@@ -211,6 +236,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: FolderOpen,
     category: "cluster",
     displayName: "Namespaces",
+    iconColor: catColor.cluster,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "status", label: "Status", sortable: true },
@@ -221,6 +247,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: Activity,
     category: "cluster",
     displayName: "Events",
+    iconColor: catColor.cluster,
     columns: [
       { key: "type", label: "Type", sortable: true },
       { key: "reason", label: "Reason", sortable: true },
@@ -234,6 +261,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: BarChart3,
     category: "policy",
     displayName: "Resource Quotas",
+    iconColor: catColor.policy,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
@@ -245,6 +273,7 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
     icon: SlidersHorizontal,
     category: "policy",
     displayName: "Limit Ranges",
+    iconColor: catColor.policy,
     columns: [
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },

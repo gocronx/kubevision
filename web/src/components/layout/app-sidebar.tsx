@@ -89,7 +89,7 @@ export function AppSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:hidden">
-                <Server className="size-4 shrink-0 text-muted-foreground" />
+                <Server className="size-4 shrink-0 text-blue-500" />
                 <span className="flex-1 truncate text-left">{currentClusterName}</span>
                 <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
               </button>
@@ -144,7 +144,7 @@ export function AppSidebar() {
                       <NavLink to={item.to}>
                         {({ isActive }) => (
                           <SidebarMenuButton isActive={isActive} tooltip={t(item.titleKey)}>
-                            <item.icon />
+                            <item.icon className={item.iconClass} />
                             <span>{t(item.titleKey)}</span>
                           </SidebarMenuButton>
                         )}
@@ -180,7 +180,7 @@ export function AppSidebar() {
                           <NavLink to={item.to}>
                             {({ isActive }) => (
                               <SidebarMenuButton isActive={isActive} tooltip={t(item.titleKey)}>
-                                <item.icon />
+                                <item.icon className={item.iconClass} />
                                 <span>{t(item.titleKey)}</span>
                               </SidebarMenuButton>
                             )}
@@ -203,7 +203,7 @@ export function AppSidebar() {
               <NavLink to="/admin">
                 {({ isActive }) => (
                   <SidebarMenuButton isActive={isActive} tooltip={t("admin.title")}>
-                    <ShieldCheck />
+                    <ShieldCheck className="text-blue-500" />
                     <span>{t("admin.title")}</span>
                   </SidebarMenuButton>
                 )}
@@ -213,7 +213,7 @@ export function AppSidebar() {
               <NavLink to="/admin/webhooks">
                 {({ isActive }) => (
                   <SidebarMenuButton isActive={isActive} tooltip={t("webhook.title")}>
-                    <Webhook />
+                    <Webhook className="text-blue-500" />
                     <span>{t("webhook.title")}</span>
                   </SidebarMenuButton>
                 )}
@@ -223,7 +223,7 @@ export function AppSidebar() {
               <NavLink to="/admin/terminal-sessions">
                 {({ isActive }) => (
                   <SidebarMenuButton isActive={isActive} tooltip={t("terminalSession.title")}>
-                    <TerminalSquare />
+                    <TerminalSquare className="text-blue-500" />
                     <span>{t("terminalSession.title")}</span>
                   </SidebarMenuButton>
                 )}
@@ -233,7 +233,7 @@ export function AppSidebar() {
               <NavLink to="/admin/plugins">
                 {({ isActive }) => (
                   <SidebarMenuButton isActive={isActive} tooltip={t("plugin.title")}>
-                    <Plug />
+                    <Plug className="text-blue-500" />
                     <span>{t("plugin.title")}</span>
                   </SidebarMenuButton>
                 )}
@@ -244,7 +244,7 @@ export function AppSidebar() {
                 <NavLink to="/admin/users">
                   {({ isActive }) => (
                     <SidebarMenuButton isActive={isActive} tooltip={t("users.title")}>
-                      <Users />
+                      <Users className="text-blue-500" />
                       <span>{t("users.title")}</span>
                     </SidebarMenuButton>
                   )}

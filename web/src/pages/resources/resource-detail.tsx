@@ -251,7 +251,7 @@ export function ResourceDetailPage() {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           {config?.icon && (
-            <config.icon className="size-7 text-muted-foreground" />
+            <config.icon className={`size-7 ${config.iconColor}`} />
           )}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{name}</h1>

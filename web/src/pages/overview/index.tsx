@@ -43,10 +43,12 @@ interface OverviewData {
   pods: number
   runningPods: number
   deployments: number
+  readyDeployments: number
   services: number
   nodes: number
   readyNodes: number
   namespaces: number
+  activeNamespaces: number
   resources: ResourceUsage
   recentEvents: EventSummary[]
 }
@@ -76,11 +78,20 @@ interface StatCardProps {
   icon: LucideIcon
   value?: number
   subtitle?: string
+  subtitleColor?: string
   isLoading: boolean
   iconClass?: string
 }
 
-function StatCard({ title, icon: Icon, value, subtitle, isLoading, iconClass }: StatCardProps) {
+function getSubtitleColor(active: number, total: number): string {
+  if (total === 0) return "text-muted-foreground"
+  const ratio = active / total
+  if (ratio >= 1) return "text-green-500"
+  if (ratio >= 0.5) return "text-amber-500"
+  return "text-red-500"
+}
+
+function StatCard({ title, icon: Icon, value, subtitle, subtitleColor, isLoading, iconClass }: StatCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -99,7 +110,7 @@ function StatCard({ title, icon: Icon, value, subtitle, isLoading, iconClass }: 
           <>
             <div className="text-3xl font-bold">{value}</div>
             {subtitle && (
-              <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+              <p className={`mt-1 text-xs font-medium ${subtitleColor ?? "text-muted-foreground"}`}>{subtitle}</p>
             )}
           </>
         )}
@@ -466,9 +477,12 @@ export function OverviewPage() {
               value={data?.nodes}
               subtitle={
                 data
-                  ? t("overview.ready_count", { ready: data.readyNodes, total: data.nodes })
+                  ? data.readyNodes >= data.nodes
+                    ? t("overview.all_ready")
+                    : t("overview.ready_count", { ready: data.readyNodes, total: data.nodes })
                   : undefined
               }
+              subtitleColor={data ? getSubtitleColor(data.readyNodes, data.nodes) : undefined}
               isLoading={isLoading}
               iconClass="bg-blue-500/10"
             />
@@ -478,9 +492,12 @@ export function OverviewPage() {
               value={data?.pods}
               subtitle={
                 data
-                  ? t("overview.running_count", { running: data.runningPods, total: data.pods })
+                  ? data.runningPods >= data.pods
+                    ? t("overview.all_running")
+                    : t("overview.running_count", { running: data.runningPods, total: data.pods })
                   : undefined
               }
+              subtitleColor={data ? getSubtitleColor(data.runningPods, data.pods) : undefined}
               isLoading={isLoading}
               iconClass="bg-green-500/10"
             />
@@ -488,6 +505,14 @@ export function OverviewPage() {
               title={t("overview.deployments")}
               icon={Server}
               value={data?.deployments}
+              subtitle={
+                data
+                  ? data.readyDeployments >= data.deployments
+                    ? t("overview.all_available")
+                    : t("overview.available_count", { available: data.readyDeployments, total: data.deployments })
+                  : undefined
+              }
+              subtitleColor={data ? getSubtitleColor(data.readyDeployments, data.deployments) : undefined}
               isLoading={isLoading}
               iconClass="bg-purple-500/10"
             />
@@ -495,6 +520,12 @@ export function OverviewPage() {
               title={t("overview.services")}
               icon={Network}
               value={data?.services}
+              subtitle={
+                data
+                  ? t("overview.all_active")
+                  : undefined
+              }
+              subtitleColor={data ? "text-green-500" : undefined}
               isLoading={isLoading}
               iconClass="bg-orange-500/10"
             />
@@ -502,6 +533,14 @@ export function OverviewPage() {
               title={t("overview.namespaces")}
               icon={Layers}
               value={data?.namespaces}
+              subtitle={
+                data
+                  ? data.activeNamespaces >= data.namespaces
+                    ? t("overview.all_active")
+                    : t("overview.active_count", { active: data.activeNamespaces, total: data.namespaces })
+                  : undefined
+              }
+              subtitleColor={data ? getSubtitleColor(data.activeNamespaces, data.namespaces) : undefined}
               isLoading={isLoading}
               iconClass="bg-teal-500/10"
             />
