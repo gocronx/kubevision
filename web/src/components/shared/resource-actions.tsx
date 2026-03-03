@@ -25,7 +25,7 @@ import { toast } from "sonner"
 
 // Resource kinds that support each lifecycle action.
 const SCALABLE_KINDS = new Set(["deployments", "statefulsets", "replicasets"])
-const RESTARTABLE_KINDS = new Set(["deployments", "statefulsets", "daemonsets"])
+const RESTARTABLE_KINDS = new Set(["deployments", "statefulsets", "daemonsets", "pods"])
 const ROLLBACKABLE_KINDS = new Set(["deployments"])
 
 interface ResourceActionsProps {

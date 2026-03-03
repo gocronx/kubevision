@@ -98,8 +98,11 @@ func (s *OverviewService) GetOverview(
 		lists[rt] = list
 	}
 
-	// Fetch recent events (limit to 20 for efficiency)
-	eventList, err := s.k8sRepo.List(ctx, clusterKey, "events", "", repository.ListOptions{Limit: 20})
+	// Fetch events without a server-side limit. The Kubernetes List API returns
+	// items in etcd insertion order (oldest first), not by time, so a limit would
+	// drop the most recent events. Events have a default TTL of 1 hour in K8s,
+	// so the total count is bounded and safe to fetch in full.
+	eventList, err := s.k8sRepo.List(ctx, clusterKey, "events", "", repository.ListOptions{})
 	if err != nil {
 		// Events are optional — don't fail the whole overview.
 		eventList = &repository.ResourceList{}

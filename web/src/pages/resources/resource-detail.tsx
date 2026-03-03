@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react"
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { ChevronRight, Copy, Check, Pencil, Trash2 } from "lucide-react"
+import { ChevronRight, Copy, Check, Pencil, Trash2, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -112,6 +112,16 @@ export function ResourceDetailPage() {
       toast.error("Failed to copy to clipboard")
     }
   }, [yamlContent])
+
+  const handleDownloadYaml = useCallback(() => {
+    const blob = new Blob([yamlContent], { type: "text/yaml;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${namespace ? namespace + "-" : ""}${name}.yaml`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [yamlContent, namespace, name])
 
   const handleEditOpen = useCallback(() => {
     if (!data) return
@@ -410,18 +420,28 @@ export function ResourceDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Resource YAML</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyYaml}
-                >
-                  {copied ? (
-                    <Check className="size-4" />
-                  ) : (
-                    <Copy className="size-4" />
-                  )}
-                  {copied ? "Copied" : "Copy"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadYaml}
+                  >
+                    <Download className="size-4" />
+                    {t("pod.download")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyYaml}
+                  >
+                    {copied ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <Copy className="size-4" />
+                    )}
+                    {copied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>

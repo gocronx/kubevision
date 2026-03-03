@@ -30,6 +30,7 @@ var restartableKinds = map[string]bool{
 	"deployments":  true,
 	"statefulsets": true,
 	"daemonsets":   true,
+	"pods":         true,
 }
 
 // ScaleRequest is the request body for scaling a workload.
@@ -140,6 +141,26 @@ func (s *ResourceActionService) Restart(
 	)
 
 	switch kind {
+	case "pods":
+		// For pods: delete the pod so its controller (ReplicaSet/StatefulSet/DaemonSet) recreates it.
+		// Check ownerReferences first to prevent accidental deletion of standalone pods.
+		pod, getErr := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+		if getErr != nil {
+			return bizerr.New(bizerr.CodeNotFound,
+				fmt.Sprintf("pod %q not found in namespace %q: %s", name, namespace, getErr.Error()))
+		}
+		managed := false
+		for _, ref := range pod.OwnerReferences {
+			if ref.Controller != nil && *ref.Controller {
+				managed = true
+				break
+			}
+		}
+		if !managed {
+			return bizerr.New(bizerr.CodeParamInvalid,
+				fmt.Sprintf("pod %q has no controller; restarting would permanently delete it", name))
+		}
+		err = clientset.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	case "deployments":
 		_, err = clientset.AppsV1().Deployments(namespace).Patch(
 			ctx, name, types.StrategicMergePatchType, []byte(patchBody), metav1.PatchOptions{},
