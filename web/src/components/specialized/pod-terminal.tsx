@@ -54,7 +54,7 @@ export interface PodTerminalProps {
 
 // ---- Constants --------------------------------------------------------------
 
-const SHELLS = ["sh", "bash", "zsh"]
+const SHELLS = ["auto", "sh", "bash", "zsh"]
 const RECONNECT_DELAY_MS = 3000
 
 // ---- Component --------------------------------------------------------------
@@ -75,7 +75,7 @@ export function PodTerminal({
 
   const [status, setStatus] = useState<ConnectionStatus>("disconnected")
   const [container, setContainer] = useState<string>(containers[0] ?? "")
-  const [shell, setShell] = useState<string>("sh")
+  const [shell, setShell] = useState<string>("auto")
 
   // ---- xterm setup ----------------------------------------------------------
 
@@ -187,12 +187,11 @@ export function PodTerminal({
 
     const token = localStorage.getItem("token") ?? ""
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const params = new URLSearchParams({
-      token,
-      container,
-      command: shell,
-    })
-    const url = `${protocol}//${window.location.host}/ws-api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/exec?${params}`
+    const params = new URLSearchParams({ token, container })
+    if (shell !== "auto") {
+      params.set("command", shell)
+    }
+    const url = `${protocol}//${window.location.host}/api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/exec?${params}`
 
     const ws = new WebSocket(url)
     wsRef.current = ws

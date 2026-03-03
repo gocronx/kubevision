@@ -80,10 +80,19 @@
     "deployments": "Deployments",
     "services": "Services",
     "nodes": "Nodes",
+    "namespaces": "Namespaces",
     "no_cluster": "No cluster registered",
     "no_cluster_desc": "Add a cluster to get started with KubeVision.",
     "add_cluster": "Add Cluster",
-    "error": "Failed to load cluster overview."
+    "error": "Failed to load cluster overview.",
+    "ready_count": "{{ready}} / {{total}} ready",
+    "running_count": "{{running}} / {{total}} running",
+    "resource_usage": "Resource Allocation",
+    "requests": "Requests",
+    "limits": "Limits",
+    "memory": "Memory",
+    "recent_events": "Recent Events",
+    "no_events": "No recent events"
   },
   "notFound": {
     "title": "404",

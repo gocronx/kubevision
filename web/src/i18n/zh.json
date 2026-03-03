@@ -80,10 +80,19 @@
     "deployments": "Deployments",
     "services": "Services",
     "nodes": "节点",
+    "namespaces": "命名空间",
     "no_cluster": "还没有注册集群",
     "no_cluster_desc": "请先添加集群，开始使用 KubeVision。",
     "add_cluster": "添加集群",
-    "error": "加载集群概览失败。"
+    "error": "加载集群概览失败。",
+    "ready_count": "{{ready}} / {{total}} 就绪",
+    "running_count": "{{running}} / {{total}} 运行中",
+    "resource_usage": "资源分配",
+    "requests": "请求量",
+    "limits": "限制量",
+    "memory": "内存",
+    "recent_events": "最近事件",
+    "no_events": "暂无近期事件"
   },
   "notFound": {
     "title": "404",

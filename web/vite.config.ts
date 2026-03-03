@@ -15,12 +15,7 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
-      },
-      "/ws-api": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
         ws: true,
-        rewrite: (path: string) => path.replace(/^\/ws-api/, "/api"),
       },
     },
   },

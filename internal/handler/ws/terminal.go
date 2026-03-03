@@ -104,7 +104,7 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 	namespace := c.Param("namespace")
 	podName := c.Param("name")
 	container := c.Query("container")
-	shell := c.DefaultQuery("command", "sh")
+	shellParam := c.Query("command") // empty means auto-detect
 
 	// Resolve numeric cluster DB ID to the cluster name key used by the manager.
 	restConfig, err := h.resolveClusterConfig(c, clusterIDStr)
@@ -123,6 +123,20 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+
+	// Detect a working shell. If the user specified one, use it directly.
+	// Otherwise probe common shells so distroless / minimal images still work.
+	shell := shellParam
+	if shell == "" {
+		h.sendTermMsg(conn, termMsgOutput, "\x1b[90mDetecting available shell...\x1b[0m\r\n")
+		detected := h.detectShell(restConfig, namespace, podName, container)
+		if detected == "" {
+			h.sendTermMsg(conn, termMsgError, "no shell found in container (tried /bin/bash, /bin/sh, bash, sh) — this container may be distroless")
+			h.sendTermMsg(conn, termMsgClose, "session ended")
+			return
+		}
+		shell = detected
+	}
 
 	h.logger.Info("terminal session started",
 		zap.String("pod", podName),
@@ -302,6 +316,35 @@ func (h *TerminalHandler) resolveClusterConfig(c *gin.Context, clusterIDStr stri
 		return nil, err
 	}
 	return h.clusterManager.RESTConfig(clusterName)
+}
+
+// detectShell probes the container for a usable shell by attempting a quick
+// exec of each candidate. Returns the first shell that exits successfully.
+// Falls back to "sh" if none work (let the real session surface the error).
+func (h *TerminalHandler) detectShell(restConfig *k8sRestConfig, namespace, pod, container string) string {
+	candidates := []string{"/bin/bash", "/bin/sh", "bash", "sh"}
+	for _, sh := range candidates {
+		session, err := kubexec.NewSession(restConfig)
+		if err != nil {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		err = session.Exec(kubexec.ExecOptions{
+			Ctx:       ctx,
+			Namespace: namespace,
+			PodName:   pod,
+			Container: container,
+			Command:   []string{sh, "-c", "true"},
+			TTY:       false,
+		})
+		cancel()
+		if err == nil {
+			h.logger.Info("detected shell", zap.String("pod", pod), zap.String("shell", sh))
+			return sh
+		}
+	}
+	h.logger.Warn("no shell detected in container", zap.String("pod", pod))
+	return ""
 }
 
 // authenticateToken validates a JWT token string against the database.

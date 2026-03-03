@@ -99,20 +99,27 @@ func TestOverviewHandler_GetOverview_EmptyCluster(t *testing.T) {
 	var data service.OverviewResponse
 	require.NoError(t, json.Unmarshal(resp.Data, &data))
 	assert.Equal(t, 0, data.Pods, "pods should be 0")
+	assert.Equal(t, 0, data.RunningPods, "runningPods should be 0")
 	assert.Equal(t, 0, data.Deployments, "deployments should be 0")
 	assert.Equal(t, 0, data.Services, "services should be 0")
 	assert.Equal(t, 0, data.Nodes, "nodes should be 0")
+	assert.Equal(t, 0, data.ReadyNodes, "readyNodes should be 0")
+	assert.Equal(t, 0, data.Namespaces, "namespaces should be 0")
+	assert.Empty(t, data.RecentEvents, "recentEvents should be empty")
 }
 
 func TestOverviewHandler_GetOverview_WithCounts(t *testing.T) {
 	testCluster := &model.Cluster{ID: 1, Name: "test-cluster"}
 
-	// Return different totals per resource kind.
+	// Return different totals per resource kind. The service now queries:
+	// pods, deployments, services, nodes, namespaces, then events.
 	totals := map[string]int64{
 		"pods":        10,
 		"deployments": 3,
 		"services":    5,
 		"nodes":       2,
+		"namespaces":  4,
+		"events":      0,
 	}
 	listFn := func(_ context.Context, _, kind, _ string, _ repository.ListOptions) (*repository.ResourceList, error) {
 		total := totals[kind]
@@ -141,6 +148,7 @@ func TestOverviewHandler_GetOverview_WithCounts(t *testing.T) {
 	assert.Equal(t, 3, data.Deployments)
 	assert.Equal(t, 5, data.Services)
 	assert.Equal(t, 2, data.Nodes)
+	assert.Equal(t, 4, data.Namespaces)
 }
 
 func TestOverviewHandler_GetOverview_ResponseBodyStructure(t *testing.T) {
@@ -161,13 +169,18 @@ func TestOverviewHandler_GetOverview_ResponseBodyStructure(t *testing.T) {
 	assert.Contains(t, raw, "message")
 	assert.Contains(t, raw, "data")
 
-	// Verify the data payload has all four count fields.
+	// Verify the data payload has all new fields from the enhanced OverviewResponse.
 	var dataPayload map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(raw["data"], &dataPayload))
 	assert.Contains(t, dataPayload, "pods")
+	assert.Contains(t, dataPayload, "runningPods")
 	assert.Contains(t, dataPayload, "deployments")
 	assert.Contains(t, dataPayload, "services")
 	assert.Contains(t, dataPayload, "nodes")
+	assert.Contains(t, dataPayload, "readyNodes")
+	assert.Contains(t, dataPayload, "namespaces")
+	assert.Contains(t, dataPayload, "resources")
+	assert.Contains(t, dataPayload, "recentEvents")
 }
 
 func TestOverviewHandler_GetOverview_K8sError(t *testing.T) {
