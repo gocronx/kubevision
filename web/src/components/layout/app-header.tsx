@@ -10,6 +10,7 @@ import {
   Check,
   Type,
   SlidersHorizontal,
+  Languages,
 } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -48,7 +49,7 @@ const COLOR_DOTS: Record<ColorTheme, string> = {
 }
 
 export function AppHeader() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const location = useLocation()
   const { user, logout } = useAuth()
   const { theme, setTheme, resolvedTheme, colorTheme, setColorTheme, font, setFont } = useAppearance()
@@ -133,6 +134,20 @@ export function AppHeader() {
             </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Language toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            const next = i18n.language === "zh" ? "en" : "zh"
+            i18n.changeLanguage(next)
+            localStorage.setItem("language", next)
+          }}
+          title={i18n.language === "zh" ? "Switch to English" : "切换为中文"}
+        >
+          <Languages className="size-4" />
+        </Button>
 
         {/* User menu */}
         <DropdownMenu>

@@ -1,7 +1,6 @@
 import { NavLink } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import {
-  Languages,
   ChevronsUpDown,
   Check,
   ShieldCheck,
@@ -45,33 +44,8 @@ import { AddClusterDialog } from "@/components/shared/add-cluster-dialog"
 import { useCluster } from "@/hooks/use-cluster"
 import { useSidebarConfig } from "@/components/sidebar-config-provider"
 import { navGroups, getNavItemByRoute, getNavGroupByKey } from "@/lib/nav-items"
-import { useState, useCallback } from "react"
-import { useTranslation as useI18nTranslation } from "react-i18next"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-
-function LanguageToggle() {
-  const { i18n } = useI18nTranslation()
-  const isZh = i18n.language === "zh"
-
-  const toggle = useCallback(() => {
-    const next = isZh ? "en" : "zh"
-    i18n.changeLanguage(next)
-    localStorage.setItem("language", next)
-  }, [i18n, isZh])
-
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-6 w-auto px-1.5 text-xs text-muted-foreground hover:text-foreground"
-      onClick={toggle}
-      title={isZh ? "Switch to English" : "切换为中文"}
-    >
-      <Languages className="size-3.5" />
-      <span className="ml-1 group-data-[collapsible=icon]:hidden">{isZh ? "EN" : "中文"}</span>
-    </Button>
-  )
-}
 
 export function AppSidebar() {
   const { t } = useTranslation()
@@ -279,11 +253,10 @@ export function AppSidebar() {
             )}
           </SidebarMenu>
         )}
-        <div className="flex items-center justify-between px-2 py-1 group-data-[collapsible=icon]:justify-center">
-          <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+        <div className="px-2 py-1 group-data-[collapsible=icon]:hidden">
+          <span className="text-xs text-muted-foreground">
             KubeVision v0.1.0
           </span>
-          <LanguageToggle />
         </div>
       </SidebarFooter>
     </Sidebar>
