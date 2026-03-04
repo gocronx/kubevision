@@ -42,6 +42,7 @@ type RouterDeps struct {
 // RegisterRoutes sets up all API route groups on the given engine.
 func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 	// Global middleware.
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.RequestID())
 	if deps != nil && deps.Logger != nil {
 		r.Use(middleware.Logger(deps.Logger))
@@ -57,6 +58,7 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 	{
 		// ---- Public auth routes (no authentication required) ----
 		authGroup := v1.Group("/auth")
+		authGroup.Use(middleware.AuthRateLimit())
 		{
 			if deps != nil && deps.AuthHandler != nil {
 				authGroup.POST("/login", deps.AuthHandler.Login)

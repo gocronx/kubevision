@@ -164,9 +164,9 @@ func main() {
 	templateHandler := handler.NewTemplateHandler(templateService)
 
 	// Pod terminal and log streaming handlers.
-	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger).
+	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger).
 		WithSessionService(terminalSessionService)
-	logsHandler := ws.NewLogsHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger)
+	logsHandler := ws.NewLogsHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(jwtManager, userRepo, apiKeyService)

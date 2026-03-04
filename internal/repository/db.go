@@ -84,7 +84,7 @@ func initDefaultAdmin(db *gorm.DB, logger *zap.Logger) {
 		if err := db.Create(&admin).Error; err != nil {
 			logger.Warn("failed to create default admin", zap.Error(err))
 		} else {
-			logger.Info("default admin user created (password: admin123)")
+			logger.Info("default admin user created", zap.String("username", "admin"))
 		}
 	}
 }
@@ -111,14 +111,19 @@ func initSystemRoles(db *gorm.DB, logger *zap.Logger) {
 			IsSystem:    true,
 			// Can CRUD K8s resources, use cluster tools, and manage favorites.
 			// Cannot access users, webhooks, audit-logs, api-keys, or terminal-sessions.
-			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create"]`,
+			// pods:exec  — required by the WebSocket terminal handler (checkWSPermission).
+			// pods:list  — required by the WebSocket log-streaming handler (checkWSPermission).
+			// overview:list — required by the cluster overview endpoint.
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create","pods:exec","pods:list","overview:list"]`,
 		},
 		{
 			Name:        "viewer",
 			DisplayName: "Viewer",
 			IsSystem:    true,
 			// Read-only access to K8s resources and cluster views.
-			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","history:list"]`,
+			// pods:list  — required by the WebSocket log-streaming handler (checkWSPermission).
+			// overview:list — required by the cluster overview endpoint.
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","history:list","pods:list","overview:list"]`,
 		},
 		{
 			Name:        "custom",
@@ -132,8 +137,18 @@ func initSystemRoles(db *gorm.DB, logger *zap.Logger) {
 	for _, role := range roles {
 		var existing model.Role
 		if silent.Where("name = ?", role.Name).First(&existing).Error != nil {
+			// Role does not exist yet — create it.
 			if err := db.Create(&role).Error; err != nil {
 				logger.Warn("failed to create system role", zap.String("role", role.Name), zap.Error(err))
+			}
+		} else {
+			// Role exists — update its permissions and display name so that
+			// permission additions introduced by security patches are applied
+			// to already-running databases without requiring a manual migration.
+			existing.Permissions = role.Permissions
+			existing.DisplayName = role.DisplayName
+			if err := db.Save(&existing).Error; err != nil {
+				logger.Warn("failed to update system role permissions", zap.String("role", role.Name), zap.Error(err))
 			}
 		}
 	}

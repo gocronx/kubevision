@@ -40,6 +40,7 @@ type LogsHandler struct {
 	clusterRepo    repository.ClusterRepo
 	jwtManager     *auth.JWTManager
 	userRepo       repository.UserRepo
+	roleRepo       repository.RoleRepo
 	logger         *zap.Logger
 }
 
@@ -49,6 +50,7 @@ func NewLogsHandler(
 	clusterRepo repository.ClusterRepo,
 	jwtManager *auth.JWTManager,
 	userRepo repository.UserRepo,
+	roleRepo repository.RoleRepo,
 	logger *zap.Logger,
 ) *LogsHandler {
 	return &LogsHandler{
@@ -56,6 +58,7 @@ func NewLogsHandler(
 		clusterRepo:    clusterRepo,
 		jwtManager:     jwtManager,
 		userRepo:       userRepo,
+		roleRepo:       roleRepo,
 		logger:         logger,
 	}
 }
@@ -79,9 +82,18 @@ func (h *LogsHandler) HandleLogs(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "missing token query parameter"})
 		return
 	}
-	if _, err := h.authenticateToken(c, tokenStr); err != nil {
+	authResult, err := h.authenticateToken(c, tokenStr)
+	if err != nil {
 		c.JSON(401, gin.H{"error": "unauthorized: " + err.Error()})
 		return
+	}
+
+	// --- RBAC: require pods:list permission (viewing logs) ---
+	if h.roleRepo != nil {
+		if permErr := checkWSPermission(c.Request.Context(), h.roleRepo, authResult.UserRole, "pods", "list"); permErr != nil {
+			c.JSON(403, gin.H{"error": "permission denied"})
+			return
+		}
 	}
 
 	// --- Route parameters ---
@@ -239,8 +251,15 @@ func (h *LogsHandler) sendLogMsg(conn *websocket.Conn, writeMu *sync.Mutex, msgT
 	_ = conn.WriteMessage(websocket.TextMessage, raw)
 }
 
+// logsAuthResult bundles the validated JWT claims with the user's
+// current role as stored in the database.
+type logsAuthResult struct {
+	Claims   *auth.TokenClaims
+	UserRole string
+}
+
 // authenticateToken validates a JWT token string and checks the user in the database.
-func (h *LogsHandler) authenticateToken(c *gin.Context, tokenStr string) (*auth.TokenClaims, error) {
+func (h *LogsHandler) authenticateToken(c *gin.Context, tokenStr string) (*logsAuthResult, error) {
 	claims, err := h.jwtManager.ParseToken(tokenStr)
 	if err != nil {
 		return nil, err
@@ -255,5 +274,5 @@ func (h *LogsHandler) authenticateToken(c *gin.Context, tokenStr string) (*auth.
 	if claims.TokenVersion != user.TokenVersion {
 		return nil, errTokenRevoked
 	}
-	return claims, nil
+	return &logsAuthResult{Claims: claims, UserRole: user.Role}, nil
 }

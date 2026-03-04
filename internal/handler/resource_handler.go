@@ -121,7 +121,7 @@ func (h *ResourceHandler) Create(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 2*1024*1024))
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
 		return
@@ -167,7 +167,7 @@ func (h *ResourceHandler) Update(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 2*1024*1024))
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
 		return
@@ -249,7 +249,7 @@ func (h *ResourceHandler) Patch(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 2*1024*1024))
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
 		return
@@ -302,7 +302,7 @@ func (h *ResourceHandler) DryRunCreate(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 2*1024*1024))
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
 		return
@@ -361,7 +361,7 @@ func (h *ResourceHandler) DryRunUpdate(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 2*1024*1024))
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "failed to read request body")
 		return

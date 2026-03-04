@@ -2,9 +2,14 @@ package auth
 
 import "golang.org/x/crypto/bcrypt"
 
+// bcryptCost is the work factor used when hashing passwords. Cost 12 strikes a
+// good balance between brute-force resistance and acceptable login latency on
+// modern hardware (~250 ms per hash).
+const bcryptCost = 12
+
 // HashPassword returns the bcrypt hash of the given password.
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
 		return "", err
 	}

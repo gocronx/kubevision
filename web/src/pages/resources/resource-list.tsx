@@ -340,6 +340,13 @@ export function ResourceListPage() {
               currentReplicas={spec?.replicas ?? 0}
               readOnly={!userCanMutate}
               onDeleted={handleRefresh}
+              onEdit={() => {
+                const ns = meta?.namespace
+                const path = ns
+                  ? `/${resource}/${itemName}?namespace=${ns}`
+                  : `/${resource}/${itemName}`
+                navigate(path)
+              }}
             />
           </div>
         )

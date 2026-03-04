@@ -405,7 +405,7 @@ export function ResourceDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="max-h-[300px]">
-                    <pre className="rounded-md bg-muted/50 p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
+                    <pre className="rounded-md bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
                       {toYaml(data.status)}
                     </pre>
                   </ScrollArea>
@@ -447,7 +447,7 @@ export function ResourceDetailPage() {
             </CardHeader>
             <CardContent>
               <ScrollArea className="max-h-[600px]">
-                <pre className="rounded-md bg-muted/50 p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
+                <pre className="rounded-md bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
                   {yamlContent}
                 </pre>
               </ScrollArea>
@@ -532,7 +532,7 @@ export function ResourceDetailPage() {
           />
           <ScrollArea className="max-h-[500px]">
             <textarea
-              className="h-[400px] w-full rounded-md border bg-muted/50 p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
+              className="h-[400px] w-full rounded-md border bg-muted p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
               value={editJson}
               onChange={(e) => setEditJson(e.target.value)}
             />

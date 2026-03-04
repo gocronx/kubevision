@@ -3,6 +3,9 @@ package ws
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,13 +33,65 @@ const (
 	sendBufferSize = 256
 )
 
-// upgrader is the WebSocket upgrader with permissive origin check for development.
+// allowedOriginHosts is the set of hosts permitted to make cross-origin
+// WebSocket connections in addition to the backend's own Host. Populated at
+// startup from the KUBEVISION_ALLOWED_ORIGINS environment variable (comma-
+// separated list of host[:port] values) so that development front-ends
+// (e.g. Vite on localhost:5173) are not blocked without disabling the check
+// entirely.
+var allowedOriginHosts = parseAllowedOrigins(os.Getenv("KUBEVISION_ALLOWED_ORIGINS"))
+
+// parseAllowedOrigins splits a comma-separated list of host[:port] values into
+// a set for O(1) membership testing. Empty entries are silently ignored.
+func parseAllowedOrigins(raw string) map[string]bool {
+	result := make(map[string]bool)
+	for _, entry := range strings.Split(raw, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry != "" {
+			result[entry] = true
+		}
+	}
+	return result
+}
+
+// upgrader is the WebSocket upgrader that validates the Origin header against
+// the request's Host header to prevent cross-origin WebSocket hijacking.
+// In development mode (GIN_MODE != "release") cross-origin connections from
+// localhost are also permitted so that the Vite dev-server (default port 5173)
+// can reach the backend without disabling origin checks entirely.
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// Allow all origins; restrict in production via reverse proxy or config.
-		return true
+		origin := r.Header.Get("Origin")
+		// No Origin header means a same-origin or non-browser request — allow.
+		if origin == "" {
+			return true
+		}
+		// Parse the Origin header and compare its host (host[:port]) against
+		// the request's Host header so cross-origin browser requests are
+		// rejected while same-origin connections continue to work.
+		originURL, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		// url.Parse puts host[:port] in URL.Host.
+		originHost := originURL.Host
+		if originHost == r.Host {
+			return true
+		}
+		// Allow explicitly whitelisted origins (set via KUBEVISION_ALLOWED_ORIGINS).
+		if allowedOriginHosts[originHost] {
+			return true
+		}
+		// In non-release (development) mode, permit any localhost origin so
+		// that a Vite/webpack dev-server on a different port is not blocked.
+		// In release mode only the same-origin and whitelisted origins pass.
+		if gin.Mode() != gin.ReleaseMode {
+			host := originURL.Hostname() // host without port
+			return host == "localhost" || host == "127.0.0.1" || host == "::1"
+		}
+		return false
 	},
 }
 

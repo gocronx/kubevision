@@ -1,11 +1,29 @@
 package handler
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
 	"github.com/kubevision/kubevision/internal/pkg/response"
 	"github.com/kubevision/kubevision/internal/service"
 )
+
+const maxPromQLQueryLen = 1000
+
+// validatePromQLQuery performs basic safety checks on a PromQL query string:
+//   - Rejects queries longer than maxPromQLQueryLen characters.
+//   - Rejects queries containing the broad wildcard pattern __name__=~".*"
+//     which can result in extremely expensive full-metric-set scans.
+func validatePromQLQuery(query string) error {
+	if len(query) > maxPromQLQueryLen {
+		return bizerr.New(bizerr.CodeParamInvalid, "query exceeds maximum allowed length")
+	}
+	if strings.Contains(query, `__name__=~".*"`) {
+		return bizerr.New(bizerr.CodeParamInvalid, "query contains disallowed pattern")
+	}
+	return nil
+}
 
 // PluginHandler handles HTTP requests for plugin management.
 type PluginHandler struct {
@@ -107,6 +125,15 @@ func (h *PluginHandler) PrometheusQuery(c *gin.Context) {
 	query := c.Query("query")
 	if query == "" {
 		response.Error(c, bizerr.CodeParamMissing, "query parameter required")
+		return
+	}
+
+	if err := validatePromQLQuery(query); err != nil {
+		if bizErr, ok := err.(*bizerr.BizError); ok {
+			response.ErrorWithBizErr(c, bizErr)
+		} else {
+			response.Error(c, bizerr.CodeParamInvalid, "invalid query")
+		}
 		return
 	}
 

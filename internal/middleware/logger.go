@@ -1,11 +1,29 @@
 package middleware
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
+
+// redactQuery removes sensitive query parameters (e.g. token) from the raw
+// query string before it is written to logs.
+func redactQuery(rawQuery string) string {
+	if rawQuery == "" {
+		return ""
+	}
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		// If we can't parse, return a safe placeholder rather than leaking data.
+		return "[unparseable query]"
+	}
+	if _, ok := values["token"]; ok {
+		values.Set("token", "[REDACTED]")
+	}
+	return values.Encode()
+}
 
 // Logger returns a Gin middleware that logs every request using the provided
 // zap logger.
@@ -13,7 +31,7 @@ func Logger(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
+		query := redactQuery(c.Request.URL.RawQuery)
 
 		c.Next()
 

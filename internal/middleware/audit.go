@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"strings"
 	"time"
@@ -10,6 +11,53 @@ import (
 	"github.com/kubevision/kubevision/internal/model"
 	"github.com/kubevision/kubevision/internal/service"
 )
+
+// sensitiveFields is the set of JSON field names whose values must be
+// redacted before storing a request body in the audit log.
+var sensitiveFields = map[string]bool{
+	"password":     true,
+	"newPassword":  true,
+	"oldPassword":  true,
+	"secret":       true,
+	"kubeconfig":   true,
+	"token":        true,
+	"refreshToken": true,
+}
+
+// redactSensitiveFields parses bodyStr as JSON and replaces the values of any
+// sensitiveFields keys with "[REDACTED]". If the body is not valid JSON it is
+// returned unchanged so we do not lose audit data for non-JSON endpoints.
+func redactSensitiveFields(bodyStr string) string {
+	if bodyStr == "" {
+		return bodyStr
+	}
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(bodyStr), &parsed); err != nil {
+		// Not a JSON object — return as-is (binary or text bodies).
+		return bodyStr
+	}
+	redactMapFields(parsed)
+	out, err := json.Marshal(parsed)
+	if err != nil {
+		return bodyStr
+	}
+	return string(out)
+}
+
+// redactMapFields recursively walks a decoded JSON map and replaces the values
+// of any sensitive fields with "[REDACTED]".
+func redactMapFields(m map[string]interface{}) {
+	for k, v := range m {
+		if sensitiveFields[k] {
+			m[k] = "[REDACTED]"
+			continue
+		}
+		// Recurse into nested objects.
+		if nested, ok := v.(map[string]interface{}); ok {
+			redactMapFields(nested)
+		}
+	}
+}
 
 const maxRequestBodySize = 4 * 1024 // 4 KB
 
@@ -43,11 +91,12 @@ func AuditMiddleware(auditService *service.AuditService) gin.HandlerFunc {
 		if c.Request.Body != nil {
 			raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxRequestBodySize))
 			if err == nil {
-				bodyStr = string(raw)
 				// Restore the FULL body for downstream handlers. raw holds the
 				// first (up to) 4 KB; c.Request.Body still contains everything
 				// beyond that. Concatenating them gives the complete payload.
 				c.Request.Body = io.NopCloser(io.MultiReader(bytes.NewReader(raw), c.Request.Body))
+				// Redact sensitive fields before storing in the audit log.
+				bodyStr = redactSensitiveFields(string(raw))
 			}
 		}
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -122,14 +123,38 @@ func (p *Plugin) QueryRange(ctx context.Context, query string, start, end time.T
 	return &result, nil
 }
 
+// escapePromQLLabelValue escapes special characters inside a PromQL label
+// value string so that user-controlled input cannot break out of the
+// double-quoted label selector syntax.
+//
+// Characters that must be escaped inside double-quoted PromQL strings:
+//   - backslash  (\) — must be first to avoid double-escaping
+//   - double quote (") — closes the label value prematurely
+//   - newline (\n)    — terminates the label value
+func escapePromQLLabelValue(s string) string {
+	// Order matters: escape backslashes first.
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	s = strings.ReplaceAll(s, "\n", `\n`)
+	return s
+}
+
 // PodCPU returns the CPU usage rate for a specific pod.
 func (p *Plugin) PodCPU(ctx context.Context, namespace, pod string) (*QueryResult, error) {
-	query := fmt.Sprintf(`rate(container_cpu_usage_seconds_total{namespace="%s",pod="%s",container!=""}[5m])`, namespace, pod)
+	query := fmt.Sprintf(
+		`rate(container_cpu_usage_seconds_total{namespace="%s",pod="%s",container!=""}[5m])`,
+		escapePromQLLabelValue(namespace),
+		escapePromQLLabelValue(pod),
+	)
 	return p.Query(ctx, query)
 }
 
 // PodMemory returns the memory usage for a specific pod.
 func (p *Plugin) PodMemory(ctx context.Context, namespace, pod string) (*QueryResult, error) {
-	query := fmt.Sprintf(`container_memory_working_set_bytes{namespace="%s",pod="%s",container!=""}`, namespace, pod)
+	query := fmt.Sprintf(
+		`container_memory_working_set_bytes{namespace="%s",pod="%s",container!=""}`,
+		escapePromQLLabelValue(namespace),
+		escapePromQLLabelValue(pod),
+	)
 	return p.Query(ctx, query)
 }

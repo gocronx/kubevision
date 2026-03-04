@@ -77,7 +77,7 @@ func TestLogMessage_OmitemptyData(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLogsHandler_HandleLogs_MissingToken_Returns400(t *testing.T) {
-	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/logs", nil)
 	w := httptest.NewRecorder()
@@ -95,7 +95,7 @@ func TestLogsHandler_HandleLogs_MissingToken_Returns400(t *testing.T) {
 
 func TestLogsHandler_HandleLogs_InvalidToken_Returns401(t *testing.T) {
 	jwtMgr := newTestJWTManager()
-	handler := NewLogsHandler(nil, nil, jwtMgr, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, jwtMgr, nil, nil, newDiscardLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/logs?token=garbage-token", nil)
 	w := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestLogsHandler_SendLogMsg(t *testing.T) {
 
 	<-connReady
 
-	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 	var mu sync.Mutex
 	handler.sendLogMsg(serverConn, &mu, logMsgLine, "container log line here")
 
@@ -165,7 +165,7 @@ func TestLogsHandler_SendLogMsg_ErrorType(t *testing.T) {
 
 	serverConn := <-serverConnCh
 
-	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 	var mu sync.Mutex
 	handler.sendLogMsg(serverConn, &mu, logMsgError, "pod terminated unexpectedly")
 
@@ -189,7 +189,7 @@ func TestLogsHandler_SendLogMsg_CloseType(t *testing.T) {
 
 	serverConn := <-serverConnCh
 
-	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 	var mu sync.Mutex
 	handler.sendLogMsg(serverConn, &mu, logMsgClose, "stream ended")
 
@@ -219,7 +219,7 @@ func TestLogsHandler_PingLoop_ExitsOnContextCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -253,7 +253,7 @@ func TestLogsHandler_PingLoop_ExitsOnSecondContextCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	handler := NewLogsHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewLogsHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -277,11 +277,12 @@ func TestLogsHandler_PingLoop_ExitsOnSecondContextCancel(t *testing.T) {
 
 func TestLogsHandler_QueryParams_Follow(t *testing.T) {
 	// "true" is the only string that results in follow=true.
-	assert.True(t, "true" == "true")
-	assert.False(t, "" == "true")
-	assert.False(t, "1" == "true")
-	assert.False(t, "True" == "true")
-	assert.False(t, "yes" == "true")
+	parseFollow := func(s string) bool { return s == "true" }
+	assert.True(t, parseFollow("true"))
+	assert.False(t, parseFollow(""))
+	assert.False(t, parseFollow("1"))
+	assert.False(t, parseFollow("True"))
+	assert.False(t, parseFollow("yes"))
 }
 
 func TestLogsHandler_QueryParams_TailLines_Valid(t *testing.T) {

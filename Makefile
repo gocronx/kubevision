@@ -6,11 +6,18 @@ GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
 
-.PHONY: dev build test lint clean tidy fmt
+.PHONY: dev build build-frontend build-all test lint clean tidy fmt
 
 ## dev: Run with air hot-reload (requires: go install github.com/air-verse/air@latest)
 dev:
 	air -c .air.toml || $(GO) run $(MAIN_PKG)
+
+## build-frontend: Build the React frontend
+build-frontend:
+	cd web && pnpm install && pnpm build
+
+## build-all: Build frontend + backend into a single binary
+build-all: build-frontend build
 
 ## build: Compile the binary
 build:

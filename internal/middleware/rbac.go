@@ -60,7 +60,7 @@ func RBACMiddleware(roleRepo repository.RoleRepo) gin.HandlerFunc {
 		}
 
 		if !hasPermission(permissions, resource, action) {
-			response.Error(c, bizerr.CodeForbidden, "permission denied: "+resource+":"+action)
+			response.Error(c, bizerr.CodeForbidden, "permission denied")
 			c.Abort()
 			return
 		}

@@ -165,6 +165,15 @@ func Load(path string) (*Config, error) {
 		}
 		cfg.Auth.JWTSecret = secret
 		secretsChanged = true
+	} else if len(cfg.Auth.JWTSecret) < 32 {
+		// The configured secret is too short to be safe; replace it with a
+		// freshly generated one and persist it so the change survives restarts.
+		secret, err := randomHex(32)
+		if err != nil {
+			return nil, fmt.Errorf("generate jwt secret: %w", err)
+		}
+		cfg.Auth.JWTSecret = secret
+		secretsChanged = true
 	}
 	if cfg.EncryptKey == "" {
 		key, err := randomHex(32)

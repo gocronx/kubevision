@@ -204,7 +204,7 @@ func TestWsWriter_MarshalledPayload(t *testing.T) {
 // TestTerminalHandler_HandleExec_MissingToken verifies that a request without
 // the token query parameter receives a 400 response before any WS upgrade.
 func TestTerminalHandler_HandleExec_MissingToken(t *testing.T) {
-	handler := NewTerminalHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/exec", nil)
 	w := httptest.NewRecorder()
@@ -232,7 +232,7 @@ func TestTerminalHandler_ResolveClusterConfig_ClusterNotFound(t *testing.T) {
 	repo := newStubClusterRepo()
 	// No clusters registered — any lookup should fail.
 
-	handler := NewTerminalHandler(nil, repo, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, repo, nil, nil, nil, newDiscardLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/exec?token=x", nil)
 	w := httptest.NewRecorder()
@@ -251,7 +251,7 @@ func TestTerminalHandler_ResolveClusterConfig_ClusterNotFound(t *testing.T) {
 // the JWTManager is present but the token is garbage.
 func TestTerminalHandler_HandleExec_InvalidToken_Rejected(t *testing.T) {
 	jwtMgr := newTestJWTManager()
-	handler := NewTerminalHandler(nil, nil, jwtMgr, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, jwtMgr, nil, nil, newDiscardLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/exec?token=notavalidjwt", nil)
 	w := httptest.NewRecorder()
@@ -367,7 +367,7 @@ func TestTerminalHandler_SendTermMsg(t *testing.T) {
 
 	<-connReady
 
-	handler := NewTerminalHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 	handler.sendTermMsg(serverConn, termMsgError, "something went wrong")
 
 	_, raw, err := clientConn.ReadMessage()
@@ -420,7 +420,7 @@ func TestTerminalHandler_ReadLoop_InputMessage_WritesToStdin(t *testing.T) {
 
 	<-serverReady
 
-	handler := NewTerminalHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 
 	// Run the readLoop in the background — it will read from serverConn.
 	go handler.readLoop(ctx, serverConn, stdinW, sizeQueue, cancel)
@@ -476,7 +476,7 @@ func TestTerminalHandler_ReadLoop_ResizeMessage_PushesToSizeQueue(t *testing.T) 
 
 	_, stdinW := io.Pipe()
 	sizeQueue := newTermSizeQueue()
-	handler := NewTerminalHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 
 	go handler.readLoop(ctx, serverConn, stdinW, sizeQueue, cancel)
 
@@ -519,7 +519,7 @@ func TestTerminalHandler_ReadLoop_RawBytesForwardedToStdin(t *testing.T) {
 
 	stdinR, stdinW := io.Pipe()
 	sizeQueue := newTermSizeQueue()
-	handler := NewTerminalHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 
 	go handler.readLoop(ctx, serverConn, stdinW, sizeQueue, cancel)
 
@@ -573,7 +573,7 @@ func TestTerminalHandler_ReadLoop_ZeroDimensionResizeIgnored(t *testing.T) {
 
 	_, stdinW := io.Pipe()
 	sizeQueue := newTermSizeQueue()
-	handler := NewTerminalHandler(nil, nil, nil, nil, newDiscardLogger())
+	handler := NewTerminalHandler(nil, nil, nil, nil, nil, newDiscardLogger())
 
 	go handler.readLoop(ctx, serverConn, stdinW, sizeQueue, cancel)
 

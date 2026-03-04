@@ -35,7 +35,8 @@ tmp/
 
 # Frontend (Node)
 web/node_modules/
-web/dist/
+web/dist/*
+!web/dist/.gitkeep
 web/.next/
 web/.cache/
 
@@ -48,3 +49,4 @@ coverage/
 config.yaml
 config.local.yaml
 .kubevision-secrets.yaml
+**/.kubevision-secrets.yaml

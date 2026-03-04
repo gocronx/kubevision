@@ -49,6 +49,7 @@ type TerminalHandler struct {
 	clusterRepo     repository.ClusterRepo
 	jwtManager      *auth.JWTManager
 	userRepo        repository.UserRepo
+	roleRepo        repository.RoleRepo
 	sessionService  *service.TerminalSessionService
 	logger          *zap.Logger
 }
@@ -59,6 +60,7 @@ func NewTerminalHandler(
 	clusterRepo repository.ClusterRepo,
 	jwtManager *auth.JWTManager,
 	userRepo repository.UserRepo,
+	roleRepo repository.RoleRepo,
 	logger *zap.Logger,
 ) *TerminalHandler {
 	return &TerminalHandler{
@@ -66,6 +68,7 @@ func NewTerminalHandler(
 		clusterRepo:    clusterRepo,
 		jwtManager:     jwtManager,
 		userRepo:       userRepo,
+		roleRepo:       roleRepo,
 		logger:         logger,
 	}
 }
@@ -93,10 +96,19 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 		h.writeErrorAndClose(c, "missing token query parameter")
 		return
 	}
-	claims, err := h.authenticateToken(c, tokenStr)
+	authResult, err := h.authenticateToken(c, tokenStr)
 	if err != nil {
 		h.writeErrorAndClose(c, "unauthorized: "+err.Error())
 		return
+	}
+	claims := authResult.Claims
+
+	// --- RBAC: require pods:exec permission ---
+	if h.roleRepo != nil {
+		if permErr := checkWSPermission(c.Request.Context(), h.roleRepo, authResult.UserRole, "pods", "exec"); permErr != nil {
+			h.writeErrorAndClose(c, "permission denied")
+			return
+		}
 	}
 
 	// --- Route parameters ---
@@ -349,8 +361,16 @@ func (h *TerminalHandler) detectShell(restConfig *k8sRestConfig, namespace, pod,
 	return ""
 }
 
+// terminalAuthResult bundles the validated JWT claims with the user's
+// current role as stored in the database (may differ from the JWT claim
+// if the role was changed after the token was issued).
+type terminalAuthResult struct {
+	Claims   *auth.TokenClaims
+	UserRole string
+}
+
 // authenticateToken validates a JWT token string against the database.
-func (h *TerminalHandler) authenticateToken(c *gin.Context, tokenStr string) (*auth.TokenClaims, error) {
+func (h *TerminalHandler) authenticateToken(c *gin.Context, tokenStr string) (*terminalAuthResult, error) {
 	claims, err := h.jwtManager.ParseToken(tokenStr)
 	if err != nil {
 		return nil, err
@@ -365,7 +385,7 @@ func (h *TerminalHandler) authenticateToken(c *gin.Context, tokenStr string) (*a
 	if claims.TokenVersion != user.TokenVersion {
 		return nil, errTokenRevoked
 	}
-	return claims, nil
+	return &terminalAuthResult{Claims: claims, UserRole: user.Role}, nil
 }
 
 // --------------------------------------------------------------------------

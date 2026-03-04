@@ -74,11 +74,17 @@ func (s *UserService) GetUser(ctx context.Context, id uint) (*UserDetail, error)
 	return toUserDetail(user), nil
 }
 
+// minPasswordLen is the minimum acceptable plaintext password length.
+const minPasswordLen = 6
+
 // CreateUser creates a new user with a hashed password.
 // It validates that the username is unique and that the role is valid.
 func (s *UserService) CreateUser(ctx context.Context, username, password, role string) (*UserDetail, error) {
 	if username == "" || password == "" {
 		return nil, bizerr.New(bizerr.CodeParamInvalid, "username and password are required")
+	}
+	if len(password) < minPasswordLen {
+		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("password must be at least %d characters", minPasswordLen))
 	}
 	if !validRoles[role] {
 		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("invalid role: %s", role))
@@ -182,6 +188,9 @@ func (s *UserService) ResetPassword(ctx context.Context, id uint, newPassword st
 	if newPassword == "" {
 		return bizerr.New(bizerr.CodeParamInvalid, "new password is required")
 	}
+	if len(newPassword) < minPasswordLen {
+		return bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("password must be at least %d characters", minPasswordLen))
+	}
 
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -209,6 +218,9 @@ func (s *UserService) ResetPassword(ctx context.Context, id uint, newPassword st
 func (s *UserService) ChangePassword(ctx context.Context, userID uint, oldPassword, newPassword string) error {
 	if oldPassword == "" || newPassword == "" {
 		return bizerr.New(bizerr.CodeParamInvalid, "old and new passwords are required")
+	}
+	if len(newPassword) < minPasswordLen {
+		return bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("password must be at least %d characters", minPasswordLen))
 	}
 
 	user, err := s.repo.GetByID(ctx, userID)
