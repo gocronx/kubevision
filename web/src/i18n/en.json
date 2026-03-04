@@ -190,7 +190,8 @@
     "enabledSuccess": "Two-factor authentication enabled",
     "disabledSuccess": "Two-factor authentication disabled",
     "disableConfirmTitle": "Disable Two-Factor Authentication",
-    "disableConfirmDescription": "Enter your current authenticator code to confirm."
+    "disableConfirmDescription": "Enter your current authenticator code to confirm.",
+    "codePlaceholder": "Enter 6-digit code"
   },
   "settings": {
     "security": "Security",

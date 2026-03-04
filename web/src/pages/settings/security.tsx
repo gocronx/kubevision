@@ -336,7 +336,7 @@ export function SecuritySettingsPage() {
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    placeholder="000000"
+                    placeholder={t("twofa.codePlaceholder", "Enter 6-digit code")}
                     value={enableCode}
                     onChange={(e) => setEnableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     maxLength={6}
@@ -425,7 +425,7 @@ export function SecuritySettingsPage() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="000000"
+                placeholder={t("twofa.codePlaceholder", "Enter 6-digit code")}
                 value={disableCode}
                 onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 maxLength={6}

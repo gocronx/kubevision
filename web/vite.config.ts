@@ -16,6 +16,12 @@ export default defineConfig({
         target: "http://localhost:8080",
         changeOrigin: true,
         ws: true,
+        configure: (proxy) => {
+          proxy.on("error", () => {})
+          proxy.on("proxyReqWs", (_proxyReq, _req, socket) => {
+            socket.on("error", () => {})
+          })
+        },
       },
     },
   },

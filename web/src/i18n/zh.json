@@ -190,7 +190,8 @@
     "enabledSuccess": "双因素认证已启用",
     "disabledSuccess": "双因素认证已禁用",
     "disableConfirmTitle": "禁用双因素认证",
-    "disableConfirmDescription": "请输入当前身份验证器中的验证码以确认。"
+    "disableConfirmDescription": "请输入当前身份验证器中的验证码以确认。",
+    "codePlaceholder": "请输入6位验证码"
   },
   "settings": {
     "security": "安全",

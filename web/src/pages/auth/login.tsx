@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import type { FormEvent, ChangeEvent } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Loader2, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react"
+import { Loader2, ShieldCheck, KeyRound, Eye, EyeOff, Languages } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import api from "@/lib/api"
@@ -36,7 +36,7 @@ interface TwoFARequired {
 type LoginStep = "credentials" | "2fa" | "recovery"
 
 export function LoginPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
@@ -142,7 +142,8 @@ export function LoginPage() {
   if (step === "credentials") {
     return (
       <div className="flex min-h-svh items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-sm">
+        <Card className="relative w-full max-w-sm">
+          <LanguageToggle i18n={i18n} />
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
             <CardDescription>{t("login.description")}</CardDescription>
@@ -199,7 +200,8 @@ export function LoginPage() {
   if (step === "recovery") {
     return (
       <div className="flex min-h-svh items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-sm">
+        <Card className="relative w-full max-w-sm">
+          <LanguageToggle i18n={i18n} />
           <CardHeader className="text-center">
             <div className="flex justify-center mb-2">
               <KeyRound className="size-8 text-muted-foreground" />
@@ -247,7 +249,8 @@ export function LoginPage() {
   // ---- Render: TOTP code step ----
   return (
     <div className="flex min-h-svh items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
+      <Card className="relative w-full max-w-sm">
+        <LanguageToggle i18n={i18n} />
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
             <ShieldCheck className="size-8 text-primary" />
@@ -267,7 +270,7 @@ export function LoginPage() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="000000"
+                placeholder={t("twofa.codePlaceholder", "Enter 6-digit code")}
                 value={totpCode}
                 onChange={handleTotpChange}
                 autoComplete="one-time-code"
@@ -295,5 +298,22 @@ export function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function LanguageToggle({ i18n }: { i18n: { language: string; changeLanguage: (lng: string) => void } }) {
+  return (
+    <button
+      type="button"
+      className="absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full size-8 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      onClick={() => {
+        const next = i18n.language === "zh" ? "en" : "zh"
+        i18n.changeLanguage(next)
+        localStorage.setItem("language", next)
+      }}
+      title={i18n.language === "zh" ? "Switch to English" : "切换为中文"}
+    >
+      <Languages className="size-4" />
+    </button>
   )
 }
