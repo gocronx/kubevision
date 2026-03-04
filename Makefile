@@ -10,7 +10,7 @@ LDFLAGS := -s -w
 
 ## dev: Run with air hot-reload (requires: go install github.com/air-verse/air@latest)
 dev:
-	air -c .air.toml || $(GO) run $(MAIN_PKG)
+	GIN_MODE=debug air -c .air.toml || GIN_MODE=debug $(GO) run $(MAIN_PKG)
 
 ## build-frontend: Build the React frontend
 build-frontend:

@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -29,7 +30,12 @@ type Server struct {
 
 // New creates a new Server with the given config, logger, and route dependencies.
 func New(cfg *config.Config, logger *zap.Logger, deps *RouterDeps) *Server {
-	gin.SetMode(gin.ReleaseMode)
+	// Respect GIN_MODE env var; default to release mode for security.
+	if os.Getenv("GIN_MODE") != "" {
+		gin.SetMode(os.Getenv("GIN_MODE"))
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	engine := gin.New()
 

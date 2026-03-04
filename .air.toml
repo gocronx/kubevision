@@ -15,6 +15,9 @@ tmp_dir = "tmp"
   send_interrupt = false
   stop_on_error = true
 
+[env]
+  GIN_MODE = "debug"
+
 [color]
   app = ""
   build = "yellow"
