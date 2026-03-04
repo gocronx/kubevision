@@ -1,87 +1,144 @@
 <div align="center">
 
+<img src="docs/assets/logo.png" width="120" alt="KubeVision Logo">
+<!-- TODO: Replace with actual logo -->
+
 # KubeVision
 
-**A modern, real-time Kubernetes dashboard**
+A modern, real-time Kubernetes dashboard
 
-*Kube + Vision — See your clusters clearly, act on them instantly.*
-
-Go + React + shadcn/ui &nbsp;|&nbsp; Informer Cache + WebSocket Push &nbsp;|&nbsp; 26 Resource Types
+**Kube + Vision — See your clusters clearly, act on them instantly.**
 
 [![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org) [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE)
-
-<br>
 
 **English** &nbsp;&nbsp;|&nbsp;&nbsp; [中文](./README_CN.md)
 
 <br>
 
+<!-- TODO: Replace with actual animated GIF showing a 15-20s workflow -->
+<!-- <img src="docs/assets/demo.gif" width="800" alt="KubeVision Demo"> -->
+<img src="docs/assets/screenshot-overview.png" width="800" alt="KubeVision Dashboard">
 <!-- TODO: Replace with actual screenshot -->
-<!-- <img src="docs/screenshot.png" width="800" alt="KubeVision Dashboard"> -->
 
 </div>
 
 <br>
 
-## 🚀 Why KubeVision?
+## Why KubeVision?
 
-Most K8s dashboards either require **hundreds of lines of boilerplate per resource type**, or skip real-time updates entirely. KubeVision takes a different approach:
+<table>
+<tr>
+<td width="33%" align="center">
 
-### 🧩 Zero-boilerplate Resources
+**Real-time Architecture**
 
-Add a new K8s resource type with **1 line** of Go code and **1 config block** in the frontend. No new files, no duplicated handlers.
+Informer Watch → WebSocket Push.
 
-```go
-// That's it. One line.
-r.resources["cronjobs"] = Meta{
-  Name: "cronjobs",
-  GVR:  schema.GroupVersionResource{...},
-  ...
-}
+Sub-second updates, zero polling.
+
+</td>
+<td width="33%" align="center">
+
+**Fully Extensible**
+
+1 line of Go + 1 config block per resource.
+
+CRDs auto-discovered at runtime.
+
+</td>
+<td width="33%" align="center">
+
+**Production Ready**
+
+Multi-cluster, RBAC, 2FA, audit logging.
+
+Built for teams, not just demos.
+
+</td>
+</tr>
+</table>
+
+<br>
+
+## Screenshots
+
+<!-- TODO: Replace with actual screenshots -->
+
+<table>
+<tr>
+<td><img src="docs/assets/screenshot-overview.png" alt="Cluster Overview"></td>
+<td><img src="docs/assets/screenshot-terminal.png" alt="Pod Terminal"></td>
+</tr>
+<tr>
+<td><img src="docs/assets/screenshot-topology.png" alt="Resource Topology"></td>
+<td><img src="docs/assets/screenshot-diff.png" alt="Dry-Run Diff"></td>
+</tr>
+<tr>
+<td><img src="docs/assets/screenshot-search.png" alt="Global Search"></td>
+<td><img src="docs/assets/screenshot-dark.png" alt="Dark Mode"></td>
+</tr>
+</table>
+
+<br>
+
+## Features
+
+- :zap: **Real-time Sync** — Informer → WebSocket, sub-second updates
+- :globe_with_meridians: **Multi-cluster** — Single dashboard for all clusters
+- :computer: **Pod Terminal & Logs** — Session recording & playback
+- :rocket: **Deployment Ops** — Scale, restart, rollback
+- :eyes: **Dry-Run Diff** — Preview changes before applying
+- :twisted_rightwards_arrows: **Cross-cluster Diff** — Spot configuration drift
+- :world_map: **Resource Topology** — Visual ownership graph
+- :mag: **Global Search** — `Cmd+K` fuzzy search
+- :keyboard: **kubectl Hints** — Auto-generated commands
+- :jigsaw: **Resource Templates** — One-click deploy
+- :shield: **RBAC** — 5 built-in roles + custom
+- :key: **2FA (TOTP)** — QR setup + recovery codes
+- :memo: **Audit Logging** — Async writes + retention
+- :bell: **Webhooks** — Slack, Discord, custom endpoints
+- :package: **26+ Resources** — 8 cached + 18 on-demand + CRD
+- :zap: **Batch Ops** — Multi-select delete & restart
+- :earth_africa: **i18n** — English & Chinese
+- :crescent_moon: **Dark Mode** — System-aware themes
+
+<br>
+
+## Quick Start
+
+### Helm (recommended)
+
+```bash
+helm install kubevision deploy/helm/kubevision
 ```
 
-### ⚡ True Real-time
+### Docker
 
-Informer Watch detects changes → WebSocket Hub pushes to browser → TanStack Query cache auto-invalidates. **Sub-second updates, zero polling.**
-
+```bash
+docker build -f deploy/Dockerfile -t kubevision:latest .
+docker run -p 8080:8080 kubevision:latest
 ```
-K8s API ──→ Informer ──→ WS Hub ──→ Browser
-  write         watch        push     auto-refresh
+
+> Open http://localhost:8080
+>
+> Default login: `admin` / `admin123`
+
+### Development
+
+```bash
+git clone https://github.com/kubevision/kubevision.git
+cd kubevision
+
+# Backend — :8080
+go mod tidy && make dev
+
+# Frontend — :5173, proxies /api → :8080
+cd web && pnpm install && pnpm dev
 ```
 
 <br>
 
-## ✨ Features
-
-- 🔄 **Real-time Updates** — Informer → WebSocket → auto-refresh
-- 📦 **26 Resource Types** — 8 cached + 18 on-demand, one unified handler
-- 🌐 **Multi-cluster** — Manage all clusters from one dashboard
-- 🔐 **JWT + Token Revocation** — Access/Refresh tokens, instant revocation via version
-- 🌙 **Dark Mode** — System-aware, one-click toggle
-- 🌍 **i18n Ready** — English & Chinese built-in
-- ⚙️ **Generic CRUD** — List, Get, Create, Update, Delete, Patch
-- 🏷️ **Namespace Filtering** — Quick namespace switch with dropdown
-- 🖥️ **Pod Terminal & Logs** — xterm.js terminal, real-time log streaming with search
-- 🚀 **Deployment Ops** — Scale, restart, rollback with revision history
-- 🔍 **Global Search** — Cmd+K search across all resources with relevance scoring
-- 📋 **Dry-Run Diff** — Preview changes before applying, side-by-side diff view
-- 💡 **kubectl Hints** — Auto-generated kubectl commands for every UI action
-- ⭐ **Favorites** — Pin resources for quick access, drag-and-drop reorder
-- 📊 **Resource Quotas** — Visual progress bars for CPU/Memory/Pods usage
-- 🛡️ **RBAC** — 5 built-in roles (super-admin, admin, editor, viewer, custom) with middleware enforcement
-- 🔑 **2FA (TOTP)** — Time-based one-time passwords with QR setup and recovery codes
-- 📝 **Audit Logging** — Async batch writes for all mutating operations with retention policy
-- 🗝️ **API Key Auth** — Generate and revoke API keys for programmatic access
-- 🗺️ **Resource Topology** — Visual graph of ownership and selector relationships
-- ⚡ **Batch Operations** — Multi-select delete and restart with confirmation dialogs
-- 🔀 **Cross-cluster Diff** — Compare resources across clusters side-by-side
-- 🔔 **Webhooks** — Event-driven notifications to external endpoints
-- 🎬 **Terminal Recording** — Session recording and playback for pod terminals
-- 🐘 **PostgreSQL** — Production-ready database driver alongside SQLite
-
-<br>
-
-## 🏗️ Architecture
+## Architecture
 
 ```
                     Browser
@@ -105,194 +162,24 @@ K8s API ──→ Informer ──→ WS Hub ──→ Browser
 └─────────────────────────────────────────────┘
 ```
 
-> **Read path**: Informer cache first, fallback to API Server on miss
+> **Read**: Informer cache first, fallback to API Server
 >
-> **Write path**: API Server → Informer Watch → WS Hub → browser auto-refresh
+> **Write**: API Server → Informer → WS Hub → browser
 
 <br>
 
-## ⚡ Quick Start
+## Built With
 
-### Prerequisites
-
-| Dependency | Version |
-|-----------|---------|
-| Go | 1.23+ |
-| Node.js | 20+ |
-| pnpm | 9+ |
-| Kubernetes | 1.28+ (kubeconfig) |
-
-### Development
-
-```bash
-git clone https://github.com/kubevision/kubevision.git
-cd kubevision
-
-# Backend — starts on :8080
-go mod tidy && make dev
-
-# Frontend — starts on :5173, proxies /api → :8080
-cd web && pnpm install && pnpm dev
-```
-
-> Default login: **admin** / **admin123**
-
-### Docker
-
-```bash
-docker build -f deploy/Dockerfile -t kubevision:latest .
-docker run -p 8080:8080 kubevision:latest
-```
+1. [Gin](https://github.com/gin-gonic/gin) — HTTP framework
+2. [client-go](https://github.com/kubernetes/client-go) — Kubernetes API client & Informer
+3. [GORM](https://gorm.io) — ORM (SQLite + PostgreSQL)
+4. [shadcn/ui](https://ui.shadcn.com) — Component library built on [Radix UI](https://radix-ui.com)
+5. [TanStack Query](https://tanstack.com/query) — Server state management & cache
+6. [xterm.js](https://xtermjs.org) — Pod terminal emulator
 
 <br>
 
-## 🛠️ Tech Stack
-
-| | Technology | Purpose |
-|---|-----------|---------|
-| **Backend** | Go 1.23 &middot; Gin &middot; GORM &middot; client-go &middot; zap | API server, K8s integration |
-| **Frontend** | React 19 &middot; TypeScript &middot; Vite 7 &middot; shadcn/ui &middot; TanStack Query v5 | Modern UI with real-time data |
-| **Database** | SQLite / PostgreSQL | User, cluster, audit persistence |
-| **Auth** | JWT (15min access + 7d refresh) &middot; bcrypt | Token revocation via version check |
-| **Real-time** | Informer &middot; gorilla/websocket | Sub-second push to browser |
-
-<br>
-
-## 📋 Supported Resources
-
-<table>
-<tr>
-<td><b>Cached</b> (Informer, real-time push)</td>
-<td>
-
-`Pods` `Deployments` `StatefulSets` `DaemonSets` `ReplicaSets` `Services` `Nodes` `Namespaces`
-
-</td>
-</tr>
-<tr>
-<td><b>On-demand</b> (API Server query)</td>
-<td>
-
-`Jobs` `CronJobs` `Ingresses` `ConfigMaps` `Secrets` `Events` `PVs` `PVCs` `StorageClasses` `ServiceAccounts` `Roles` `ClusterRoles` `RoleBindings` `ClusterRoleBindings` `HPAs` `Endpoints` `NetworkPolicies`
-
-</td>
-</tr>
-</table>
-
-<br>
-
-## 📡 API
-
-```
-Auth
-  POST   /api/v1/auth/login                          Login
-  POST   /api/v1/auth/refresh                        Refresh token
-  GET    /api/v1/users/me                             Current user
-  POST   /api/v1/auth/2fa/verify                     Verify TOTP code
-  POST   /api/v1/auth/2fa/recovery                   Use recovery code
-  POST   /api/v1/auth/2fa/setup                      Generate TOTP secret (protected)
-  POST   /api/v1/auth/2fa/enable                     Enable 2FA (protected)
-  POST   /api/v1/auth/2fa/disable                    Disable 2FA (protected)
-
-Clusters
-  GET    /api/v1/clusters                             List clusters
-  POST   /api/v1/clusters                             Add cluster
-  DELETE /api/v1/clusters/:id                         Remove cluster
-
-Resources (generic CRUD)
-  GET    /api/v1/clusters/:id/resources/:res          List
-  GET    /api/v1/clusters/:id/resources/:res/:name    Get
-  POST   /api/v1/clusters/:id/resources/:res          Create
-  PUT    /api/v1/clusters/:id/resources/:res/:name    Update
-  DELETE /api/v1/clusters/:id/resources/:res/:name    Delete
-  PATCH  /api/v1/clusters/:id/resources/:res/:name    Patch
-  POST   /api/v1/clusters/:id/resources/:res/dry-run  Dry-run create
-  PUT    /api/v1/clusters/:id/resources/:res/:name/dry-run  Dry-run update
-  POST   /api/v1/clusters/:id/resources/batch-delete  Batch delete
-  POST   /api/v1/clusters/:id/batch-restart           Batch restart
-
-Workload Actions
-  PUT    /api/v1/clusters/:id/namespaces/:ns/:kind/:name/scale     Scale
-  POST   /api/v1/clusters/:id/namespaces/:ns/:kind/:name/restart   Restart
-  GET    /api/v1/clusters/:id/namespaces/:ns/deployments/:name/history  Rollout history
-  POST   /api/v1/clusters/:id/namespaces/:ns/deployments/:name/rollback Rollback
-
-Topology
-  GET    /api/v1/clusters/:id/namespaces/:ns/topology  Resource graph
-
-Search
-  GET    /api/v1/clusters/:id/search                 Global search
-
-Favorites
-  GET    /api/v1/favorites                            List favorites
-  POST   /api/v1/favorites                            Add favorite
-  DELETE /api/v1/favorites/:id                        Remove favorite
-
-Audit & Security
-  GET    /api/v1/audit-logs                           List audit logs
-  GET    /api/v1/api-keys                             List API keys
-  POST   /api/v1/api-keys                             Generate API key
-  DELETE /api/v1/api-keys/:id                         Revoke API key
-
-Webhooks
-  GET    /api/v1/webhooks                             List webhooks
-  POST   /api/v1/webhooks                             Create webhook
-  PUT    /api/v1/webhooks/:id                         Update webhook
-  DELETE /api/v1/webhooks/:id                         Delete webhook
-  POST   /api/v1/webhooks/:id/test                    Test webhook
-
-Terminal Sessions
-  GET    /api/v1/terminal-sessions                    List recordings
-  GET    /api/v1/terminal-sessions/:id                Get recording
-  GET    /api/v1/terminal-sessions/:id/play           Playback recording
-
-Cross-cluster
-  POST   /api/v1/compare                              Compare resources
-
-Real-time
-  GET    /api/v1/ws/watch                             WebSocket events
-  GET    /api/v1/clusters/:id/.../pods/:name/exec     Pod terminal (WS)
-  GET    /api/v1/clusters/:id/.../pods/:name/logs     Pod log stream (WS)
-
-Health
-  GET    /healthz                                     Health check
-```
-
-<br>
-
-## 📁 Project Structure
-
-```
-kubevision/
-├── cmd/kubevision/main.go         Entry point, DI wiring
-├── internal/
-│   ├── config/                    YAML + env config
-│   ├── server/                    HTTP server + router
-│   ├── middleware/                 Auth, RequestID, Logger, Audit
-│   ├── handler/                   HTTP handlers (auth, cluster, resource, ws)
-│   ├── service/                   Business logic layer
-│   ├── repository/                Data access (GORM + K8s dynamic client)
-│   ├── model/                     Database models (11 tables)
-│   ├── kubernetes/
-│   │   ├── cluster/               Multi-cluster connection manager
-│   │   ├── informer/              Informer lifecycle + EventListener
-│   │   └── resource/              Resource registry (26 types)
-│   ├── auth/                      JWT + bcrypt
-│   └── pkg/                       Response helpers, error codes
-├── web/src/
-│   ├── components/ui/             shadcn/ui (17 components)
-│   ├── components/shared/         DataTable, StatusBadge, NamespaceSelector
-│   ├── hooks/                     useResource, useCluster, useWebSocket
-│   ├── pages/                     Login, Overview, ResourceList, ResourceDetail
-│   ├── lib/                       API client, WebSocket client, K8s utils
-│   └── config/                    Resource UI config (icons, columns)
-├── deploy/Dockerfile              3-stage: Node → Go → Alpine
-└── Makefile                       dev, build, test, lint, tidy
-```
-
-<br>
-
-## ⚙️ Configuration
+## Configuration
 
 ```yaml
 server:
@@ -312,8 +199,6 @@ kubernetes:
   informer_resync: 30m
 ```
 
-All settings can be overridden via environment variables:
-
 | Variable | Description |
 |----------|-------------|
 | `KUBEVISION_SERVER_PORT` | HTTP port (default: 8080) |
@@ -324,40 +209,21 @@ All settings can be overridden via environment variables:
 
 <br>
 
-## 🗺️ Roadmap
+## Documentation
 
-| Phase | Scope | Status |
-|-------|-------|--------|
-| **P1** | Single cluster, generic CRUD, Informer + WebSocket, JWT auth, base UI | Done |
-| **P2** | Pod terminal/logs, Deployment ops, multi-cluster, global search, dry-run diff | Done |
-| **P3** | RBAC, 2FA (TOTP), audit, topology, batch ops, cross-cluster diff, webhooks, terminal recording | Done |
-| **P4** | Plugin system (Prometheus/Grafana/ArgoCD), OAuth/OIDC, CRD discovery, Helm chart | Done |
-
-<br>
-
-## 🧪 Tests
-
-```
-12 test packages · 466 tests · 57 test files
-```
-
-| Layer | Packages | Coverage |
-|-------|----------|----------|
-| **Middleware** | auth, rbac, audit, logger | JWT, RBAC rules, audit capture, request logging |
-| **Handler** | auth, cluster, resource, apikey, audit, compare, topology, webhook, terminal_session, ws/hub | All HTTP endpoints + WebSocket hub |
-| **Service** | auth, apikey, audit, cluster, compare, terminal_session, topology, webhook | Business logic with mock repos |
-| **Repository** | user, role, cluster, apikey, audit, webhook, terminal_session | GORM CRUD with in-memory SQLite |
-| **Server** | router, server | Route registration, health check |
-| **Other** | config, auth/jwt, auth/totp, resource registry, errors, response | Parsing, signing, crypto, helpers |
-
-```bash
-go test ./... -count=1      # Run all tests
-go test ./... -cover         # With coverage
-```
+| | |
+|---|---|
+| [Architecture](docs/ARCHITECTURE.md) | System design, data flow, component interactions |
+| [Design](docs/DESIGN.md) | Technical deep-dive and implementation details |
+| [Comparison](docs/COMPARISON.md) | How KubeVision compares to alternative approaches |
 
 <br>
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please open an issue first to discuss what you would like to change.
 
+<!-- ## Contributors -->
+<!-- <a href="https://github.com/kubevision/kubevision/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=kubevision/kubevision" />
+</a> -->
