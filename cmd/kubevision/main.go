@@ -113,9 +113,14 @@ func main() {
 	// P4: CRD discovery, OAuth, and Plugin services.
 	crdService := service.NewCRDService(clusterManager, clusterRepo, logger)
 	oauthService := service.NewOAuthService(userRepo, jwtManager, cfg, logger)
+	templateRepo := repository.NewTemplateRepo(db)
 	pluginConfigRepo := repository.NewPluginConfigRepo(db)
 	pluginService := service.NewPluginService(pluginConfigRepo, logger)
 	pluginService.InitFromDB(context.Background())
+	templateService := service.NewTemplateService(templateRepo)
+	if err := templateService.SeedBuiltinTemplates(context.Background()); err != nil {
+		logger.Warn("failed to seed built-in templates", zap.Error(err))
+	}
 
 	// Start periodic CRD discovery in the background.
 	crdCtx, crdCancel := context.WithCancel(context.Background())
@@ -156,6 +161,7 @@ func main() {
 	crdHandler := handler.NewCRDHandler(crdService)
 	oauthHandler := handler.NewOAuthHandler(oauthService)
 	pluginHandler := handler.NewPluginHandler(pluginService)
+	templateHandler := handler.NewTemplateHandler(templateService)
 
 	// Pod terminal and log streaming handlers.
 	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, logger).
@@ -190,6 +196,7 @@ func main() {
 		CRDHandler:             crdHandler,
 		OAuthHandler:           oauthHandler,
 		PluginHandler:          pluginHandler,
+		TemplateHandler:        templateHandler,
 		WSHub:                  wsHub,
 		TerminalHandler:        terminalHandler,
 		LogsHandler:            logsHandler,

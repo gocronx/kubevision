@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
+import { useTemplates, type Template } from "@/hooks/use-templates"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
 type K8sItem = Record<string, unknown>
@@ -61,6 +63,13 @@ export function ResourceListPage() {
 
   // Dry-run preview dialog state.
   const [dryRunDialogOpen, setDryRunDialogOpen] = useState(false)
+
+  // Templates for the current resource type.
+  const { data: allTemplates = [] } = useTemplates()
+  const resourceTemplates = useMemo(
+    () => allTemplates.filter((t) => t.resourceType === resource),
+    [allTemplates, resource]
+  )
 
   const { data: favorites = [] } = useFavorites()
 
@@ -440,10 +449,33 @@ export function ResourceListPage() {
           <DialogHeader>
             <DialogTitle>Create {config?.displayName ?? resource}</DialogTitle>
             <DialogDescription>
-              Paste the resource JSON below. Use &quot;Preview Changes&quot; to validate
-              against the API server before applying, or &quot;Create&quot; to apply directly.
+              {resourceTemplates.length > 0
+                ? "Select a template to get started, or paste your own JSON."
+                : "Paste the resource JSON below. Use \"Preview Changes\" to validate against the API server before applying."}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Template picker */}
+          {resourceTemplates.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {resourceTemplates.map((tmpl: Template) => (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  onClick={() => setCreateYaml(tmpl.content)}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+                >
+                  {tmpl.name}
+                  {tmpl.isBuiltin && (
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                      built-in
+                    </Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
           <ScrollArea className="max-h-[400px]">
             <textarea
               className="h-[300px] w-full rounded-md border bg-muted/50 p-3 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"

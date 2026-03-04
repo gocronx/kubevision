@@ -29,6 +29,7 @@ type RouterDeps struct {
 	CRDHandler             *handler.CRDHandler
 	OAuthHandler           *handler.OAuthHandler
 	PluginHandler          *handler.PluginHandler
+	TemplateHandler        *handler.TemplateHandler
 	WSHub                  *ws.Hub
 	TerminalHandler        *ws.TerminalHandler
 	LogsHandler            *ws.LogsHandler
@@ -226,6 +227,15 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				favs.POST("/toggle", deps.FavoriteHandler.Toggle)
 				favs.PUT("/reorder", deps.FavoriteHandler.Reorder)
 				favs.GET("/check", deps.FavoriteHandler.Check)
+			}
+
+			// Template routes.
+			if deps != nil && deps.TemplateHandler != nil {
+				templates := protected.Group("/templates")
+				templates.GET("", deps.TemplateHandler.List)
+				templates.GET("/:id", deps.TemplateHandler.Get)
+				templates.POST("", deps.TemplateHandler.Create)
+				templates.DELETE("/:id", deps.TemplateHandler.Delete)
 			}
 
 			// Audit log routes.

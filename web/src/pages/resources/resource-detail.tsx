@@ -20,6 +20,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { KubectlHint } from "@/components/specialized/kubectl-hint"
 import { FavoriteButton } from "@/components/shared/favorite-button"
 import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
+import { ResourceEvents } from "@/components/specialized/resource-events"
 import { PodTerminal } from "@/components/specialized/pod-terminal"
 import { PodLogs } from "@/components/specialized/pod-logs"
 import { resourceUIConfig } from "@/config/resource-ui-config"
@@ -456,13 +457,12 @@ export function ResourceDetailPage() {
 
         {/* Events Tab */}
         <TabsContent value="events" className="mt-4">
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <p className="text-sm text-muted-foreground">
-                Events coming soon
-              </p>
-            </CardContent>
-          </Card>
+          <ResourceEvents
+            clusterID={currentCluster}
+            resource={resource}
+            name={name}
+            namespace={namespace}
+          />
         </TabsContent>
 
         {/* Logs Tab — Pods only */}

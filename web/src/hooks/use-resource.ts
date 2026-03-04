@@ -5,6 +5,7 @@ import type { ApiMeta } from "@/lib/api"
 interface ResourceListOptions {
   namespace?: string
   labelSelector?: string
+  fieldSelector?: string
   limit?: number
   enabled?: boolean
 }
@@ -60,14 +61,15 @@ export function useResourceList(
   resource: string,
   options: ResourceListOptions = {}
 ) {
-  const { namespace, labelSelector, limit, enabled = true } = options
+  const { namespace, labelSelector, fieldSelector, limit, enabled = true } = options
 
   return useQuery<ResourceListResult>({
-    queryKey: ["resources", clusterID, resource, namespace ?? "", labelSelector ?? ""],
+    queryKey: ["resources", clusterID, resource, namespace ?? "", labelSelector ?? "", fieldSelector ?? ""],
     queryFn: async () => {
       const params: Record<string, string | number> = {}
       if (namespace) params.namespace = namespace
       if (labelSelector) params.labelSelector = labelSelector
+      if (fieldSelector) params.fieldSelector = fieldSelector
       if (limit) params.limit = limit
 
       const res = await getWithMeta<Record<string, unknown>[]>(
@@ -140,9 +142,12 @@ export function useCreateResource(clusterID: string, resource: string) {
       return res as unknown as Record<string, unknown>
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["resources", clusterID, resource],
-      })
+      // Delay to allow the informer cache to receive the watch event.
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["resources", clusterID, resource],
+        })
+      }, 2000)
     },
   })
 }
@@ -166,14 +171,17 @@ export function useUpdateResource(clusterID: string, resource: string) {
       return res as unknown as Record<string, unknown>
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["resources", clusterID, resource],
-      })
-      if (variables.name) {
+      // Delay to allow the informer cache to receive the watch event.
+      setTimeout(() => {
         queryClient.invalidateQueries({
-          queryKey: ["resource", clusterID, resource, variables.namespace ?? "", variables.name],
+          queryKey: ["resources", clusterID, resource],
         })
-      }
+        if (variables.name) {
+          queryClient.invalidateQueries({
+            queryKey: ["resource", clusterID, resource, variables.namespace ?? "", variables.name],
+          })
+        }
+      }, 2000)
     },
   })
 }
@@ -195,9 +203,12 @@ export function useDeleteResource(clusterID: string, resource: string) {
       )
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["resources", clusterID, resource],
-      })
+      // Delay to allow the informer cache to receive the watch event.
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["resources", clusterID, resource],
+        })
+      }, 2000)
     },
   })
 }
