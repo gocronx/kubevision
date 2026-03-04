@@ -29,11 +29,11 @@ func TestDefault(t *testing.T) {
 		if cfg.Auth.JWTSecret != "" {
 			t.Errorf("Auth.JWTSecret = %q, want empty string", cfg.Auth.JWTSecret)
 		}
-		if cfg.Auth.AccessTokenTTL != 15*time.Minute {
-			t.Errorf("Auth.AccessTokenTTL = %v, want %v", cfg.Auth.AccessTokenTTL, 15*time.Minute)
+		if cfg.Auth.AccessTokenTTL != 30*time.Minute {
+			t.Errorf("Auth.AccessTokenTTL = %v, want %v", cfg.Auth.AccessTokenTTL, 30*time.Minute)
 		}
-		if cfg.Auth.RefreshTokenTTL != 168*time.Hour {
-			t.Errorf("Auth.RefreshTokenTTL = %v, want %v", cfg.Auth.RefreshTokenTTL, 168*time.Hour)
+		if cfg.Auth.RefreshTokenTTL != 12*time.Hour {
+			t.Errorf("Auth.RefreshTokenTTL = %v, want %v", cfg.Auth.RefreshTokenTTL, 12*time.Hour)
 		}
 	})
 
@@ -372,8 +372,8 @@ func TestEnvironmentVariableOverrides(t *testing.T) {
 				"KUBEVISION_ACCESS_TOKEN_TTL": "not-a-duration",
 			},
 			check: func(t *testing.T, cfg *Config) {
-				if cfg.Auth.AccessTokenTTL != 15*time.Minute {
-					t.Errorf("Auth.AccessTokenTTL = %v, want %v (invalid value should be ignored)", cfg.Auth.AccessTokenTTL, 15*time.Minute)
+				if cfg.Auth.AccessTokenTTL != 30*time.Minute {
+					t.Errorf("Auth.AccessTokenTTL = %v, want %v (invalid value should be ignored)", cfg.Auth.AccessTokenTTL, 30*time.Minute)
 				}
 			},
 		},

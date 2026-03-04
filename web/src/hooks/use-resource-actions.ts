@@ -56,10 +56,32 @@ export function useScaleResource(clusterID: string, kind: string) {
         replicas,
       } satisfies ScaleRequest)
     },
-    onSuccess: (_data, { namespace }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["resources", clusterID, kind, namespace],
-      })
+    onSuccess: (_data, { name, replicas }) => {
+      // Optimistically update spec.replicas in all matching cached queries so
+      // the UI reflects the change instantly (the backend informer cache may
+      // lag behind the K8s API by a few hundred milliseconds).
+      queryClient.setQueriesData<{ items: Record<string, unknown>[]; meta?: unknown }>(
+        { queryKey: ["resources", clusterID, kind] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            items: old.items.map((item) => {
+              const meta = item.metadata as Record<string, unknown> | undefined
+              if (meta?.name !== name) return item
+              const spec = (item.spec ?? {}) as Record<string, unknown>
+              return { ...item, spec: { ...spec, replicas } }
+            }),
+          }
+        },
+      )
+      // Also invalidate after a short delay to pick up the full state
+      // (e.g. status.readyReplicas) once the informer has caught up.
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["resources", clusterID, kind],
+        })
+      }, 2000)
     },
   })
 }
@@ -84,10 +106,13 @@ export function useRestartResource(clusterID: string, kind: string) {
     }) => {
       await api.post(`${actionBase(clusterID, namespace, kind, name)}/restart`)
     },
-    onSuccess: (_data, { namespace }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["resources", clusterID, kind, namespace],
-      })
+    onSuccess: () => {
+      // Delay to allow the informer cache to receive the watch event.
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["resources", clusterID, kind],
+        })
+      }, 2000)
     },
   })
 }
@@ -146,14 +171,16 @@ export function useRollbackDeployment(clusterID: string) {
         { revision: revision ?? 0 } satisfies RollbackRequest
       )
     },
-    onSuccess: (_data, { namespace }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["resources", clusterID, "deployments", namespace],
-      })
-      // Also invalidate history so the next open fetches fresh data.
-      queryClient.invalidateQueries({
-        queryKey: ["rollout-history", clusterID, namespace],
-      })
+    onSuccess: () => {
+      // Delay to allow the informer cache to receive the watch event.
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["resources", clusterID, "deployments"],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["rollout-history", clusterID],
+        })
+      }, 2000)
     },
   })
 }

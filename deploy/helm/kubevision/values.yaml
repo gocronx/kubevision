@@ -60,8 +60,8 @@ config:
     dsn: /data/kubevision.db
   auth:
     jwtSecret: ""  # Auto-generated if empty
-    accessTokenTTL: 15m
-    refreshTokenTTL: 168h
+    accessTokenTTL: 30m
+    refreshTokenTTL: 12h
   kubernetes:
     informerResync: 30m
     crdDiscoveryInterval: 5m

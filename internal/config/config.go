@@ -108,8 +108,8 @@ func Default() *Config {
 		},
 		Auth: AuthConfig{
 			JWTSecret:       "",
-			AccessTokenTTL:  15 * time.Minute,
-			RefreshTokenTTL: 168 * time.Hour,
+			AccessTokenTTL:  30 * time.Minute,
+			RefreshTokenTTL: 12 * time.Hour,
 		},
 		Kube: KubeConfig{
 			Kubeconfig:           "",
