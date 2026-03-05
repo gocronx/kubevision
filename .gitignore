@@ -34,6 +34,7 @@ vendor/
 tmp/
 
 # Frontend (Node)
+node_modules/
 web/node_modules/
 web/dist/*
 !web/dist/.gitkeep
