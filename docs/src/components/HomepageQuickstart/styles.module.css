@@ -1,0 +1,25 @@
+.quickstart {
+  padding: 5rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.sectionHeader h2 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.sectionHeader p {
+  font-size: 1.125rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.content {
+  max-width: 720px;
+  margin: 0 auto;
+}

@@ -1,0 +1,81 @@
+.comparison {
+  padding: 5rem 0;
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.sectionHeader h2 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.sectionHeader p {
+  font-size: 1.125rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.table th {
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.highlight {
+  color: var(--ifm-color-primary) !important;
+  font-weight: 700 !important;
+}
+
+.yes {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.no {
+  color: var(--ifm-color-emphasis-400);
+}
+
+.cta {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.ctaLink {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+}
+
+.ctaLink:hover {
+  text-decoration: underline;
+}

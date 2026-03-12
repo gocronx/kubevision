@@ -100,11 +100,11 @@ func TestOverviewService_GetOverview_WithCounts(t *testing.T) {
 	clusterRepo := newMockClusterRepo()
 	clusterRepo.addCluster(makeTestCluster(1, "prod"))
 
-	// Use a custom implementation that returns different totals per resource type.
-	// The service calls List for: pods, deployments, services, nodes, namespaces (5 calls),
-	// then events (6th call). The sequentialMockK8sRepo cycles through the totals slice.
+	// The service calls List for: pods, deployments, services, nodes, namespaces,
+	// statefulsets, daemonsets, jobs, cronjobs, ingresses, persistentvolumes,
+	// persistentvolumeclaims (12 calls), then events (13th call).
 	callIndex := 0
-	totals := []int64{12, 4, 7, 3, 5, 0} // pods, deployments, services, nodes, namespaces, events
+	totals := []int64{12, 4, 7, 3, 5, 0, 0, 0, 0, 0, 0, 0, 0} // pods, deployments, services, nodes, namespaces, ss, ds, jobs, cj, ing, pv, pvc, events
 	k8sRepoCustom := &sequentialMockK8sRepo{totals: totals, index: &callIndex}
 
 	svc := NewOverviewService(k8sRepoCustom, clusterRepo)
@@ -161,12 +161,19 @@ func TestOverviewService_GetOverview_QueriesAllResourceTypesIncludingNamespacesA
 	}
 
 	expected := map[string]bool{
-		"pods":        true,
-		"deployments": true,
-		"services":    true,
-		"nodes":       true,
-		"namespaces":  true,
-		"events":      true,
+		"pods":                  true,
+		"deployments":          true,
+		"services":             true,
+		"nodes":                true,
+		"namespaces":           true,
+		"statefulsets":         true,
+		"daemonsets":           true,
+		"jobs":                 true,
+		"cronjobs":             true,
+		"ingresses":            true,
+		"persistentvolumes":    true,
+		"persistentvolumeclaims": true,
+		"events":               true,
 	}
 	for _, kind := range tracker.kinds {
 		delete(expected, kind)
@@ -178,8 +185,8 @@ func TestOverviewService_GetOverview_QueriesAllResourceTypesIncludingNamespacesA
 		}
 		t.Errorf("GetOverview did not query the following resource types: %v", missing)
 	}
-	if len(tracker.kinds) != 6 {
-		t.Errorf("expected exactly 6 k8s List calls, got %d", len(tracker.kinds))
+	if len(tracker.kinds) != 13 {
+		t.Errorf("expected exactly 13 k8s List calls, got %d", len(tracker.kinds))
 	}
 }
 
@@ -212,6 +219,13 @@ func TestOverviewService_GetOverview_RunningPodsAndReadyNodes(t *testing.T) {
 			{total: 0, items: nil},              // services
 			{total: 3, items: nodeItems},        // nodes
 			{total: 0, items: nil},              // namespaces
+			{total: 0, items: nil},              // statefulsets
+			{total: 0, items: nil},              // daemonsets
+			{total: 0, items: nil},              // jobs
+			{total: 0, items: nil},              // cronjobs
+			{total: 0, items: nil},              // ingresses
+			{total: 0, items: nil},              // persistentvolumes
+			{total: 0, items: nil},              // persistentvolumeclaims
 			{total: 0, items: nil},              // events
 		},
 		index: &callIndex,
@@ -235,6 +249,17 @@ func TestOverviewService_GetOverview_RunningPodsAndReadyNodes(t *testing.T) {
 	}
 	if resp.ReadyNodes != 2 {
 		t.Errorf("ReadyNodes = %d, want 2", resp.ReadyNodes)
+	}
+
+	// Verify pod status distribution
+	if resp.PodStatusDistribution.Running != 2 {
+		t.Errorf("PodStatusDistribution.Running = %d, want 2", resp.PodStatusDistribution.Running)
+	}
+	if resp.PodStatusDistribution.Pending != 1 {
+		t.Errorf("PodStatusDistribution.Pending = %d, want 1", resp.PodStatusDistribution.Pending)
+	}
+	if resp.PodStatusDistribution.Succeeded != 1 {
+		t.Errorf("PodStatusDistribution.Succeeded = %d, want 1", resp.PodStatusDistribution.Succeeded)
 	}
 }
 
@@ -306,6 +331,13 @@ func TestOverviewService_GetOverview_ResourceAggregation(t *testing.T) {
 			{total: 0, items: nil},       // services
 			{total: 2, items: nodeItems}, // nodes
 			{total: 0, items: nil},       // namespaces
+			{total: 0, items: nil},       // statefulsets
+			{total: 0, items: nil},       // daemonsets
+			{total: 0, items: nil},       // jobs
+			{total: 0, items: nil},       // cronjobs
+			{total: 0, items: nil},       // ingresses
+			{total: 0, items: nil},       // persistentvolumes
+			{total: 0, items: nil},       // persistentvolumeclaims
 			{total: 0, items: nil},       // events
 		},
 		index: &callIndex,

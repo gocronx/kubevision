@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="KubeVision logo">
+  <defs>
+    <linearGradient id="primary-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#818cf8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="eye-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:0.95" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer ring -->
+  <circle cx="100" cy="100" r="90" fill="none" stroke="url(#primary-grad)" stroke-width="4" />
+
+  <!-- Kubernetes-style spokes (7 spokes like the helm wheel) -->
+  <!-- Spoke 1: top -->
+  <line x1="100" y1="100" x2="100" y2="24" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Spoke 2: upper-right -->
+  <line x1="100" y1="100" x2="166" y2="34" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Spoke 3: lower-right -->
+  <line x1="100" y1="100" x2="176" y2="134" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Spoke 4: bottom-right -->
+  <line x1="100" y1="100" x2="134" y2="176" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Spoke 5: bottom-left -->
+  <line x1="100" y1="100" x2="66" y2="176" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Spoke 6: lower-left -->
+  <line x1="100" y1="100" x2="24" y2="134" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Spoke 7: upper-left -->
+  <line x1="100" y1="100" x2="34" y2="34" stroke="url(#primary-grad)" stroke-width="5" stroke-linecap="round" />
+
+  <!-- Spoke end caps (small circles at outer ring) -->
+  <circle cx="100" cy="24" r="5" fill="#6366f1" />
+  <circle cx="166" cy="34" r="5" fill="#6366f1" />
+  <circle cx="176" cy="134" r="5" fill="#6366f1" />
+  <circle cx="134" cy="176" r="5" fill="#6366f1" />
+  <circle cx="66" cy="176" r="5" fill="#6366f1" />
+  <circle cx="24" cy="134" r="5" fill="#6366f1" />
+  <circle cx="34" cy="34" r="5" fill="#6366f1" />
+
+  <!-- Inner hub circle (background for eye) -->
+  <circle cx="100" cy="100" r="38" fill="url(#primary-grad)" />
+
+  <!-- Eye shape (outer) -->
+  <ellipse cx="100" cy="100" rx="26" ry="17" fill="url(#eye-grad)" filter="url(#glow)" />
+
+  <!-- Eye iris -->
+  <circle cx="100" cy="100" r="10" fill="#6366f1" />
+
+  <!-- Eye pupil -->
+  <circle cx="100" cy="100" r="5" fill="#1e1b4b" />
+
+  <!-- Eye highlight -->
+  <circle cx="104" cy="97" r="2.5" fill="white" opacity="0.8" />
+
+  <!-- Upper eyelid arc accent -->
+  <path d="M 74 100 Q 100 82 126 100" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+</svg>

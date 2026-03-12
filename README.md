@@ -17,7 +17,7 @@ A modern, real-time Kubernetes dashboard
 
 <!-- TODO: Replace with actual animated GIF showing a 15-20s workflow -->
 <!-- <img src="docs/assets/demo.gif" width="800" alt="KubeVision Demo"> -->
-<img src="docs/assets/screenshot-overview.png" width="800" alt="KubeVision Dashboard">
+<img src="assets/overview.png" width="800" alt="KubeVision Dashboard">
 <!-- TODO: Replace with actual screenshot -->
 
 </div>
@@ -211,11 +211,15 @@ kubernetes:
 
 ## Documentation
 
+**[docs.kubevision.dev](https://kubevision.github.io)** — Full documentation site with guides, API reference, and architecture deep-dives.
+
 | | |
 |---|---|
-| [Architecture](docs/ARCHITECTURE.md) | System design, data flow, component interactions |
-| [Design](docs/DESIGN.md) | Technical deep-dive and implementation details |
-| [Comparison](docs/COMPARISON.md) | How KubeVision compares to alternative approaches |
+| [Getting Started](https://kubevision.github.io/docs/getting-started/installation) | Installation, quick start, configuration |
+| [Architecture](https://kubevision.github.io/docs/architecture/overview) | System design, data flow, component interactions |
+| [User Guide](https://kubevision.github.io/docs/user-guide/cluster-management) | Features walkthrough and usage guides |
+| [API Reference](https://kubevision.github.io/docs/api/overview) | REST & WebSocket API documentation |
+| [Comparison](https://kubevision.github.io/docs/comparison) | How KubeVision compares to alternatives |
 
 <br>
 

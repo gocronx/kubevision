@@ -1,0 +1,146 @@
+{
+  "hero.tagline": {
+    "message": "清晰洞察集群，即刻掌控一切"
+  },
+  "hero.description": {
+    "message": "现代化 Kubernetes 管理面板，具备实时同步、多集群管理、2FA 安全认证、Dry-Run 变更预览和终端录制功能。Go + React 构建，专为团队协作设计。"
+  },
+  "hero.getStarted": {
+    "message": "快速开始"
+  },
+  "features.title": {
+    "message": "核心功能"
+  },
+  "features.subtitle": {
+    "message": "大规模管理 Kubernetes 集群所需的一切"
+  },
+  "features.realtime.title": {
+    "message": "实时同步"
+  },
+  "features.realtime.desc": {
+    "message": "Informer Watch → WebSocket 推送，亚秒级更新至所有客户端，零轮询开销。"
+  },
+  "features.multicluster.title": {
+    "message": "多集群管理"
+  },
+  "features.multicluster.desc": {
+    "message": "在单一面板管理所有集群。即时切换上下文，跨环境对比资源。"
+  },
+  "features.terminal.title": {
+    "message": "终端 & 日志"
+  },
+  "features.terminal.desc": {
+    "message": "完整的 Pod 终端，支持会话录制与回放。实时日志流，支持搜索和过滤。"
+  },
+  "features.security.title": {
+    "message": "企业级安全"
+  },
+  "features.security.desc": {
+    "message": "五级 RBAC、TOTP 双因素认证、审计日志、Secrets 脱敏、即时 Token 吊销。"
+  },
+  "features.topology.title": {
+    "message": "资源拓扑"
+  },
+  "features.topology.desc": {
+    "message": "可视化所属关系图，展示 Deployment、ReplicaSet、Pod、Service 等资源间的关联。"
+  },
+  "features.search.title": {
+    "message": "全局搜索"
+  },
+  "features.search.desc": {
+    "message": "Cmd+K 模糊搜索，横跨所有集群、命名空间和资源类型，毫秒级响应。"
+  },
+  "architecture.title": {
+    "message": "架构设计"
+  },
+  "architecture.subtitle": {
+    "message": "清晰分层设计，实时数据流"
+  },
+  "architecture.read.title": {
+    "message": "读取路径"
+  },
+  "architecture.read.desc": {
+    "message": "Informer 缓存优先，亚毫秒响应。缓存未命中时自动降级到 API Server。8 种核心资源缓存，18+ 种按需查询。"
+  },
+  "architecture.write.title": {
+    "message": "写入路径"
+  },
+  "architecture.write.desc": {
+    "message": "API Server 校验 → Informer 检测变更 → EventListener 触发 → WS Hub 广播 → 所有浏览器即时更新。"
+  },
+  "architecture.extend.title": {
+    "message": "可扩展性"
+  },
+  "architecture.extend.desc": {
+    "message": "新增资源类型只需后端注册表 1 行 Go + 前端 1 段配置。CRD 运行时自动发现。插件系统支持 Prometheus、Grafana、ArgoCD。"
+  },
+  "unique.badge": {
+    "message": "KubeVision 独有"
+  },
+  "unique.title": {
+    "message": "独特功能"
+  },
+  "unique.subtitle": {
+    "message": "其他 Kubernetes 面板均未提供的功能"
+  },
+  "unique.2fa.title": {
+    "message": "双因素认证 (TOTP)"
+  },
+  "unique.2fa.desc": {
+    "message": "二维码设置 + 恢复码，管理员可强制全员启用。所有竞品均不支持。"
+  },
+  "unique.dryrun.title": {
+    "message": "Dry-Run 变更预览"
+  },
+  "unique.dryrun.desc": {
+    "message": "应用前预览每一处变更。API Server 校验 YAML 并展示并排 Diff。"
+  },
+  "unique.crossdiff.title": {
+    "message": "跨集群对比"
+  },
+  "unique.crossdiff.desc": {
+    "message": "在不同集群或环境间对比同一资源，使用 Monaco Diff Editor 即时发现配置漂移。"
+  },
+  "unique.recording.title": {
+    "message": "终端录制"
+  },
+  "unique.recording.desc": {
+    "message": "Pod/Node 终端操作全程以 asciinema 格式录制，管理员可回放审查与培训。"
+  },
+  "unique.kubectl.title": {
+    "message": "kubectl 命令提示"
+  },
+  "unique.kubectl.desc": {
+    "message": "每个 UI 操作都显示等效的 kubectl 命令。边用面板边学 Kubernetes CLI。"
+  },
+  "unique.secrets.title": {
+    "message": "Secrets 脱敏"
+  },
+  "unique.secrets.desc": {
+    "message": "所有视图中 Secrets 默认脱敏，需主动操作才能显示明文，杜绝意外泄露。"
+  },
+  "quickstart.title": {
+    "message": "快速开始"
+  },
+  "quickstart.subtitle": {
+    "message": "5 分钟内完成部署"
+  },
+  "comparison.title": {
+    "message": "对比一览"
+  },
+  "comparison.subtitle": {
+    "message": "KubeVision 与主流 Kubernetes 面板对比"
+  },
+  "comparison.feature": {
+    "message": "功能"
+  },
+  "comparison.cta": {
+    "message": "查看完整对比 →"
+  },
+  "theme.docs.sidebar.collapseButtonTitle": {
+    "message": "收起侧边栏"
+  },
+  "theme.docs.sidebar.expandButtonTitle": {
+    "message": "展开侧边栏"
+  }
+}

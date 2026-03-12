@@ -1,0 +1,54 @@
+.architecture {
+  padding: 5rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.sectionHeader h2 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.sectionHeader p {
+  font-size: 1.125rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+.diagram pre {
+  font-size: 0.8rem !important;
+  line-height: 1.5;
+}
+
+.flowItem {
+  margin-bottom: 1.5rem;
+}
+
+.flowItem h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.flowItem p {
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 996px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}

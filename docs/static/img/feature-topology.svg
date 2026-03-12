@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none" role="img" aria-label="Network topology icon">
+  <defs>
+    <linearGradient id="topo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1" />
+      <stop offset="100%" style="stop-color:#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Edges (draw behind nodes) -->
+  <!-- Center to top -->
+  <line x1="24" y1="24" x2="24" y2="9" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+  <!-- Center to right -->
+  <line x1="24" y1="24" x2="39" y2="24" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+  <!-- Center to bottom-left -->
+  <line x1="24" y1="24" x2="12" y2="38" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+  <!-- Center to bottom-right -->
+  <line x1="24" y1="24" x2="36" y2="38" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+  <!-- Top to right (cross edge) -->
+  <line x1="24" y1="9" x2="39" y2="24" stroke="#818cf8" stroke-width="1" stroke-linecap="round" opacity="0.35" stroke-dasharray="2 2" />
+  <!-- Right to bottom-right (cross edge) -->
+  <line x1="39" y1="24" x2="36" y2="38" stroke="#818cf8" stroke-width="1" stroke-linecap="round" opacity="0.35" stroke-dasharray="2 2" />
+  <!-- Extra node: left middle -->
+  <line x1="24" y1="24" x2="9" y2="20" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+
+  <!-- Nodes -->
+  <!-- Top node -->
+  <circle cx="24" cy="9" r="4.5" fill="url(#topo-grad)" />
+  <circle cx="24" cy="9" r="2" fill="white" opacity="0.85" />
+
+  <!-- Right node -->
+  <circle cx="39" cy="24" r="4.5" fill="url(#topo-grad)" />
+  <circle cx="39" cy="24" r="2" fill="white" opacity="0.85" />
+
+  <!-- Bottom-left node -->
+  <circle cx="12" cy="38" r="4.5" fill="url(#topo-grad)" />
+  <circle cx="12" cy="38" r="2" fill="white" opacity="0.85" />
+
+  <!-- Bottom-right node -->
+  <circle cx="36" cy="38" r="4.5" fill="url(#topo-grad)" />
+  <circle cx="36" cy="38" r="2" fill="white" opacity="0.85" />
+
+  <!-- Left node -->
+  <circle cx="9" cy="20" r="3.5" fill="#818cf8" opacity="0.75" />
+  <circle cx="9" cy="20" r="1.5" fill="white" opacity="0.85" />
+
+  <!-- Center hub node (largest) -->
+  <circle cx="24" cy="24" r="6" fill="url(#topo-grad)" />
+  <circle cx="24" cy="24" r="3" fill="none" stroke="white" stroke-width="1.5" opacity="0.85" />
+  <circle cx="24" cy="24" r="1" fill="white" opacity="0.95" />
+</svg>

@@ -35,6 +35,15 @@ type EventSummary struct {
 	Timestamp  string `json:"timestamp"`
 }
 
+// PodStatusDist holds the distribution of pods across phases.
+type PodStatusDist struct {
+	Running   int `json:"running"`
+	Pending   int `json:"pending"`
+	Succeeded int `json:"succeeded"`
+	Failed    int `json:"failed"`
+	Unknown   int `json:"unknown"`
+}
+
 // OverviewResponse holds the aggregated resource counts for a cluster overview.
 type OverviewResponse struct {
 	Pods              int            `json:"pods"`
@@ -48,6 +57,32 @@ type OverviewResponse struct {
 	ActiveNamespaces  int            `json:"activeNamespaces"`
 	Resources         ResourceUsage  `json:"resources"`
 	RecentEvents      []EventSummary `json:"recentEvents"`
+
+	// Workload stats
+	StatefulSets      int `json:"statefulSets"`
+	ReadyStatefulSets int `json:"readyStatefulSets"`
+	DaemonSets        int `json:"daemonSets"`
+	ReadyDaemonSets   int `json:"readyDaemonSets"`
+	Jobs              int `json:"jobs"`
+	SucceededJobs     int `json:"succeededJobs"`
+	FailedJobs        int `json:"failedJobs"`
+	CronJobs          int `json:"cronJobs"`
+	ActiveCronJobs    int `json:"activeCronJobs"`
+	Ingresses         int `json:"ingresses"`
+
+	// Storage stats
+	PersistentVolumes      int   `json:"persistentVolumes"`
+	BoundPVs               int   `json:"boundPVs"`
+	AvailablePVs           int   `json:"availablePVs"`
+	ReleasedPVs            int   `json:"releasedPVs"`
+	PersistentVolumeClaims int   `json:"persistentVolumeClaims"`
+	BoundPVCs              int   `json:"boundPVCs"`
+	PendingPVCs            int   `json:"pendingPVCs"`
+	TotalStorageBytes      int64 `json:"totalStorageBytes"`
+	UsedStorageBytes       int64 `json:"usedStorageBytes"`
+
+	// Pod status distribution
+	PodStatusDistribution PodStatusDist `json:"podStatusDistribution"`
 }
 
 // OverviewService aggregates cluster-level resource counts.
@@ -84,7 +119,11 @@ func (s *OverviewService) GetOverview(
 	clusterKey := cluster.Name
 
 	// Fetch resource lists
-	resourceTypes := []string{"pods", "deployments", "services", "nodes", "namespaces"}
+	resourceTypes := []string{
+		"pods", "deployments", "services", "nodes", "namespaces",
+		"statefulsets", "daemonsets", "jobs", "cronjobs", "ingresses",
+		"persistentvolumes", "persistentvolumeclaims",
+	}
 	lists := make(map[string]*repository.ResourceList, len(resourceTypes))
 
 	for _, rt := range resourceTypes {
@@ -108,12 +147,23 @@ func (s *OverviewService) GetOverview(
 		eventList = &repository.ResourceList{}
 	}
 
-	// Count running pods
+	// Count running pods and pod status distribution
 	runningPods := 0
+	var podStatusDist PodStatusDist
 	for _, pod := range lists["pods"].Items {
 		phase := getNestedString(pod.Raw, "status", "phase")
-		if phase == "Running" {
+		switch phase {
+		case "Running":
 			runningPods++
+			podStatusDist.Running++
+		case "Pending":
+			podStatusDist.Pending++
+		case "Succeeded":
+			podStatusDist.Succeeded++
+		case "Failed":
+			podStatusDist.Failed++
+		default:
+			podStatusDist.Unknown++
 		}
 	}
 
@@ -133,6 +183,103 @@ func (s *OverviewService) GetOverview(
 		phase := getNestedString(ns.Raw, "status", "phase")
 		if phase == "Active" {
 			activeNamespaces++
+		}
+	}
+
+	// Count ready statefulsets
+	readyStatefulSets := 0
+	for _, ss := range lists["statefulsets"].Items {
+		desired := getNestedFloat(ss.Raw, "spec", "replicas")
+		ready := getNestedFloat(ss.Raw, "status", "readyReplicas")
+		if desired >= 0 && ready >= desired {
+			readyStatefulSets++
+		}
+	}
+
+	// Count ready daemonsets
+	readyDaemonSets := 0
+	for _, ds := range lists["daemonsets"].Items {
+		desired := getNestedFloat(ds.Raw, "status", "desiredNumberScheduled")
+		ready := getNestedFloat(ds.Raw, "status", "numberReady")
+		if desired >= 0 && ready >= desired {
+			readyDaemonSets++
+		}
+	}
+
+	// Count job statuses
+	succeededJobs := 0
+	failedJobs := 0
+	for _, job := range lists["jobs"].Items {
+		succeeded := getNestedFloat(job.Raw, "status", "succeeded")
+		failed := getNestedFloat(job.Raw, "status", "failed")
+		conditions := getNestedSlice(job.Raw, "status", "conditions")
+		isComplete := false
+		isFailed := false
+		for _, c := range conditions {
+			cond, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			if cond["type"] == "Complete" && cond["status"] == "True" {
+				isComplete = true
+			}
+			if cond["type"] == "Failed" && cond["status"] == "True" {
+				isFailed = true
+			}
+		}
+		if isComplete || succeeded > 0 {
+			succeededJobs++
+		} else if isFailed || failed > 0 {
+			failedJobs++
+		}
+	}
+
+	// Count active cronjobs (those with active jobs)
+	activeCronJobs := 0
+	for _, cj := range lists["cronjobs"].Items {
+		active := getNestedSlice(cj.Raw, "status", "active")
+		if len(active) > 0 {
+			activeCronJobs++
+		}
+	}
+
+	// Storage: PV stats
+	boundPVs := 0
+	availablePVs := 0
+	releasedPVs := 0
+	var totalStorageBytes int64
+	var usedStorageBytes int64
+	for _, pv := range lists["persistentvolumes"].Items {
+		phase := getNestedString(pv.Raw, "status", "phase")
+		capacity := getNestedMap(pv.Raw, "spec", "capacity")
+		var pvBytes int64
+		if capacity != nil {
+			if storage, ok := capacity["storage"].(string); ok {
+				pvBytes = parseMemoryQuantity(storage)
+				totalStorageBytes += pvBytes
+			}
+		}
+		switch phase {
+		case "Bound":
+			boundPVs++
+			usedStorageBytes += pvBytes
+		case "Available":
+			availablePVs++
+		case "Released":
+			releasedPVs++
+		}
+	}
+
+	// Storage: PVC stats
+	boundPVCs := 0
+	pendingPVCs := 0
+	for _, pvc := range lists["persistentvolumeclaims"].Items {
+		phase := getNestedString(pvc.Raw, "status", "phase")
+		switch phase {
+		case "Bound":
+			boundPVCs++
+		case "Pending":
+			pendingPVCs++
 		}
 	}
 
@@ -251,6 +398,29 @@ func (s *OverviewService) GetOverview(
 		ActiveNamespaces: activeNamespaces,
 		Resources:        resources,
 		RecentEvents:     recentEvents,
+
+		StatefulSets:      int(lists["statefulsets"].Total),
+		ReadyStatefulSets: readyStatefulSets,
+		DaemonSets:        int(lists["daemonsets"].Total),
+		ReadyDaemonSets:   readyDaemonSets,
+		Jobs:              int(lists["jobs"].Total),
+		SucceededJobs:     succeededJobs,
+		FailedJobs:        failedJobs,
+		CronJobs:          int(lists["cronjobs"].Total),
+		ActiveCronJobs:    activeCronJobs,
+		Ingresses:         int(lists["ingresses"].Total),
+
+		PersistentVolumes:      int(lists["persistentvolumes"].Total),
+		BoundPVs:               boundPVs,
+		AvailablePVs:           availablePVs,
+		ReleasedPVs:            releasedPVs,
+		PersistentVolumeClaims: int(lists["persistentvolumeclaims"].Total),
+		BoundPVCs:              boundPVCs,
+		PendingPVCs:            pendingPVCs,
+		TotalStorageBytes:      totalStorageBytes,
+		UsedStorageBytes:       usedStorageBytes,
+
+		PodStatusDistribution: podStatusDist,
 	}, nil
 }
 

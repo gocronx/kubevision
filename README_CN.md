@@ -17,7 +17,7 @@
 
 <!-- TODO: 替换为实际动图，展示 15-20 秒的操作流程 -->
 <!-- <img src="docs/assets/demo.gif" width="800" alt="KubeVision Demo"> -->
-<img src="docs/assets/screenshot-overview.png" width="800" alt="KubeVision Dashboard">
+<img src="assets/overview.png" width="800" alt="KubeVision Dashboard">
 <!-- TODO: 替换为实际截图 -->
 
 </div>
@@ -211,11 +211,15 @@ kubernetes:
 
 ## 文档
 
+**[docs.kubevision.dev](https://kubevision.github.io)** — 完整文档站，包含使用指南、API 参考和架构详解。
+
 | | |
 |---|---|
-| [架构设计](docs/ARCHITECTURE.md) | 系统设计、数据流、组件交互 |
-| [技术精要](docs/DESIGN.md) | 技术深度剖析与实现细节 |
-| [方案对比](docs/COMPARISON.md) | KubeVision 与其他方案的对比 |
+| [快速开始](https://kubevision.github.io/docs/getting-started/installation) | 安装、快速上手、配置说明 |
+| [架构设计](https://kubevision.github.io/docs/architecture/overview) | 系统设计、数据流、组件交互 |
+| [使用指南](https://kubevision.github.io/docs/user-guide/cluster-management) | 功能详解与操作指引 |
+| [API 参考](https://kubevision.github.io/docs/api/overview) | REST & WebSocket API 文档 |
+| [方案对比](https://kubevision.github.io/docs/comparison) | KubeVision 与其他方案的对比 |
 
 <br>
 

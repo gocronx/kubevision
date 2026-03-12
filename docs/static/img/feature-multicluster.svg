@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none" role="img" aria-label="Multi-cluster icon">
+  <defs>
+    <linearGradient id="mc-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1" />
+      <stop offset="100%" style="stop-color:#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Connection lines between clusters -->
+  <!-- Center to top-left -->
+  <line x1="24" y1="24" x2="10" y2="10" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round" opacity="0.7" />
+  <!-- Center to top-right -->
+  <line x1="24" y1="24" x2="38" y2="10" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round" opacity="0.7" />
+  <!-- Center to bottom-left -->
+  <line x1="24" y1="24" x2="10" y2="38" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round" opacity="0.7" />
+  <!-- Center to bottom-right -->
+  <line x1="24" y1="24" x2="38" y2="38" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round" opacity="0.7" />
+
+  <!-- Top-left cluster node -->
+  <circle cx="10" cy="10" r="6" fill="url(#mc-grad)" />
+  <circle cx="10" cy="10" r="2.5" fill="white" opacity="0.9" />
+
+  <!-- Top-right cluster node -->
+  <circle cx="38" cy="10" r="6" fill="url(#mc-grad)" />
+  <circle cx="38" cy="10" r="2.5" fill="white" opacity="0.9" />
+
+  <!-- Bottom-left cluster node -->
+  <circle cx="10" cy="38" r="6" fill="url(#mc-grad)" />
+  <circle cx="10" cy="38" r="2.5" fill="white" opacity="0.9" />
+
+  <!-- Bottom-right cluster node -->
+  <circle cx="38" cy="38" r="6" fill="url(#mc-grad)" />
+  <circle cx="38" cy="38" r="2.5" fill="white" opacity="0.9" />
+
+  <!-- Center hub (larger, primary cluster) -->
+  <circle cx="24" cy="24" r="8" fill="url(#mc-grad)" />
+  <!-- Center hub inner ring -->
+  <circle cx="24" cy="24" r="5" fill="none" stroke="white" stroke-width="1.5" opacity="0.8" />
+  <!-- Center hub dot -->
+  <circle cx="24" cy="24" r="2" fill="white" opacity="0.95" />
+</svg>

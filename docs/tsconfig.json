@@ -1,0 +1,6 @@
+{
+  "extends": "./node_modules/@docusaurus/tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "."
+  }
+}

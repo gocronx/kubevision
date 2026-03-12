@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none" role="img" aria-label="Search icon">
+  <defs>
+    <linearGradient id="srch-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1" />
+      <stop offset="100%" style="stop-color:#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Magnifying glass circle -->
+  <circle cx="20" cy="20" r="13" stroke="url(#srch-grad)" stroke-width="3" fill="none" />
+
+  <!-- Subtle inner fill -->
+  <circle cx="20" cy="20" r="10" fill="#6366f1" opacity="0.08" />
+
+  <!-- Handle -->
+  <line x1="30" y1="30" x2="42" y2="42" stroke="url(#srch-grad)" stroke-width="3.5" stroke-linecap="round" />
+
+  <!-- Inner lens highlight arc -->
+  <path d="M13 15 Q16 11 21 11" stroke="#818cf8" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.55" />
+
+  <!-- Small search lines inside lens (representing content being searched) -->
+  <line x1="15" y1="19" x2="25" y2="19" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.45" />
+  <line x1="15" y1="23" x2="22" y2="23" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" opacity="0.45" />
+</svg>
