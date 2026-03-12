@@ -1,7 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" width="120" alt="KubeVision Logo">
-<!-- TODO: 替换为实际 Logo -->
+<img src="docs/assets/logo.svg" width="120" alt="KubeVision Logo">
 
 # KubeVision
 
@@ -62,20 +61,36 @@ CRD 运行时自动发现。
 
 ## 截图
 
-<!-- TODO: 替换为实际截图 -->
-
 <table>
 <tr>
-<td><img src="docs/assets/screenshot-overview.png" alt="集群概览"></td>
-<td><img src="docs/assets/screenshot-terminal.png" alt="Pod 终端"></td>
+<td width="50%" align="center">
+<strong>Pod 终端</strong><br><br>
+<img src="docs/assets/screenshot-terminal.png" width="100%" alt="Pod 终端">
+</td>
+<td width="50%" align="center">
+<strong>资源拓扑</strong><br><br>
+<img src="docs/assets/screenshot-topology.png" width="100%" alt="资源拓扑">
+</td>
 </tr>
 <tr>
-<td><img src="docs/assets/screenshot-topology.png" alt="资源拓扑"></td>
-<td><img src="docs/assets/screenshot-diff.png" alt="Dry-Run Diff"></td>
+<td width="50%" align="center">
+<strong>资源 YAML</strong><br><br>
+<img src="docs/assets/screenshot-diff.png" width="100%" alt="资源 YAML">
+</td>
+<td width="50%" align="center">
+<strong>全局搜索</strong><br><br>
+<img src="docs/assets/screenshot-search.png" width="100%" alt="全局搜索">
+</td>
 </tr>
 <tr>
-<td><img src="docs/assets/screenshot-search.png" alt="全局搜索"></td>
-<td><img src="docs/assets/screenshot-dark.png" alt="暗色模式"></td>
+<td width="50%" align="center">
+<strong>终端审计录频</strong><br><br>
+<img src="docs/assets/screenshot-audit.png" width="100%" alt="终端审计录频">
+</td>
+<td width="50%" align="center">
+<strong>暗色模式</strong><br><br>
+<img src="docs/assets/screenshot-dark.png" width="100%" alt="暗色模式">
+</td>
 </tr>
 </table>
 

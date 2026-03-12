@@ -1,7 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" width="120" alt="KubeVision Logo">
-<!-- TODO: Replace with actual logo -->
+<img src="docs/assets/logo.svg" width="120" alt="KubeVision Logo">
 
 # KubeVision
 
@@ -62,20 +61,36 @@ Built for teams, not just demos.
 
 ## Screenshots
 
-<!-- TODO: Replace with actual screenshots -->
-
 <table>
 <tr>
-<td><img src="docs/assets/screenshot-overview.png" alt="Cluster Overview"></td>
-<td><img src="docs/assets/screenshot-terminal.png" alt="Pod Terminal"></td>
+<td width="50%" align="center">
+<strong>Pod Terminal</strong><br><br>
+<img src="docs/assets/screenshot-terminal.png" width="100%" alt="Pod Terminal">
+</td>
+<td width="50%" align="center">
+<strong>Resource Topology</strong><br><br>
+<img src="docs/assets/screenshot-topology.png" width="100%" alt="Resource Topology">
+</td>
 </tr>
 <tr>
-<td><img src="docs/assets/screenshot-topology.png" alt="Resource Topology"></td>
-<td><img src="docs/assets/screenshot-diff.png" alt="Dry-Run Diff"></td>
+<td width="50%" align="center">
+<strong>Resource YAML</strong><br><br>
+<img src="docs/assets/screenshot-diff.png" width="100%" alt="Resource YAML">
+</td>
+<td width="50%" align="center">
+<strong>Global Search</strong><br><br>
+<img src="docs/assets/screenshot-search.png" width="100%" alt="Global Search">
+</td>
 </tr>
 <tr>
-<td><img src="docs/assets/screenshot-search.png" alt="Global Search"></td>
-<td><img src="docs/assets/screenshot-dark.png" alt="Dark Mode"></td>
+<td width="50%" align="center">
+<strong>Terminal Audit</strong><br><br>
+<img src="docs/assets/screenshot-audit.png" width="100%" alt="Terminal Audit">
+</td>
+<td width="50%" align="center">
+<strong>Dark Mode</strong><br><br>
+<img src="docs/assets/screenshot-dark.png" width="100%" alt="Dark Mode">
+</td>
 </tr>
 </table>
 
