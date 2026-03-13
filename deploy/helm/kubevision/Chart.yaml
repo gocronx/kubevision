@@ -8,6 +8,6 @@ keywords:
   - kubernetes
   - dashboard
   - monitoring
-home: https://github.com/kubevision/kubevision
+home: https://github.com/gocronx/kubevision
 maintainers:
   - name: KubeVision

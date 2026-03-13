@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/handler"
-	"github.com/kubevision/kubevision/internal/handler/ws"
-	"github.com/kubevision/kubevision/internal/middleware"
+	"github.com/gocronx/kubevision/internal/handler"
+	"github.com/gocronx/kubevision/internal/handler/ws"
+	"github.com/gocronx/kubevision/internal/middleware"
 )
 
 // RouterDeps holds all handler and middleware dependencies required to register routes.

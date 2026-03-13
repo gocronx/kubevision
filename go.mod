@@ -1,4 +1,4 @@
-module github.com/kubevision/kubevision
+module github.com/gocronx/kubevision
 
 go 1.25.0
 

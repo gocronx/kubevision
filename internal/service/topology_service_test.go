@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 func TestTopologyService_GetNamespaceTopology_EmptyNamespace(t *testing.T) {

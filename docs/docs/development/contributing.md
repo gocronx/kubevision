@@ -15,7 +15,7 @@ git clone https://github.com/<your-username>/kubevision.git
 cd kubevision
 
 # 2. Add the upstream remote
-git remote add upstream https://github.com/kubevision/kubevision.git
+git remote add upstream https://github.com/gocronx/kubevision.git
 
 # 3. Create a feature branch from main
 git checkout -b feat/my-feature
@@ -117,7 +117,7 @@ First-time contributors must sign the CLA (Contributor License Agreement) via th
 
 ## License
 
-By contributing to KubeVision you agree that your contributions are licensed under the **Apache License, Version 2.0**. See [LICENSE](https://github.com/kubevision/kubevision/blob/main/LICENSE) for the full text.
+By contributing to KubeVision you agree that your contributions are licensed under the **Apache License, Version 2.0**. See [LICENSE](https://github.com/gocronx/kubevision/blob/main/LICENSE) for the full text.
 
 ## Related
 

@@ -8,10 +8,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/internal/model"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
 // ---------------------------------------------------------------------------
@@ -311,12 +311,12 @@ func TestAuthService_Login(t *testing.T) {
 		svc := NewAuthService(repo, jwtMgr, newTestConfig(), newTestLogger())
 
 		repo.addUser(&model.User{
-			ID:           4,
-			Username:     "mfa_user",
-			PasswordHash: mustHashPassword(t, "pass"),
-			Role:         "dev",
-			IsActive:     true,
-			TOTPEnabled:  true,
+			ID:            4,
+			Username:      "mfa_user",
+			PasswordHash:  mustHashPassword(t, "pass"),
+			Role:          "dev",
+			IsActive:      true,
+			TOTPEnabled:   true,
 			TOTPSecretEnc: "dummyencryptedsecret",
 		})
 

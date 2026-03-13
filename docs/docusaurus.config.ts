@@ -32,7 +32,7 @@ const config: Config = {
         docs: {
           sidebarPath: "./sidebars.ts",
           editUrl:
-            "https://github.com/kubevision/kubevision/tree/main/docs/",
+            "https://github.com/gocronx/kubevision/tree/main/docs/",
         },
         blog: false,
         theme: {
@@ -78,7 +78,7 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://github.com/kubevision/kubevision",
+          href: "https://github.com/gocronx/kubevision",
           label: "GitHub",
           position: "right",
         },
@@ -100,11 +100,11 @@ const config: Config = {
           items: [
             {
               label: "GitHub Discussions",
-              href: "https://github.com/kubevision/kubevision/discussions",
+              href: "https://github.com/gocronx/kubevision/discussions",
             },
             {
               label: "Issues",
-              href: "https://github.com/kubevision/kubevision/issues",
+              href: "https://github.com/gocronx/kubevision/issues",
             },
           ],
         },
@@ -113,7 +113,7 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/kubevision/kubevision",
+              href: "https://github.com/gocronx/kubevision",
             },
             { label: "Comparison", to: "/docs/comparison" },
             { label: "Roadmap", to: "/docs/roadmap" },

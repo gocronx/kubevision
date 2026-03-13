@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // TemplateResponse is the API response for a single template.

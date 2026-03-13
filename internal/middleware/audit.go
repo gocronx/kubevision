@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/service"
+	"github.com/gocronx/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/service"
 )
 
 // sensitiveFields is the set of JSON field names whose values must be

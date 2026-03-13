@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubevision/kubevision/internal/model"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
 // ---------------------------------------------------------------------------
@@ -15,13 +15,13 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockFavoriteRepo struct {
-	favorites  map[uint]*model.Favorite
-	nextID     uint
-	createErr  error
-	deleteErr  error
-	listErr    error
-	updateErr  error
-	getByErr   error
+	favorites map[uint]*model.Favorite
+	nextID    uint
+	createErr error
+	deleteErr error
+	listErr   error
+	updateErr error
+	getByErr  error
 	// When non-nil, getByResult is returned instead of a lookup result.
 	getByResult *model.Favorite
 }

@@ -8,8 +8,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // ---------------------------------------------------------------------------
@@ -17,13 +17,13 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockClusterRepo struct {
-	clusters   map[uint]*model.Cluster
-	byName     map[string]*model.Cluster
-	nextID     uint
-	createErr  error
-	updateErr  error
-	deleteErr  error
-	listErr    error
+	clusters  map[uint]*model.Cluster
+	byName    map[string]*model.Cluster
+	nextID    uint
+	createErr error
+	updateErr error
+	deleteErr error
+	listErr   error
 }
 
 func newMockClusterRepo() *mockClusterRepo {

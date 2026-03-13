@@ -25,7 +25,7 @@ plugins:
 
 ```bash
 # Helm
-helm upgrade kubevision kubevision/kubevision -f values.yaml
+helm upgrade kubevision gocronx/kubevision -f values.yaml
 
 # From source
 make dev

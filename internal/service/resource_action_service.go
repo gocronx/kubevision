@@ -13,9 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // scalableKinds enumerates workload resource types that expose a scale subresource.

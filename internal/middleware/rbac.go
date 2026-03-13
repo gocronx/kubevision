@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/pkg/response"
-	"github.com/kubevision/kubevision/internal/repository"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/pkg/response"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // RBACMiddleware returns a Gin middleware that enforces role-based access

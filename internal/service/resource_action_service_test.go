@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
 // ---------------------------------------------------------------------------

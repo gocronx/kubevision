@@ -2,10 +2,10 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/kubevision/kubevision/internal/middleware"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/pkg/response"
-	"github.com/kubevision/kubevision/internal/service"
+	"github.com/gocronx/kubevision/internal/middleware"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/pkg/response"
+	"github.com/gocronx/kubevision/internal/service"
 )
 
 // AuthHandler handles HTTP requests for authentication operations.

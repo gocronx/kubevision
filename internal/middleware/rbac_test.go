@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/kubevision/kubevision/internal/model"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
 // ---------------------------------------------------------------------------

@@ -8,9 +8,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // ---------------------------------------------------------------------------

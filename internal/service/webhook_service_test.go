@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kubevision/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/model"
 )
 
 // ---------------------------------------------------------------------------

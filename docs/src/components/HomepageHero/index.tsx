@@ -37,7 +37,7 @@ export default function HomepageHero(): JSX.Element {
                 styles.heroBtn,
                 styles.heroBtnSecondary
               )}
-              href="https://github.com/kubevision/kubevision"
+              href="https://github.com/gocronx/kubevision"
             >
               GitHub →
             </Link>

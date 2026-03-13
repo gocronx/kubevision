@@ -13,10 +13,10 @@ import (
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	kubexec "github.com/kubevision/kubevision/internal/kubernetes/exec"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	kubexec "github.com/gocronx/kubevision/internal/kubernetes/exec"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // logMsgType classifies messages on the logs WebSocket channel.

@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/service"
-	discoveryfake "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/gocronx/kubevision/internal/service"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
+	discoveryfake "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 type stubDiscoveryProvider struct {
@@ -61,7 +61,7 @@ func TestCRDHandler_List(t *testing.T) {
 	}
 
 	var resp struct {
-		Code int                `json:"code"`
+		Code int               `json:"code"`
 		Data []service.CRDInfo `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {

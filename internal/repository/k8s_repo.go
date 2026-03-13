@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	"github.com/kubevision/kubevision/internal/kubernetes/informer"
-	"github.com/kubevision/kubevision/internal/kubernetes/resource"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	"github.com/gocronx/kubevision/internal/kubernetes/informer"
+	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"

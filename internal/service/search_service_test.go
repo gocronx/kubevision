@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	"github.com/kubevision/kubevision/internal/kubernetes/informer"
-	"github.com/kubevision/kubevision/internal/kubernetes/resource"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	"github.com/gocronx/kubevision/internal/kubernetes/informer"
+	"github.com/gocronx/kubevision/internal/kubernetes/resource"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -124,12 +124,12 @@ func TestSearchService_Search(t *testing.T) {
 
 func TestMatchScore(t *testing.T) {
 	tests := []struct {
-		name       string
-		query      string
-		resName    string
-		namespace  string
-		labels     map[string]string
-		wantScore  int
+		name      string
+		query     string
+		resName   string
+		namespace string
+		labels    map[string]string
+		wantScore int
 	}{
 		{
 			name:      "exact name match returns score 3",
@@ -163,17 +163,17 @@ func TestMatchScore(t *testing.T) {
 			wantScore: scoreSubstring,
 		},
 		{
-			name:    "no name or namespace match but label key contains query returns score 1",
-			query:   "env",
-			resName: "my-pod",
-			labels:  map[string]string{"environment": "prod"},
+			name:      "no name or namespace match but label key contains query returns score 1",
+			query:     "env",
+			resName:   "my-pod",
+			labels:    map[string]string{"environment": "prod"},
 			wantScore: scoreSubstring,
 		},
 		{
-			name:    "no name or namespace match but label value contains query returns score 1",
-			query:   "prod",
-			resName: "my-pod",
-			labels:  map[string]string{"env": "production"},
+			name:      "no name or namespace match but label value contains query returns score 1",
+			query:     "prod",
+			resName:   "my-pod",
+			labels:    map[string]string{"env": "production"},
 			wantScore: scoreSubstring,
 		},
 		{
@@ -195,10 +195,10 @@ func TestMatchScore(t *testing.T) {
 			wantScore: scorePrefix,
 		},
 		{
-			name:    "nil labels map is handled gracefully",
-			query:   "nginx",
-			resName: "my-pod",
-			labels:  nil,
+			name:      "nil labels map is handled gracefully",
+			query:     "nginx",
+			resName:   "my-pod",
+			labels:    nil,
 			wantScore: 0,
 		},
 	}

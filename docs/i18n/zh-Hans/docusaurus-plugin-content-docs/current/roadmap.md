@@ -7,7 +7,7 @@ title: 路线图
 KubeVision 遵循分阶段发布计划。每个阶段都在前一阶段的基础上构建——首先是核心稳定性，其次是高级集成，最后是智能自动化。
 
 :::note
-本路线图反映当前规划，可能会根据社区反馈和贡献者的可用性而调整。请在 [GitHub Discussions](https://github.com/kubevision/kubevision/discussions) 中跟踪进展并为功能投票。
+本路线图反映当前规划，可能会根据社区反馈和贡献者的可用性而调整。请在 [GitHub Discussions](https://github.com/gocronx/kubevision/discussions) 中跟踪进展并为功能投票。
 :::
 
 ---
@@ -153,7 +153,7 @@ UI 目前仅提供英文版。计划新增的语言区域：
 
 有未列出的功能想法？影响路线图的最佳方式是：
 
-1. 在 [GitHub Discussions](https://github.com/kubevision/kubevision/discussions) 中提出，描述使用场景。
+1. 在 [GitHub Discussions](https://github.com/gocronx/kubevision/discussions) 中提出，描述使用场景。
 2. 如果有社区兴趣，维护者将创建一个跟踪 Issue 并将其加入路线图。
 3. 如果你想自行实现，请参阅[贡献指南](/docs/development/contributing)了解如何开始。
 

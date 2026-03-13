@@ -27,7 +27,7 @@ helm repo add kubevision https://kubevision.github.io/charts
 helm repo update
 
 # Install KubeVision
-helm install kubevision kubevision/kubevision
+helm install kubevision gocronx/kubevision
 
 # Access the dashboard
 kubectl port-forward svc/kubevision 8080:8080
@@ -48,7 +48,7 @@ docker run -p 8080:8080 \\
             </TabItem>
             <TabItem value="dev" label="Development">
               <CodeBlock language="bash">
-                {`git clone https://github.com/kubevision/kubevision.git
+                {`git clone https://github.com/gocronx/kubevision.git
 cd kubevision
 
 # Backend — starts on :8080

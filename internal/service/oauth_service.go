@@ -14,17 +14,17 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/internal/model"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // OAuthProviderInfo is the public information about an available OAuth provider.
 type OAuthProviderInfo struct {
-	Name     string `json:"name"`
-	AuthURL  string `json:"authUrl"`
+	Name    string `json:"name"`
+	AuthURL string `json:"authUrl"`
 }
 
 // OAuthService handles OAuth2/OIDC authentication flows.

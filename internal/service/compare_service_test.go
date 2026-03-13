@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 func TestCompareService_Compare(t *testing.T) {

@@ -19,7 +19,7 @@ KubeVision 支持通过 Helm、Docker 或从源码进行部署。
 helm repo add kubevision https://kubevision.github.io/charts
 helm repo update
 
-helm install kubevision kubevision/kubevision \
+helm install kubevision gocronx/kubevision \
   --namespace kubevision \
   --create-namespace
 ```
@@ -30,7 +30,7 @@ helm install kubevision kubevision/kubevision \
 # values.yaml
 replicaCount: 1
 image:
-  repository: kubevision/kubevision
+  repository: gocronx/kubevision
   tag: latest
 
 service:
@@ -46,7 +46,7 @@ auth:
 ```
 
 ```bash
-helm install kubevision kubevision/kubevision -f values.yaml
+helm install kubevision gocronx/kubevision -f values.yaml
 ```
 
 ## Docker
@@ -64,7 +64,7 @@ docker run -p 8080:8080 \
 ## 从源码安装
 
 ```bash
-git clone https://github.com/kubevision/kubevision.git
+git clone https://github.com/gocronx/kubevision.git
 cd kubevision
 
 # 后端

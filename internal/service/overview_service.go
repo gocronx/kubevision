@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // ResourceMetric holds allocatable vs requested vs limited for a single resource dimension.
@@ -26,7 +26,7 @@ type ResourceUsage struct {
 
 // EventSummary is a condensed representation of a Kubernetes event.
 type EventSummary struct {
-	Type       string `json:"type"`                 // Normal, Warning
+	Type       string `json:"type"` // Normal, Warning
 	Reason     string `json:"reason"`
 	Message    string `json:"message"`
 	ObjectKind string `json:"objectKind"`
@@ -46,17 +46,17 @@ type PodStatusDist struct {
 
 // OverviewResponse holds the aggregated resource counts for a cluster overview.
 type OverviewResponse struct {
-	Pods              int            `json:"pods"`
-	RunningPods       int            `json:"runningPods"`
-	Deployments       int            `json:"deployments"`
-	ReadyDeployments  int            `json:"readyDeployments"`
-	Services          int            `json:"services"`
-	Nodes             int            `json:"nodes"`
-	ReadyNodes        int            `json:"readyNodes"`
-	Namespaces        int            `json:"namespaces"`
-	ActiveNamespaces  int            `json:"activeNamespaces"`
-	Resources         ResourceUsage  `json:"resources"`
-	RecentEvents      []EventSummary `json:"recentEvents"`
+	Pods             int            `json:"pods"`
+	RunningPods      int            `json:"runningPods"`
+	Deployments      int            `json:"deployments"`
+	ReadyDeployments int            `json:"readyDeployments"`
+	Services         int            `json:"services"`
+	Nodes            int            `json:"nodes"`
+	ReadyNodes       int            `json:"readyNodes"`
+	Namespaces       int            `json:"namespaces"`
+	ActiveNamespaces int            `json:"activeNamespaces"`
+	Resources        ResourceUsage  `json:"resources"`
+	RecentEvents     []EventSummary `json:"recentEvents"`
 
 	// Workload stats
 	StatefulSets      int `json:"statefulSets"`

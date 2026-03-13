@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/service"
+	"github.com/gocronx/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/service"
 )
 
 // stubPluginConfigRepo implements repository.PluginConfigRepo for testing.

@@ -13,12 +13,12 @@ import (
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	kubexec "github.com/kubevision/kubevision/internal/kubernetes/exec"
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/repository"
-	"github.com/kubevision/kubevision/internal/service"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	kubexec "github.com/gocronx/kubevision/internal/kubernetes/exec"
+	"github.com/gocronx/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/service"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -45,13 +45,13 @@ type termMessage struct {
 
 // TerminalHandler handles WebSocket-based pod exec (interactive terminal) sessions.
 type TerminalHandler struct {
-	clusterManager  *cluster.Manager
-	clusterRepo     repository.ClusterRepo
-	jwtManager      *auth.JWTManager
-	userRepo        repository.UserRepo
-	roleRepo        repository.RoleRepo
-	sessionService  *service.TerminalSessionService
-	logger          *zap.Logger
+	clusterManager *cluster.Manager
+	clusterRepo    repository.ClusterRepo
+	jwtManager     *auth.JWTManager
+	userRepo       repository.UserRepo
+	roleRepo       repository.RoleRepo
+	sessionService *service.TerminalSessionService
+	logger         *zap.Logger
 }
 
 // NewTerminalHandler creates a new TerminalHandler.
@@ -188,12 +188,12 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 
 	// recordingWriter intercepts output bytes and appends asciinema v2 events.
 	recWriter := &recordingWriter{
-		conn:       conn,
-		msgType:    termMsgOutput,
-		mu:         &sync.Mutex{},
-		startTime:  sessionStartTime,
-		recordBuf:  &recordingBuf,
-		recordMu:   &sync.Mutex{},
+		conn:      conn,
+		msgType:   termMsgOutput,
+		mu:        &sync.Mutex{},
+		startTime: sessionStartTime,
+		recordBuf: &recordingBuf,
+		recordMu:  &sync.Mutex{},
 	}
 
 	// Start reading WebSocket messages (input + resize) in a goroutine.

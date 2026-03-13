@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/model"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // FavoriteResponse is the API response for a single favorite entry.
@@ -44,8 +44,8 @@ type ToggleFavoriteResponse struct {
 
 // CheckFavoriteResponse reports whether a given resource is favorited.
 type CheckFavoriteResponse struct {
-	Favorited  bool              `json:"favorited"`
-	Favorite   *FavoriteResponse `json:"favorite,omitempty"`
+	Favorited bool              `json:"favorited"`
+	Favorite  *FavoriteResponse `json:"favorite,omitempty"`
 }
 
 // FavoriteService encapsulates business logic for the favorites/bookmarks system.

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
 // Response is the unified JSON response structure.
@@ -19,8 +19,8 @@ type Response struct {
 // Meta carries optional metadata for paginated or enriched responses.
 type Meta struct {
 	Source    string `json:"source,omitempty"`
-	Stale    bool   `json:"stale,omitempty"`
-	Total    int64  `json:"total,omitempty"`
+	Stale     bool   `json:"stale,omitempty"`
+	Total     int64  `json:"total,omitempty"`
 	RequestID string `json:"requestId,omitempty"`
 }
 

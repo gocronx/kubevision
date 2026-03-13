@@ -16,8 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/web"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/web"
 )
 
 // Server wraps the HTTP server and Gin engine.

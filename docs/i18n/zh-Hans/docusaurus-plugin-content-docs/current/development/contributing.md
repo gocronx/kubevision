@@ -15,7 +15,7 @@ git clone https://github.com/<your-username>/kubevision.git
 cd kubevision
 
 # 2. 添加上游远程仓库
-git remote add upstream https://github.com/kubevision/kubevision.git
+git remote add upstream https://github.com/gocronx/kubevision.git
 
 # 3. 从 main 创建功能分支
 git checkout -b feat/my-feature
@@ -117,7 +117,7 @@ docs(contributing): add commit message guide
 
 ## 许可证
 
-向 KubeVision 贡献代码即表示你同意，你的贡献将依据 **Apache License, Version 2.0** 授权。完整条款请参阅 [LICENSE](https://github.com/kubevision/kubevision/blob/main/LICENSE)。
+向 KubeVision 贡献代码即表示你同意，你的贡献将依据 **Apache License, Version 2.0** 授权。完整条款请参阅 [LICENSE](https://github.com/gocronx/kubevision/blob/main/LICENSE)。
 
 ## 相关文档
 

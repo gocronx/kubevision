@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: kubevision/kubevision
+  repository: gocronx/kubevision
   pullPolicy: IfNotPresent
   tag: ""  # Defaults to .Chart.AppVersion
 

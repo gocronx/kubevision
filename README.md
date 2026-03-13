@@ -141,7 +141,7 @@ docker run -p 8080:8080 kubevision:latest
 ### Development
 
 ```bash
-git clone https://github.com/kubevision/kubevision.git
+git clone https://github.com/gocronx/kubevision.git
 cd kubevision
 
 # Backend — :8080
@@ -226,7 +226,7 @@ kubernetes:
 
 ## Documentation
 
-**[docs.kubevision.dev](https://kubevision.github.io)** — Full documentation site with guides, API reference, and architecture deep-dives.
+**[kubevision-docs](https://kubevision-docs.pages.dev/)** — Full documentation site with guides, API reference, and architecture deep-dives.
 
 | | |
 |---|---|
@@ -243,6 +243,6 @@ kubernetes:
 Contributions are welcome! Please open an issue first to discuss what you would like to change.
 
 <!-- ## Contributors -->
-<!-- <a href="https://github.com/kubevision/kubevision/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=kubevision/kubevision" />
+<!-- <a href="https://github.com/gocronx/kubevision/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=gocronx/kubevision" />
 </a> -->

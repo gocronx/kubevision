@@ -141,7 +141,7 @@ docker run -p 8080:8080 kubevision:latest
 ### 本地开发
 
 ```bash
-git clone https://github.com/kubevision/kubevision.git
+git clone https://github.com/gocronx/kubevision.git
 cd kubevision
 
 # 后端 — :8080
@@ -226,7 +226,7 @@ kubernetes:
 
 ## 文档
 
-**[docs.kubevision.dev](https://kubevision.github.io)** — 完整文档站，包含使用指南、API 参考和架构详解。
+**[kubevision-docs](https://kubevision-docs.pages.dev/)** — 完整文档站，包含使用指南、API 参考和架构详解。
 
 | | |
 |---|---|
@@ -243,6 +243,6 @@ kubernetes:
 欢迎贡献代码！请先提 Issue 讨论你想做的改动。
 
 <!-- ## 贡献者 -->
-<!-- <a href="https://github.com/kubevision/kubevision/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=kubevision/kubevision" />
+<!-- <a href="https://github.com/gocronx/kubevision/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=gocronx/kubevision" />
 </a> -->

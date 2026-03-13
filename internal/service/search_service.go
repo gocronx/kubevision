@@ -6,11 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	"github.com/kubevision/kubevision/internal/kubernetes/informer"
-	"github.com/kubevision/kubevision/internal/kubernetes/resource"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	"github.com/gocronx/kubevision/internal/kubernetes/informer"
+	"github.com/gocronx/kubevision/internal/kubernetes/resource"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )

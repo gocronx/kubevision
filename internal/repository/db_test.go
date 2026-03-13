@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"

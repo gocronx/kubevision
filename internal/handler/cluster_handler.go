@@ -4,9 +4,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/pkg/response"
-	"github.com/kubevision/kubevision/internal/service"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/pkg/response"
+	"github.com/gocronx/kubevision/internal/service"
 )
 
 // ClusterHandler handles HTTP requests for cluster management operations.

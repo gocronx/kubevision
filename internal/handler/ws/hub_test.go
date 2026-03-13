@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/kubevision/kubevision/internal/kubernetes/informer"
+	"github.com/gocronx/kubevision/internal/kubernetes/informer"
 	"go.uber.org/zap/zaptest"
 )
 

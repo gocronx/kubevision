@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/repository"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -16,11 +16,11 @@ import (
 
 // CRDInfo describes a discovered Custom Resource Definition.
 type CRDInfo struct {
-	Group      string `json:"group"`
-	Version    string `json:"version"`
-	Kind       string `json:"kind"`
-	Plural     string `json:"plural"`
-	Namespaced bool   `json:"namespaced"`
+	Group      string   `json:"group"`
+	Version    string   `json:"version"`
+	Kind       string   `json:"kind"`
+	Plural     string   `json:"plural"`
+	Namespaced bool     `json:"namespaced"`
 	Categories []string `json:"categories,omitempty"`
 }
 

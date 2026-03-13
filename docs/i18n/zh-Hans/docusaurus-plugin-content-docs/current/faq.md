@@ -139,6 +139,6 @@ KubeVision 使用 Kubernetes **Informer 缓存**来响应列表和获取请求�
 
 ## 还有疑问？
 
-- 在 [GitHub Discussions](https://github.com/kubevision/kubevision/discussions) 提出一般性问题。
-- 在 [GitHub Issues](https://github.com/kubevision/kubevision/issues) 提交已确认的 bug。
+- 在 [GitHub Discussions](https://github.com/gocronx/kubevision/discussions) 提出一般性问题。
+- 在 [GitHub Issues](https://github.com/gocronx/kubevision/issues) 提交已确认的 bug。
 - 如果你想参与贡献，请参阅[贡献指南](/docs/development/contributing)。

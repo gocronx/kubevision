@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // TopologyNode represents a node in the resource topology graph.

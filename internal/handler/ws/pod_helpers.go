@@ -9,7 +9,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // k8sRestConfig is a type alias kept local to the ws package so terminal.go
@@ -18,8 +18,8 @@ type k8sRestConfig = rest.Config
 
 // Sentinel errors used by both the terminal and logs handlers.
 var (
-	errAccountDisabled = errors.New("account is disabled")
-	errTokenRevoked    = errors.New("token has been revoked")
+	errAccountDisabled  = errors.New("account is disabled")
+	errTokenRevoked     = errors.New("token has been revoked")
 	errPermissionDenied = errors.New("permission denied")
 )
 

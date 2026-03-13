@@ -7,7 +7,7 @@ title: Roadmap
 KubeVision follows a phased release plan. Each phase builds on the previous one — core stability first, advanced integrations second, intelligent automation third.
 
 :::note
-This roadmap reflects current intentions and is subject to change based on community feedback and contributor availability. Track progress and vote on features in [GitHub Discussions](https://github.com/kubevision/kubevision/discussions).
+This roadmap reflects current intentions and is subject to change based on community feedback and contributor availability. Track progress and vote on features in [GitHub Discussions](https://github.com/gocronx/kubevision/discussions).
 :::
 
 ---
@@ -153,7 +153,7 @@ Existing local accounts and 2FA will remain supported alongside OIDC for environ
 
 Have a feature idea not listed here? The best way to influence the roadmap is to:
 
-1. Open a [GitHub Discussion](https://github.com/kubevision/kubevision/discussions) and describe the use case.
+1. Open a [GitHub Discussion](https://github.com/gocronx/kubevision/discussions) and describe the use case.
 2. If there is community interest, a maintainer will create a tracking issue and add it to the roadmap.
 3. If you want to implement it yourself, see [Contributing](/docs/development/contributing) to get started.
 

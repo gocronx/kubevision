@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubevision/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kubevision/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/auth"
 	"go.uber.org/zap"
 )
 

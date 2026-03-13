@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // ---------------------------------------------------------------------------
@@ -161,19 +161,19 @@ func TestOverviewService_GetOverview_QueriesAllResourceTypesIncludingNamespacesA
 	}
 
 	expected := map[string]bool{
-		"pods":                  true,
-		"deployments":          true,
-		"services":             true,
-		"nodes":                true,
-		"namespaces":           true,
-		"statefulsets":         true,
-		"daemonsets":           true,
-		"jobs":                 true,
-		"cronjobs":             true,
-		"ingresses":            true,
-		"persistentvolumes":    true,
+		"pods":                   true,
+		"deployments":            true,
+		"services":               true,
+		"nodes":                  true,
+		"namespaces":             true,
+		"statefulsets":           true,
+		"daemonsets":             true,
+		"jobs":                   true,
+		"cronjobs":               true,
+		"ingresses":              true,
+		"persistentvolumes":      true,
 		"persistentvolumeclaims": true,
-		"events":               true,
+		"events":                 true,
 	}
 	for _, kind := range tracker.kinds {
 		delete(expected, kind)
@@ -214,19 +214,19 @@ func TestOverviewService_GetOverview_RunningPodsAndReadyNodes(t *testing.T) {
 	callIndex := 0
 	k8sRepoCustom := &sequentialMockK8sRepoWithItems{
 		calls: []sequentialCall{
-			{total: 4, items: podItems},         // pods
-			{total: 0, items: nil},              // deployments
-			{total: 0, items: nil},              // services
-			{total: 3, items: nodeItems},        // nodes
-			{total: 0, items: nil},              // namespaces
-			{total: 0, items: nil},              // statefulsets
-			{total: 0, items: nil},              // daemonsets
-			{total: 0, items: nil},              // jobs
-			{total: 0, items: nil},              // cronjobs
-			{total: 0, items: nil},              // ingresses
-			{total: 0, items: nil},              // persistentvolumes
-			{total: 0, items: nil},              // persistentvolumeclaims
-			{total: 0, items: nil},              // events
+			{total: 4, items: podItems},  // pods
+			{total: 0, items: nil},       // deployments
+			{total: 0, items: nil},       // services
+			{total: 3, items: nodeItems}, // nodes
+			{total: 0, items: nil},       // namespaces
+			{total: 0, items: nil},       // statefulsets
+			{total: 0, items: nil},       // daemonsets
+			{total: 0, items: nil},       // jobs
+			{total: 0, items: nil},       // cronjobs
+			{total: 0, items: nil},       // ingresses
+			{total: 0, items: nil},       // persistentvolumes
+			{total: 0, items: nil},       // persistentvolumeclaims
+			{total: 0, items: nil},       // events
 		},
 		index: &callIndex,
 	}

@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/pkg/response"
-	"github.com/kubevision/kubevision/internal/repository"
-	"github.com/kubevision/kubevision/internal/service"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/pkg/response"
+	"github.com/gocronx/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/service"
 )
 
 // ResourceHandler handles HTTP requests for Kubernetes resource operations

@@ -139,6 +139,6 @@ In benchmarks on a cluster with 3,000 pods across 50 namespaces, list-pods API c
 
 ## Still Have Questions?
 
-- Open a [GitHub Discussion](https://github.com/kubevision/kubevision/discussions) for general questions.
-- File a [GitHub Issue](https://github.com/kubevision/kubevision/issues) for confirmed bugs.
+- Open a [GitHub Discussion](https://github.com/gocronx/kubevision/discussions) for general questions.
+- File a [GitHub Issue](https://github.com/gocronx/kubevision/issues) for confirmed bugs.
 - See [Contributing](/docs/development/contributing) if you want to help improve KubeVision.

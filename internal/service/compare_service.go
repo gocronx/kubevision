@@ -6,8 +6,8 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/repository"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // CompareTarget identifies a single Kubernetes resource to fetch.

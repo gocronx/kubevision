@@ -7,13 +7,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/model"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
-	"github.com/kubevision/kubevision/internal/plugin"
-	"github.com/kubevision/kubevision/internal/plugin/argocd"
-	"github.com/kubevision/kubevision/internal/plugin/grafana"
-	"github.com/kubevision/kubevision/internal/plugin/prometheus"
-	"github.com/kubevision/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
+	"github.com/gocronx/kubevision/internal/plugin"
+	"github.com/gocronx/kubevision/internal/plugin/argocd"
+	"github.com/gocronx/kubevision/internal/plugin/grafana"
+	"github.com/gocronx/kubevision/internal/plugin/prometheus"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // PluginInfo is the public summary of a registered plugin.
@@ -34,9 +34,9 @@ type PluginConfigRequest struct {
 
 // PluginService manages plugin lifecycle and configuration.
 type PluginService struct {
-	registry   *plugin.Registry
-	repo       repository.PluginConfigRepo
-	logger     *zap.Logger
+	registry *plugin.Registry
+	repo     repository.PluginConfigRepo
+	logger   *zap.Logger
 }
 
 // NewPluginService creates a new PluginService.

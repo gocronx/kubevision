@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/model"
 )
 
 // mockPluginConfigRepo implements repository.PluginConfigRepo for testing.

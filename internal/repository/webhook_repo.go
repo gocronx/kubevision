@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/kubevision/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/model"
 	"gorm.io/gorm"
 )
 

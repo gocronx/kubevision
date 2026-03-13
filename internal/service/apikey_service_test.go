@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubevision/kubevision/internal/model"
+	"github.com/gocronx/kubevision/internal/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -17,9 +17,9 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockAPIKeyRepo struct {
-	keys    map[uint]*model.APIKey
-	byHash  map[string]*model.APIKey
-	nextID  uint
+	keys      map[uint]*model.APIKey
+	byHash    map[string]*model.APIKey
+	nextID    uint
 	createErr error
 	deleteErr error
 }
@@ -101,8 +101,8 @@ func (m *mockUserRepoForAPIKey) GetByUsername(_ context.Context, _ string) (*mod
 	return nil, errors.New("not implemented")
 }
 func (m *mockUserRepoForAPIKey) Update(_ context.Context, _ *model.User) error { return nil }
-func (m *mockUserRepoForAPIKey) Delete(_ context.Context, _ uint) error         { return nil }
-func (m *mockUserRepoForAPIKey) List(_ context.Context) ([]model.User, error)   { return nil, nil }
+func (m *mockUserRepoForAPIKey) Delete(_ context.Context, _ uint) error        { return nil }
+func (m *mockUserRepoForAPIKey) List(_ context.Context) ([]model.User, error)  { return nil, nil }
 func (m *mockUserRepoForAPIKey) GetByEmail(_ context.Context, _ string) (*model.User, error) {
 	return nil, errors.New("not implemented")
 }

@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/internal/pkg/response"
-	"github.com/kubevision/kubevision/internal/repository"
-	"github.com/kubevision/kubevision/internal/service"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/internal/pkg/response"
+	"github.com/gocronx/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	testJWTSecret     = "test-secret-for-auth-handler-tests"
+	testJWTSecret       = "test-secret-for-auth-handler-tests"
 	testAccessTokenTTL  = 15 * time.Minute
 	testRefreshTokenTTL = 24 * time.Hour
 )

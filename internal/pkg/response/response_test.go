@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	bizerr "github.com/kubevision/kubevision/internal/pkg/errors"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
 func init() {

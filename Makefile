@@ -6,7 +6,7 @@ GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
 
-.PHONY: dev build build-frontend build-all test lint clean tidy fmt
+.PHONY: dev build build-frontend build-all test lint clean tidy fmt docs docs-dev docs-deploy
 
 ## dev: Run with air hot-reload (requires: go install github.com/air-verse/air@latest)
 dev:
@@ -44,6 +44,18 @@ fmt:
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -f kubevision.db
+
+## docs: Build documentation site
+docs:
+	cd docs && pnpm install && pnpm build
+
+## docs-dev: Start documentation dev server
+docs-dev:
+	cd docs && pnpm install && pnpm start
+
+## docs-deploy: Build and deploy docs to Cloudflare Pages
+docs-deploy: docs
+	cd docs && wrangler pages deploy build --project-name kubevision-docs
 
 ## help: Show this help message
 help:

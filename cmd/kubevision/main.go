@@ -11,17 +11,17 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/kubevision/kubevision/internal/auth"
-	"github.com/kubevision/kubevision/internal/config"
-	"github.com/kubevision/kubevision/internal/handler"
-	"github.com/kubevision/kubevision/internal/handler/ws"
-	"github.com/kubevision/kubevision/internal/kubernetes/cluster"
-	"github.com/kubevision/kubevision/internal/kubernetes/informer"
-	"github.com/kubevision/kubevision/internal/kubernetes/resource"
-	"github.com/kubevision/kubevision/internal/middleware"
-	"github.com/kubevision/kubevision/internal/repository"
-	"github.com/kubevision/kubevision/internal/server"
-	"github.com/kubevision/kubevision/internal/service"
+	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/config"
+	"github.com/gocronx/kubevision/internal/handler"
+	"github.com/gocronx/kubevision/internal/handler/ws"
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	"github.com/gocronx/kubevision/internal/kubernetes/informer"
+	"github.com/gocronx/kubevision/internal/kubernetes/resource"
+	"github.com/gocronx/kubevision/internal/middleware"
+	"github.com/gocronx/kubevision/internal/repository"
+	"github.com/gocronx/kubevision/internal/server"
+	"github.com/gocronx/kubevision/internal/service"
 )
 
 func main() {
