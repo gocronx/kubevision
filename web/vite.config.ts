@@ -18,13 +18,20 @@ export default defineConfig({
         ws: true,
         configure: (proxy) => {
           proxy.on("error", () => {})
+          proxy.on("proxyReq", (_proxyReq, _req, res) => {
+            res.on("error", () => {})
+          })
           proxy.on("proxyReqWs", (_proxyReq, _req, socket) => {
             socket.on("error", () => {})
           })
-          proxy.on("proxyRes", (_proxyRes, _req, res) => {
+          proxy.on("proxyRes", (_proxyRes, req, res) => {
             res.on("error", () => {})
+            req.on("error", () => {})
           })
           proxy.on("open", (socket) => {
+            socket.on("error", () => {})
+          })
+          proxy.on("close", (_res, socket) => {
             socket.on("error", () => {})
           })
         },
