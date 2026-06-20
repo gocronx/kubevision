@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/gocronx/kubevision/internal/ai"
 	"github.com/gocronx/kubevision/internal/auth"
+	"github.com/gocronx/kubevision/internal/cli"
 	"github.com/gocronx/kubevision/internal/config"
 	"github.com/gocronx/kubevision/internal/handler"
 	"github.com/gocronx/kubevision/internal/handler/ws"
@@ -26,6 +28,26 @@ import (
 )
 
 func main() {
+	// Dispatch administrative subcommands before the server bootstraps. A bare
+	// invocation (or "serve") falls through to the HTTP server, preserving the
+	// original `kubevision --config ...` behavior.
+	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+		switch sub := os.Args[1]; {
+		case sub == "serve":
+			os.Args = append(os.Args[:1], os.Args[2:]...) // strip "serve"; continue to server
+		case cli.IsCommand(sub):
+			if err := cli.Commands[sub](os.Args[2:]); err != nil {
+				fmt.Fprintf(os.Stderr, "%s: %v\n", sub, err)
+				os.Exit(1)
+			}
+			return
+		default:
+			fmt.Fprintf(os.Stderr, "unknown command %q\n\n", sub)
+			cli.Usage()
+			os.Exit(2)
+		}
+	}
+
 	// Parse command-line flags.
 	configPath := flag.String("config", "", "path to config YAML file")
 	flag.Parse()
