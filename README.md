@@ -105,6 +105,7 @@ Built for teams, not just demos.
 - :eyes: **Dry-Run Diff** — Preview changes before applying
 - :twisted_rightwards_arrows: **Cross-cluster Diff** — Spot configuration drift
 - :world_map: **Resource Topology** — Visual ownership graph
+- :robot: **AI Assistant** — Chat to inspect & (with approval) mutate resources; OpenAI-compatible
 - :mag: **Global Search** — `Cmd+K` fuzzy search
 - :keyboard: **kubectl Hints** — Auto-generated commands
 - :jigsaw: **Resource Templates** — One-click deploy
@@ -152,6 +153,45 @@ cd web && pnpm install && pnpm dev
 ```
 
 <br>
+
+## AI Assistant
+
+KubeVision ships an OpenAI-compatible AI assistant that can inspect and — only
+with explicit user approval — mutate cluster resources through a fixed, RBAC-checked
+tool set (get/list resources, pod logs, cluster overview, Prometheus queries, and
+create/update/patch/delete with confirmation).
+
+- **In the dashboard:** enable it under **Settings → AI Assistant** (admin only),
+  then use the floating chat button. Works with OpenAI, OpenRouter, DeepSeek, Qwen,
+  and any OpenAI-compatible endpoint.
+- **In the terminal:** `kubevision ai` (see CLI below).
+
+## CLI
+
+The `kubevision` binary doubles as an admin CLI. With no command (or `serve`) it
+starts the HTTP server; otherwise it runs an administrative command against the
+configured database.
+
+```bash
+# Account management (reads the same DB/config as the server)
+kubevision reset-password --username admin
+kubevision reset-2fa --username admin
+kubevision create-user --username dev --role editor --email dev@example.com
+kubevision list-users
+kubevision set-role --username dev --role admin
+kubevision deactivate-user --username dev
+kubevision activate-user --username dev
+kubevision delete-user --username dev          # prompts to confirm; --force to skip
+
+# Terminal AI assistant (chat with your cluster from the shell)
+export API_KEY=... API_BASE_URL=https://api.openai.com/v1 MODEL_ID=gpt-4o-mini
+kubevision ai "why is the web pod crashing in default?"   # one-shot
+kubevision ai                                              # interactive REPL
+```
+
+Passwords are read with hidden input on a terminal and from stdin when piped.
+Role changes and deactivation invalidate existing sessions, and the last active
+super-admin cannot be demoted, deactivated, or deleted.
 
 ## Architecture
 

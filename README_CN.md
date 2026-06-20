@@ -105,6 +105,7 @@ CRD 运行时自动发现。
 - :eyes: **Dry-Run Diff** — 应用前预览变更
 - :twisted_rightwards_arrows: **跨集群 Diff** — 快速发现配置漂移
 - :world_map: **资源拓扑图** — 可视化资源关系
+- :robot: **AI 助手** — 对话式查看、并在确认后变更资源；兼容 OpenAI 接口
 - :mag: **全局搜索** — `Cmd+K` 模糊搜索
 - :keyboard: **kubectl 提示** — 自动生成等效命令
 - :jigsaw: **资源模版** — 一键部署
@@ -152,6 +153,41 @@ cd web && pnpm install && pnpm dev
 ```
 
 <br>
+
+## AI 助手
+
+KubeVision 内置一个兼容 OpenAI 接口的 AI 助手，可查看资源，并在**用户明确确认后**
+通过一组受 RBAC 校验的固定工具变更资源（查询资源、Pod 日志、集群概览、Prometheus
+查询，以及需确认的 create/update/patch/delete）。
+
+- **在面板中：** 进入 **设置 → AI 助手**（仅管理员）配置后，点击右下角浮动按钮即可使用。
+  兼容 OpenAI、OpenRouter、DeepSeek、通义千问等任意 OpenAI 兼容服务。
+- **在终端中：** `kubevision ai`（见下方 CLI）。
+
+## 命令行工具
+
+`kubevision` 二进制同时是管理 CLI：无子命令（或 `serve`）时启动 HTTP 服务，否则对配置
+的数据库执行管理命令。
+
+```bash
+# 账号管理（与服务端共用同一数据库/配置）
+kubevision reset-password --username admin
+kubevision reset-2fa --username admin
+kubevision create-user --username dev --role editor --email dev@example.com
+kubevision list-users
+kubevision set-role --username dev --role admin
+kubevision deactivate-user --username dev
+kubevision activate-user --username dev
+kubevision delete-user --username dev          # 需输入用户名确认；--force 跳过
+
+# 终端 AI 助手（在 shell 里和集群对话）
+export API_KEY=... API_BASE_URL=https://api.openai.com/v1 MODEL_ID=gpt-4o-mini
+kubevision ai "default 里的 web pod 为什么在重启？"   # 一次性
+kubevision ai                                          # 交互式
+```
+
+终端下密码隐藏输入，管道输入时从 stdin 读取。改角色与停用会使现有会话失效；最后一个
+活跃的 super-admin 不能被降级、停用或删除。
 
 ## 架构
 
