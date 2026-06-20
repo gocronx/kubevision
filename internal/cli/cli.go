@@ -23,9 +23,14 @@ type CommandFunc func(args []string) error
 
 // Commands maps subcommand names to their handlers.
 var Commands = map[string]CommandFunc{
-	"reset-password": ResetPassword,
-	"create-user":    CreateUser,
-	"list-users":     ListUsers,
+	"reset-password":  ResetPassword,
+	"create-user":     CreateUser,
+	"list-users":      ListUsers,
+	"reset-2fa":       Reset2FA,
+	"set-role":        SetRole,
+	"activate-user":   ActivateUser,
+	"deactivate-user": DeactivateUser,
+	"delete-user":     DeleteUser,
 }
 
 // IsCommand reports whether name is a known administrative subcommand.
@@ -38,9 +43,14 @@ func IsCommand(name string) bool {
 func Usage() {
 	fmt.Fprintln(os.Stderr, "Usage: kubevision <command> [flags]")
 	fmt.Fprintln(os.Stderr, "\nAdministrative commands:")
-	fmt.Fprintln(os.Stderr, "  reset-password   Reset a user's password")
-	fmt.Fprintln(os.Stderr, "  create-user      Create a new user")
-	fmt.Fprintln(os.Stderr, "  list-users       List all users")
+	fmt.Fprintln(os.Stderr, "  reset-password    Reset a user's password")
+	fmt.Fprintln(os.Stderr, "  reset-2fa         Clear a user's two-factor authentication")
+	fmt.Fprintln(os.Stderr, "  create-user       Create a new user")
+	fmt.Fprintln(os.Stderr, "  list-users        List all users")
+	fmt.Fprintln(os.Stderr, "  set-role          Change a user's role")
+	fmt.Fprintln(os.Stderr, "  activate-user     Enable a disabled account")
+	fmt.Fprintln(os.Stderr, "  deactivate-user   Disable an account")
+	fmt.Fprintln(os.Stderr, "  delete-user       Permanently delete a user")
 	fmt.Fprintln(os.Stderr, "\nWith no command (or 'serve'), the HTTP server starts.")
 	fmt.Fprintln(os.Stderr, "Run 'kubevision <command> -h' for command-specific flags.")
 }
