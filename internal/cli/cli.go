@@ -31,6 +31,7 @@ var Commands = map[string]CommandFunc{
 	"activate-user":   ActivateUser,
 	"deactivate-user": DeactivateUser,
 	"delete-user":     DeleteUser,
+	"ai":              AIChat,
 }
 
 // IsCommand reports whether name is a known administrative subcommand.
@@ -51,6 +52,7 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "  activate-user     Enable a disabled account")
 	fmt.Fprintln(os.Stderr, "  deactivate-user   Disable an account")
 	fmt.Fprintln(os.Stderr, "  delete-user       Permanently delete a user")
+	fmt.Fprintln(os.Stderr, "  ai                Terminal AI assistant (chat with your cluster)")
 	fmt.Fprintln(os.Stderr, "\nWith no command (or 'serve'), the HTTP server starts.")
 	fmt.Fprintln(os.Stderr, "Run 'kubevision <command> -h' for command-specific flags.")
 }
