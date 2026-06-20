@@ -22,6 +22,7 @@ import {
   Settings,
   GitCompareArrows,
   Puzzle,
+  Bot,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -122,6 +123,7 @@ export const navGroups: NavGroup[] = [
     labelKey: "nav.settings",
     items: [
       { titleKey: "nav.settingsSecurity", icon: Settings, to: "/settings/security", iconClass: NAV_ICON },
+      { titleKey: "nav.settingsAI", icon: Bot, to: "/settings/ai", iconClass: NAV_ICON },
     ],
   },
 ]

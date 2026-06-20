@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { SidebarConfigProvider } from "@/components/sidebar-config-provider"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
+import { AIChatWidget } from "@/components/ai-chat/ai-chat-widget"
 import { Outlet } from "react-router-dom"
 
 export function AppLayout() {
@@ -15,6 +16,7 @@ export function AppLayout() {
             <Outlet />
           </div>
         </SidebarInset>
+        <AIChatWidget />
       </SidebarProvider>
     </SidebarConfigProvider>
   )

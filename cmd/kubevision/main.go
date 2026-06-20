@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/gocronx/kubevision/internal/ai"
 	"github.com/gocronx/kubevision/internal/auth"
 	"github.com/gocronx/kubevision/internal/config"
 	"github.com/gocronx/kubevision/internal/handler"
@@ -65,6 +66,7 @@ func main() {
 	apiKeyRepo := repository.NewAPIKeyRepo(db)
 	webhookRepo := repository.NewWebhookRepo(db)
 	terminalSessionRepo := repository.NewTerminalSessionRepo(db)
+	settingRepo := repository.NewSettingRepo(db)
 
 	// Kubernetes components
 	clusterManager := cluster.NewManager()
@@ -122,6 +124,18 @@ func main() {
 		logger.Warn("failed to seed built-in templates", zap.Error(err))
 	}
 
+	// AI assistant: an OpenAI-compatible agent with per-tool RBAC. Config is
+	// persisted in the Setting table and managed from the UI.
+	aiService := ai.NewService(
+		ai.NewConfigStore(settingRepo),
+		k8sRepo,
+		clusterManager,
+		clusterRepo,
+		resourceRegistry,
+		roleRepo,
+		pluginService.GetPrometheus,
+	)
+
 	// Start periodic CRD discovery in the background.
 	crdCtx, crdCancel := context.WithCancel(context.Background())
 	go crdService.StartPeriodicDiscovery(crdCtx, clusterManager.ListIDs, cfg.Kube.CRDDiscoveryInterval)
@@ -162,6 +176,7 @@ func main() {
 	oauthHandler := handler.NewOAuthHandler(oauthService)
 	pluginHandler := handler.NewPluginHandler(pluginService)
 	templateHandler := handler.NewTemplateHandler(templateService)
+	aiHandler := handler.NewAIHandler(aiService)
 
 	// Pod terminal and log streaming handlers.
 	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger).
@@ -197,6 +212,7 @@ func main() {
 		OAuthHandler:           oauthHandler,
 		PluginHandler:          pluginHandler,
 		TemplateHandler:        templateHandler,
+		AIHandler:              aiHandler,
 		WSHub:                  wsHub,
 		TerminalHandler:        terminalHandler,
 		LogsHandler:            logsHandler,

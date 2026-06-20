@@ -8,6 +8,7 @@ import { ResourceDetailPage } from "@/pages/resources/resource-detail"
 import { QuotaPage } from "@/pages/quota/index"
 import { TopologyPage } from "@/pages/topology/index"
 import { SecuritySettingsPage } from "@/pages/settings/security"
+import { AISettingsPage } from "@/pages/settings/ai"
 import { AdminPage } from "@/pages/admin/index"
 import { WebhooksPage } from "@/pages/admin/webhooks"
 import { TerminalSessionsPage } from "@/pages/admin/terminal-sessions"
@@ -36,6 +37,7 @@ export function AppRoutes() {
         <Route path="quota" element={<QuotaPage />} />
         <Route path="topology" element={<TopologyPage />} />
         <Route path="settings/security" element={<SecuritySettingsPage />} />
+        <Route path="settings/ai" element={<AISettingsPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/webhooks" element={<WebhooksPage />} />
         <Route path="admin/terminal-sessions" element={<TerminalSessionsPage />} />

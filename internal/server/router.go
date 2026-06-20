@@ -30,6 +30,7 @@ type RouterDeps struct {
 	OAuthHandler           *handler.OAuthHandler
 	PluginHandler          *handler.PluginHandler
 	TemplateHandler        *handler.TemplateHandler
+	AIHandler              *handler.AIHandler
 	WSHub                  *ws.Hub
 	TerminalHandler        *ws.TerminalHandler
 	LogsHandler            *ws.LogsHandler
@@ -102,6 +103,18 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			// Change own password — any authenticated user.
 			if deps != nil && deps.UserHandler != nil {
 				authOnly.PUT("/users/me/password", deps.UserHandler.ChangePassword)
+			}
+
+			// AI assistant routes. Chat streams over SSE and enforces per-tool
+			// RBAC internally, so it lives in the auth-only group (not behind the
+			// path-based RBAC middleware). Config writes are admin-gated in the
+			// handler.
+			if deps != nil && deps.AIHandler != nil {
+				aiGroup := authOnly.Group("/ai")
+				aiGroup.GET("/config", deps.AIHandler.GetConfig)
+				aiGroup.PUT("/config", deps.AIHandler.UpdateConfig)
+				aiGroup.POST("/chat", deps.AIHandler.Chat)
+				aiGroup.POST("/continue-action", deps.AIHandler.ContinueAction)
 			}
 		}
 
