@@ -98,25 +98,14 @@ Built for teams, not just demos.
 
 ## Features
 
-- :zap: **Real-time Sync** — Informer → WebSocket, sub-second updates
-- :globe_with_meridians: **Multi-cluster** — Single dashboard for all clusters
-- :computer: **Pod Terminal & Logs** — Session recording & playback
-- :rocket: **Deployment Ops** — Scale, restart, rollback
-- :eyes: **Dry-Run Diff** — Preview changes before applying
-- :twisted_rightwards_arrows: **Cross-cluster Diff** — Spot configuration drift
-- :world_map: **Resource Topology** — Visual ownership graph
-- :robot: **AI Assistant** — Chat to inspect & (with approval) mutate resources; OpenAI-compatible
-- :mag: **Global Search** — `Cmd+K` fuzzy search
-- :keyboard: **kubectl Hints** — Auto-generated commands
-- :jigsaw: **Resource Templates** — One-click deploy
-- :shield: **RBAC** — 5 built-in roles + custom
-- :key: **2FA (TOTP)** — QR setup + recovery codes
-- :memo: **Audit Logging** — Async writes + retention
-- :bell: **Webhooks** — Slack, Discord, custom endpoints
-- :package: **26+ Resources** — 8 cached + 18 on-demand + CRD
-- :zap: **Batch Ops** — Multi-select delete & restart
-- :earth_africa: **i18n** — English & Chinese
-- :crescent_moon: **Dark Mode** — System-aware themes
+| Observability | Operations | Platform & Security |
+|---|---|---|
+| ⚡ **Real-time sync** — Informer → WebSocket | 🚀 **Deployment ops** — scale · restart · rollback | 🌐 **Multi-cluster** — one dashboard |
+| 💻 **Pod terminal & logs** — recorded & replayable | 👀 **Dry-run diff** — preview before apply | 🛡️ **RBAC** — 5 roles + custom |
+| 🗺️ **Resource topology** — ownership graph | 🔀 **Cross-cluster diff** — spot drift | 🔑 **2FA (TOTP)** — QR + recovery codes |
+| 🔍 **Global search** — `Cmd+K` fuzzy | 🧩 **Templates** — one-click deploy | 📝 **Audit logging** — async + retention |
+| 🤖 **AI assistant** — chat, inspect, mutate | ⚡ **Batch ops** — multi-select delete/restart | 🔔 **Webhooks** — Slack · Discord · custom |
+| ⌨️ **kubectl hints** — auto-generated | 📦 **26+ resources** — cached + on-demand + CRD | 🌍 **i18n** · 🌙 **Dark mode** |
 
 <br>
 
@@ -197,34 +186,43 @@ super-admin cannot be demoted, deactivated, or deleted.
 
 <div align="center">
   <img src="docs/architecture.png" alt="KubeVision Architecture" width="900">
-  <p align="center"><em>KubeVision system architecture</em></p>
+  <p align="center"><em>Component overview</em></p>
 </div>
 
-```
-                    Browser
-            ┌────────┴────────┐
-            REST          WebSocket
-            │                 │
-┌───────────▼─────────────────▼──────────────┐
-│  Middleware: RequestID → Logger → Auth       │
-│                                             │
-│  Handler ──→ Service ──→ K8sRepo            │
-│                            │                │
-│                 ┌──────────┴──────────┐     │
-│                 │                     │     │
-│          Informer Cache         API Server  │
-│                 │                            │
-│     Informer Watch ──→ EventListener        │
-│                            │                │
-│                        WS Hub ──→ Browser   │
-│                                             │
-│  DB: SQLite (dev) / PostgreSQL (prod)       │
-└─────────────────────────────────────────────┘
+### Data flow
+
+```mermaid
+flowchart TD
+    B(["🖥️ Browser"])
+    subgraph SRV["Gin HTTP Server"]
+        direction TB
+        MW["Middleware<br/>RequestID · Logger · Auth · RBAC"]
+        H["Handler"]
+        SV["Service"]
+        R["K8sRepo"]
+        HUB["WS Hub"]
+        MW --> H --> SV --> R
+    end
+    B -- "REST" --> MW
+    B -- "WebSocket" --> HUB
+    R -- "read: cache-first" --> CACHE[("Informer Cache")]
+    R -- "miss / write" --> API[["Kubernetes API"]]
+    API --> WATCH["Informer Watch"] --> EL["Event Listener"] --> HUB
+    HUB -- "live updates" --> B
+    SV --> DB[("SQLite / PostgreSQL")]
+    style SRV fill:#FBFBFD,stroke:#E5E5EA
+    classDef k8s fill:#34C759,stroke:#248A3D,color:#fff;
+    classDef store fill:#F2F2F7,stroke:#C7C7CC,color:#1D1D1F;
+    classDef client fill:#5E5CE6,stroke:#3F3DBE,color:#fff;
+    classDef svc fill:#0A84FF,stroke:#0060DF,color:#fff;
+    class B client
+    class CACHE,DB store
+    class API,WATCH,EL k8s
+    class MW,H,SV,R,HUB svc
 ```
 
-> **Read**: Informer cache first, fallback to API Server
->
-> **Write**: API Server → Informer → WS Hub → browser
+> **Read** — Informer cache first, fall back to the API server.
+> **Write / events** — API server → Informer watch → event listener → WS Hub → browser.
 
 <br>
 

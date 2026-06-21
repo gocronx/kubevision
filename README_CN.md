@@ -98,25 +98,14 @@ CRD 运行时自动发现。
 
 ## 核心特性
 
-- :zap: **实时同步** — Informer → WebSocket，亚秒级更新
-- :globe_with_meridians: **多集群** — 一个面板管理所有集群
-- :computer: **Pod 终端与日志** — 会话录制与回放
-- :rocket: **工作负载操作** — 扩缩容、重启、回滚
-- :eyes: **Dry-Run Diff** — 应用前预览变更
-- :twisted_rightwards_arrows: **跨集群 Diff** — 快速发现配置漂移
-- :world_map: **资源拓扑图** — 可视化资源关系
-- :robot: **AI 助手** — 对话式查看、并在确认后变更资源；兼容 OpenAI 接口
-- :mag: **全局搜索** — `Cmd+K` 模糊搜索
-- :keyboard: **kubectl 提示** — 自动生成等效命令
-- :jigsaw: **资源模版** — 一键部署
-- :shield: **RBAC** — 5 级内置角色 + 自定义
-- :key: **2FA (TOTP)** — QR 码 + 恢复码
-- :memo: **审计日志** — 异步写入 + 保留策略
-- :bell: **Webhook** — Slack、Discord、自定义端点
-- :package: **26+ 资源类型** — 8 缓存 + 18 按需 + CRD
-- :zap: **批量操作** — 多选删除与重启
-- :earth_africa: **国际化** — 中英双语
-- :crescent_moon: **暗色模式** — 跟随系统主题
+| 观测与实时 | 操作 | 平台与安全 |
+|---|---|---|
+| ⚡ **实时同步** — Informer → WebSocket | 🚀 **工作负载操作** — 扩缩容 · 重启 · 回滚 | 🌐 **多集群** — 单面板管理 |
+| 💻 **Pod 终端与日志** — 录制与回放 | 👀 **Dry-Run Diff** — 应用前预览 | 🛡️ **RBAC** — 5 级角色 + 自定义 |
+| 🗺️ **资源拓扑图** — 可视化关系 | 🔀 **跨集群 Diff** — 发现漂移 | 🔑 **2FA (TOTP)** — QR 码 + 恢复码 |
+| 🔍 **全局搜索** — `Cmd+K` 模糊 | 🧩 **资源模板** — 一键部署 | 📝 **审计日志** — 异步 + 保留 |
+| 🤖 **AI 助手** — 对话查看与变更 | ⚡ **批量操作** — 多选删除/重启 | 🔔 **Webhook** — Slack · Discord · 自定义 |
+| ⌨️ **kubectl 提示** — 自动生成 | 📦 **26+ 资源** — 缓存 + 按需 + CRD | 🌍 **国际化** · 🌙 **暗色模式** |
 
 <br>
 
@@ -193,34 +182,43 @@ kubevision ai                                          # 交互式
 
 <div align="center">
   <img src="docs/architecture.png" alt="KubeVision 架构" width="900">
-  <p align="center"><em>KubeVision 系统架构</em></p>
+  <p align="center"><em>组件总览</em></p>
 </div>
 
-```
-                    浏览器
-            ┌────────┴────────┐
-            REST          WebSocket
-            │                 │
-┌───────────▼─────────────────▼──────────────┐
-│  中间件: RequestID → Logger → Auth          │
-│                                             │
-│  Handler ──→ Service ──→ K8sRepo            │
-│                            │                │
-│                 ┌──────────┴──────────┐     │
-│                 │                     │     │
-│          Informer 缓存          API Server  │
-│                 │                            │
-│     Informer Watch ──→ EventListener        │
-│                            │                │
-│                        WS Hub ──→ 浏览器     │
-│                                             │
-│  数据库: SQLite (开发) / PostgreSQL (生产)    │
-└─────────────────────────────────────────────┘
+### 数据流
+
+```mermaid
+flowchart TD
+    B(["🖥️ 浏览器"])
+    subgraph SRV["Gin HTTP Server"]
+        direction TB
+        MW["中间件<br/>RequestID · Logger · Auth · RBAC"]
+        H["Handler"]
+        SV["Service"]
+        R["K8sRepo"]
+        HUB["WS Hub"]
+        MW --> H --> SV --> R
+    end
+    B -- "REST" --> MW
+    B -- "WebSocket" --> HUB
+    R -- "读：缓存优先" --> CACHE[("Informer 缓存")]
+    R -- "未命中 / 写" --> API[["Kubernetes API"]]
+    API --> WATCH["Informer Watch"] --> EL["Event Listener"] --> HUB
+    HUB -- "实时推送" --> B
+    SV --> DB[("SQLite / PostgreSQL")]
+    style SRV fill:#FBFBFD,stroke:#E5E5EA
+    classDef k8s fill:#34C759,stroke:#248A3D,color:#fff;
+    classDef store fill:#F2F2F7,stroke:#C7C7CC,color:#1D1D1F;
+    classDef client fill:#5E5CE6,stroke:#3F3DBE,color:#fff;
+    classDef svc fill:#0A84FF,stroke:#0060DF,color:#fff;
+    class B client
+    class CACHE,DB store
+    class API,WATCH,EL k8s
+    class MW,H,SV,R,HUB svc
 ```
 
-> **读链路**: Informer 缓存优先，未命中降级 API Server
->
-> **写链路**: API Server → Informer → WS Hub → 浏览器
+> **读链路** — Informer 缓存优先，未命中降级到 API Server。
+> **写 / 事件** — API Server → Informer Watch → Event Listener → WS Hub → 浏览器。
 
 <br>
 
