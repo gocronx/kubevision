@@ -191,6 +191,11 @@ kubevision ai                                          # 交互式
 
 ## 架构
 
+<div align="center">
+  <img src="docs/architecture.png" alt="KubeVision 架构" width="900">
+  <p align="center"><em>KubeVision 系统架构</em></p>
+</div>
+
 ```
                     浏览器
             ┌────────┴────────┐

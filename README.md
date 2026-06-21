@@ -195,6 +195,11 @@ super-admin cannot be demoted, deactivated, or deleted.
 
 ## Architecture
 
+<div align="center">
+  <img src="docs/architecture.png" alt="KubeVision Architecture" width="900">
+  <p align="center"><em>KubeVision system architecture</em></p>
+</div>
+
 ```
                     Browser
             ┌────────┴────────┐
