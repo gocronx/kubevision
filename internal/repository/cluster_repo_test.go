@@ -21,11 +21,10 @@ func TestClusterRepo_CreateAndGetByID(t *testing.T) {
 	ctx := context.Background()
 
 	cluster := &model.Cluster{
-		Name:        "test-cluster",
-		DisplayName: "Test Cluster",
-		APIServer:   "https://10.0.0.1:6443",
-		AuthType:    "kubeconfig",
-		Status:      "healthy",
+		Name:      "test-cluster",
+		APIServer: "https://10.0.0.1:6443",
+		AuthType:  "kubeconfig",
+		Status:    "healthy",
 	}
 	err := repo.Create(ctx, cluster)
 	require.NoError(t, err)
@@ -35,7 +34,6 @@ func TestClusterRepo_CreateAndGetByID(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cluster.ID, got.ID)
 	assert.Equal(t, "test-cluster", got.Name)
-	assert.Equal(t, "Test Cluster", got.DisplayName)
 	assert.Equal(t, "https://10.0.0.1:6443", got.APIServer)
 	assert.Equal(t, "kubeconfig", got.AuthType)
 	assert.Equal(t, "healthy", got.Status)
@@ -113,17 +111,15 @@ func TestClusterRepo_Update(t *testing.T) {
 	ctx := context.Background()
 
 	cluster := &model.Cluster{
-		Name:        "update-cluster",
-		DisplayName: "Old Name",
-		APIServer:   "https://old-server:6443",
-		AuthType:    "kubeconfig",
-		Status:      "unknown",
+		Name:      "update-cluster",
+		APIServer: "https://old-server:6443",
+		AuthType:  "kubeconfig",
+		Status:    "unknown",
 	}
 	err := repo.Create(ctx, cluster)
 	require.NoError(t, err)
 
 	// Update fields.
-	cluster.DisplayName = "New Display Name"
 	cluster.APIServer = "https://new-server:6443"
 	cluster.Status = "healthy"
 	cluster.Version = "v1.28.0"
@@ -133,14 +129,13 @@ func TestClusterRepo_Update(t *testing.T) {
 	// Verify the changes persisted.
 	got, err := repo.GetByID(ctx, cluster.ID)
 	require.NoError(t, err)
-	assert.Equal(t, "New Display Name", got.DisplayName)
 	assert.Equal(t, "https://new-server:6443", got.APIServer)
 	assert.Equal(t, "healthy", got.Status)
 	assert.Equal(t, "v1.28.0", got.Version)
 	assert.Equal(t, "update-cluster", got.Name, "name should not change")
 }
 
-func TestClusterRepo_Delete_SoftDeletes(t *testing.T) {
+func TestClusterRepo_Delete_RemovesRegistration(t *testing.T) {
 	repo := newTestClusterRepo(t)
 	ctx := context.Background()
 
@@ -157,13 +152,22 @@ func TestClusterRepo_Delete_SoftDeletes(t *testing.T) {
 	err = repo.Delete(ctx, clusterID)
 	require.NoError(t, err)
 
-	// GetByID should not find the soft-deleted cluster.
+	// GetByID should not find the removed cluster.
 	_, err = repo.GetByID(ctx, clusterID)
-	require.Error(t, err, "soft-deleted cluster should not be found by GetByID")
+	require.Error(t, err, "removed cluster should not be found by GetByID")
 
 	// GetByName should also not find it.
 	_, err = repo.GetByName(ctx, "deletable-cluster")
-	require.Error(t, err, "soft-deleted cluster should not be found by GetByName")
+	require.Error(t, err, "removed cluster should not be found by GetByName")
+
+	// Removing a KubeVision registration must release its unique name so the
+	// same Kubernetes cluster can be imported again with refreshed credentials.
+	err = repo.Create(ctx, &model.Cluster{
+		Name:     "deletable-cluster",
+		AuthType: "kubeconfig",
+		Status:   "healthy",
+	})
+	require.NoError(t, err, "removed cluster name should be reusable")
 }
 
 func TestClusterRepo_Delete_ExcludedFromList(t *testing.T) {

@@ -12,10 +12,10 @@ import (
 
 // Dashboard represents a Grafana dashboard summary.
 type Dashboard struct {
-	ID    int    `json:"id"`
-	UID   string `json:"uid"`
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	ID    int      `json:"id"`
+	UID   string   `json:"uid"`
+	Title string   `json:"title"`
+	URL   string   `json:"url"`
 	Tags  []string `json:"tags"`
 }
 
@@ -32,10 +32,12 @@ func New() *Plugin {
 	}
 }
 
-func (p *Plugin) Name() string        { return "grafana" }
-func (p *Plugin) Description() string  { return "Grafana dashboard integration for embedded visualizations" }
-func (p *Plugin) Version() string      { return "1.0.0" }
-func (p *Plugin) Type() string         { return "dashboard" }
+func (p *Plugin) Name() string { return "grafana" }
+func (p *Plugin) Description() string {
+	return "Grafana dashboard integration for embedded visualizations"
+}
+func (p *Plugin) Version() string { return "1.0.0" }
+func (p *Plugin) Type() string    { return "dashboard" }
 
 func (p *Plugin) Init(config map[string]string) error {
 	u, ok := config["url"]

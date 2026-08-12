@@ -100,7 +100,8 @@ export function useResource(
   clusterID: string,
   resource: string,
   namespace: string,
-  name: string
+  name: string,
+  enabled = true
 ) {
   return useQuery<Record<string, unknown>>({
     queryKey: ["resource", clusterID, resource, namespace, name],
@@ -119,7 +120,7 @@ export function useResource(
       }
       return item
     },
-    enabled: !!clusterID && !!resource && !!name,
+    enabled: enabled && !!clusterID && !!resource && !!name,
   })
 }
 

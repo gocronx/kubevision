@@ -19,7 +19,10 @@ RUN pnpm build
 # ==============================================================================
 # Stage 2: Build Go backend
 # ==============================================================================
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
+
+ARG VERSION=dev
+ARG REVISION=unknown
 
 RUN apk add --no-cache gcc musl-dev
 
@@ -36,12 +39,20 @@ COPY . .
 COPY --from=frontend-builder /app/web/dist ./web/dist
 
 # Build the binary with CGO enabled (required for SQLite).
-RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o /app/bin/kubevision ./cmd/kubevision
+RUN CGO_ENABLED=1 go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${REVISION}" -o /app/bin/kubevision ./cmd/kubevision
 
 # ==============================================================================
 # Stage 3: Final minimal image
 # ==============================================================================
 FROM alpine:3.19
+
+ARG VERSION=dev
+ARG REVISION=unknown
+
+LABEL org.opencontainers.image.title="KubeVision" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}" \
+      org.opencontainers.image.source="https://github.com/gocronx/kubevision"
 
 RUN apk add --no-cache ca-certificates tzdata
 

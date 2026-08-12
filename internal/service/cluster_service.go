@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -19,26 +20,25 @@ import (
 
 // ClusterResponse is the API response for a cluster.
 type ClusterResponse struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	DisplayName string    `json:"displayName"`
-	APIServer   string    `json:"apiServer"`
-	AuthType    string    `json:"authType"`
-	Status      string    `json:"status"`
-	Version     string    `json:"version"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        uint      `json:"id"`
+	Name      string    `json:"name"`
+	APIServer string    `json:"apiServer"`
+	AuthType  string    `json:"authType"`
+	Status    string    `json:"status"`
+	Version   string    `json:"version"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // AddClusterRequest is the request body for adding a cluster.
 type AddClusterRequest struct {
-	Name        string `json:"name" binding:"required"`
-	DisplayName string `json:"displayName"`
-	AuthType    string `json:"authType" binding:"required"` // kubeconfig | in-cluster
-	Kubeconfig  string `json:"kubeconfig"`
+	Name       string `json:"name" binding:"required"`
+	AuthType   string `json:"authType" binding:"required"` // kubeconfig | in-cluster
+	Kubeconfig string `json:"kubeconfig"`
 }
 
 // ClusterService encapsulates business logic for Kubernetes cluster management.
 type ClusterService struct {
+	mu             sync.Mutex
 	clusterRepo    repository.ClusterRepo
 	clusterManager *cluster.Manager
 	informerMgr    *informer.Manager
@@ -68,6 +68,9 @@ func NewClusterService(
 
 // Add registers a new cluster, establishes a K8s connection, and starts informers.
 func (s *ClusterService) Add(ctx context.Context, req *AddClusterRequest) (*ClusterResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	// Check name uniqueness.
 	if existing, _ := s.clusterRepo.GetByName(ctx, req.Name); existing != nil {
 		return nil, bizerr.New(bizerr.CodeConflict, fmt.Sprintf("cluster %q already exists", req.Name))
@@ -91,6 +94,12 @@ func (s *ClusterService) Add(ctx context.Context, req *AddClusterRequest) (*Clus
 		return nil, bizerr.New(bizerr.CodeParamInvalid, fmt.Sprintf("unsupported auth type: %s", req.AuthType))
 	}
 
+	clusterInfo, err := s.clusterManager.Probe(ctx, clusterID)
+	if err != nil {
+		s.clusterManager.Remove(clusterID)
+		return nil, bizerr.New(bizerr.CodeK8sUnavailable, fmt.Sprintf("cluster health check failed: %s", err.Error()))
+	}
+
 	// Encrypt kubeconfig before persisting.
 	var kubeconfigEnc string
 	if req.Kubeconfig != "" {
@@ -105,14 +114,16 @@ func (s *ClusterService) Add(ctx context.Context, req *AddClusterRequest) (*Clus
 	// Persist to database.
 	m := &model.Cluster{
 		Name:          req.Name,
-		DisplayName:   req.DisplayName,
+		APIServer:     clusterInfo.APIServer,
 		AuthType:      req.AuthType,
 		KubeconfigEnc: kubeconfigEnc,
 		Status:        "healthy",
+		Version:       clusterInfo.Version,
 	}
 	if err := s.clusterRepo.Create(ctx, m); err != nil {
 		// Rollback K8s connection on DB failure.
 		s.clusterManager.Remove(clusterID)
+		s.logger.Error("failed to save cluster", zap.String("name", req.Name), zap.Error(err))
 		return nil, bizerr.New(bizerr.CodeInternal, "failed to save cluster")
 	}
 
@@ -152,6 +163,9 @@ func (s *ClusterService) Get(ctx context.Context, id uint) (*ClusterResponse, er
 
 // Remove removes a cluster and cleans up K8s connections and informers.
 func (s *ClusterService) Remove(ctx context.Context, id uint) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	c, err := s.clusterRepo.GetByID(ctx, id)
 	if err != nil {
 		return bizerr.New(bizerr.CodeNotFound, "cluster not found")
@@ -177,6 +191,9 @@ func (s *ClusterService) Remove(ctx context.Context, id uint) error {
 // InitClusters loads persisted clusters from the database and reconnects them.
 // Called during application startup.
 func (s *ClusterService) InitClusters(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	clusters, err := s.clusterRepo.List(ctx)
 	if err != nil {
 		s.logger.Error("failed to load clusters from database", zap.Error(err))
@@ -185,53 +202,124 @@ func (s *ClusterService) InitClusters(ctx context.Context) {
 
 	for i := range clusters {
 		c := &clusters[i]
-		clusterID := c.Name
-
-		switch c.AuthType {
-		case "kubeconfig":
-			if c.KubeconfigEnc == "" {
-				s.logger.Warn("cluster has no kubeconfig, skipping", zap.String("name", c.Name))
-				continue
+		if err := s.connectPersistedCluster(c); err != nil {
+			s.logger.Error("failed to reconnect cluster", zap.String("name", c.Name), zap.Error(err))
+			c.Status = "unhealthy"
+			if updateErr := s.clusterRepo.Update(ctx, c); updateErr != nil {
+				s.logger.Error("failed to update cluster status", zap.String("name", c.Name), zap.Error(updateErr))
 			}
-			kubeconfig, err := auth.Decrypt(c.KubeconfigEnc, s.encryptKey)
-			if err != nil {
-				s.logger.Error("failed to decrypt kubeconfig", zap.String("name", c.Name), zap.Error(err))
-				c.Status = "unhealthy"
-				if updateErr := s.clusterRepo.Update(ctx, c); updateErr != nil {
-					s.logger.Error("failed to update cluster status", zap.String("name", c.Name), zap.Error(updateErr))
-				}
-				continue
-			}
-			if err := s.clusterManager.Add(clusterID, []byte(kubeconfig)); err != nil {
-				s.logger.Error("failed to reconnect cluster", zap.String("name", c.Name), zap.Error(err))
-				c.Status = "unhealthy"
-				if updateErr := s.clusterRepo.Update(ctx, c); updateErr != nil {
-					s.logger.Error("failed to update cluster status", zap.String("name", c.Name), zap.Error(updateErr))
-				}
-				continue
-			}
-		case "in-cluster":
-			if err := s.clusterManager.AddInCluster(clusterID); err != nil {
-				s.logger.Error("failed to reconnect cluster", zap.String("name", c.Name), zap.Error(err))
-				c.Status = "unhealthy"
-				if updateErr := s.clusterRepo.Update(ctx, c); updateErr != nil {
-					s.logger.Error("failed to update cluster status", zap.String("name", c.Name), zap.Error(updateErr))
-				}
-				continue
-			}
-		default:
-			s.logger.Warn("unknown auth type, skipping cluster", zap.String("name", c.Name), zap.String("authType", c.AuthType))
 			continue
 		}
 
-		// Start informers.
-		dynClient, err := s.clusterManager.DynamicClient(clusterID)
-		if err == nil {
-			s.informerMgr.StartForCluster(clusterID, dynClient, s.registry.CachedGVRs(), 30*time.Minute)
+		if err := s.refreshClusterHealth(ctx, c, true); err != nil {
+			s.logger.Warn("cluster health check failed", zap.String("name", c.Name), zap.Error(err))
+			continue
 		}
 
 		s.logger.Info("cluster reconnected", zap.String("name", c.Name), zap.Uint("id", c.ID))
 	}
+}
+
+func (s *ClusterService) connectPersistedCluster(c *model.Cluster) error {
+	switch c.AuthType {
+	case "kubeconfig":
+		if c.KubeconfigEnc == "" {
+			return fmt.Errorf("cluster has no kubeconfig")
+		}
+		kubeconfig, err := auth.Decrypt(c.KubeconfigEnc, s.encryptKey)
+		if err != nil {
+			return fmt.Errorf("decrypt kubeconfig: %w", err)
+		}
+		if err := s.clusterManager.Add(c.Name, []byte(kubeconfig)); err != nil {
+			return err
+		}
+	case "in-cluster":
+		if err := s.clusterManager.AddInCluster(c.Name); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported auth type %q", c.AuthType)
+	}
+	return nil
+}
+
+// StartHealthChecks periodically refreshes persisted cluster health until the
+// context is canceled. InitClusters performs the initial check at startup.
+func (s *ClusterService) StartHealthChecks(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.RefreshHealth(ctx)
+		}
+	}
+}
+
+// RefreshHealth probes every registered cluster and persists status changes.
+func (s *ClusterService) RefreshHealth(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	clusters, err := s.clusterRepo.List(ctx)
+	if err != nil {
+		s.logger.Error("failed to load clusters for health check", zap.Error(err))
+		return
+	}
+
+	for i := range clusters {
+		if err := s.refreshClusterHealth(ctx, &clusters[i], false); err != nil {
+			s.logger.Warn("cluster health check failed", zap.String("name", clusters[i].Name), zap.Error(err))
+		}
+	}
+}
+
+func (s *ClusterService) refreshClusterHealth(ctx context.Context, c *model.Cluster, startInformer bool) error {
+	if _, err := s.clusterManager.RESTConfig(c.Name); err != nil {
+		if err := s.connectPersistedCluster(c); err != nil {
+			return fmt.Errorf("restore cluster connection: %w", err)
+		}
+		startInformer = true
+		s.logger.Info("cluster connection restored", zap.String("name", c.Name))
+	}
+
+	info, probeErr := s.clusterManager.Probe(ctx, c.Name)
+	if probeErr != nil {
+		s.informerMgr.StopForCluster(c.Name)
+		if c.Status != "unhealthy" {
+			c.Status = "unhealthy"
+			if err := s.clusterRepo.Update(ctx, c); err != nil {
+				return fmt.Errorf("persist unhealthy cluster status: %w", err)
+			}
+		}
+		return probeErr
+	}
+
+	wasHealthy := c.Status == "healthy"
+	changed := !wasHealthy || c.APIServer != info.APIServer || c.Version != info.Version
+	c.Status = "healthy"
+	c.APIServer = info.APIServer
+	c.Version = info.Version
+	if changed {
+		if err := s.clusterRepo.Update(ctx, c); err != nil {
+			return fmt.Errorf("persist healthy cluster status: %w", err)
+		}
+	}
+
+	if startInformer || !wasHealthy {
+		dynClient, err := s.clusterManager.DynamicClient(c.Name)
+		if err != nil {
+			return err
+		}
+		s.informerMgr.StartForCluster(c.Name, dynClient, s.registry.CachedGVRs(), 30*time.Minute)
+	}
+	return nil
 }
 
 // ResolveClusterID resolves a cluster ID string (which may be a numeric DB ID) to
@@ -255,13 +343,12 @@ func (s *ClusterService) ResolveClusterID(ctx context.Context, clusterIDStr stri
 
 func toClusterResponse(c *model.Cluster) *ClusterResponse {
 	return &ClusterResponse{
-		ID:          c.ID,
-		Name:        c.Name,
-		DisplayName: c.DisplayName,
-		APIServer:   c.APIServer,
-		AuthType:    c.AuthType,
-		Status:      c.Status,
-		Version:     c.Version,
-		CreatedAt:   c.CreatedAt,
+		ID:        c.ID,
+		Name:      c.Name,
+		APIServer: c.APIServer,
+		AuthType:  c.AuthType,
+		Status:    c.Status,
+		Version:   c.Version,
+		CreatedAt: c.CreatedAt,
 	}
 }

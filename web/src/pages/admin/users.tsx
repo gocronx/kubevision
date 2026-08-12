@@ -367,6 +367,10 @@ export function UsersPage() {
   const { t } = useTranslation()
   const { user: currentUser } = useAuth()
   const { data: users = [], isLoading } = useUsers()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<User | null>(null)
+  const [resetTarget, setResetTarget] = useState<User | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
 
   // Hard gate: only super-admin can manage users.
   if (!canManageUsers(currentUser?.role ?? "")) {
@@ -376,11 +380,6 @@ export function UsersPage() {
       </div>
     )
   }
-
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<User | null>(null)
-  const [resetTarget, setResetTarget] = useState<User | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
 
   return (
     <div className="flex flex-col gap-6">

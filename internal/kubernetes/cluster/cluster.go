@@ -1,20 +1,27 @@
 package cluster
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Info holds display metadata for a registered cluster.
+const healthCheckTimeout = 5 * time.Second
+
+// Info holds metadata for a registered cluster.
 type Info struct {
-	ID          string
-	DisplayName string
-	APIServer   string
+	ID        string
+	APIServer string
+	Version   string
 }
 
 // clientSet holds the Kubernetes clients for a single cluster.
@@ -123,6 +130,54 @@ func (m *Manager) DiscoveryClient(id string) (discovery.DiscoveryInterface, erro
 		return nil, fmt.Errorf("cluster %s not found", id)
 	}
 	return discovery.NewDiscoveryClientForConfig(cs.restConfig)
+}
+
+// Probe verifies that the API server is reachable with the configured
+// credentials and returns server metadata. It does not access cluster
+// resources, so it is safe for read-only credentials.
+func (m *Manager) Probe(ctx context.Context, id string) (*Info, error) {
+	m.mu.RLock()
+	cs, ok := m.clusters[id]
+	if !ok {
+		m.mu.RUnlock()
+		return nil, fmt.Errorf("cluster %s not found", id)
+	}
+	restCfg := rest.CopyConfig(cs.restConfig)
+	m.mu.RUnlock()
+
+	restCfg.Timeout = healthCheckTimeout
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restCfg)
+	if err != nil {
+		return nil, fmt.Errorf("create discovery client for cluster %s: %w", id, err)
+	}
+
+	probeCtx, cancel := context.WithTimeout(ctx, healthCheckTimeout)
+	defer cancel()
+	if _, err := discoveryClient.RESTClient().Get().AbsPath("/api").DoRaw(probeCtx); err != nil {
+		if apierrors.IsUnauthorized(err) {
+			return nil, fmt.Errorf("authenticate to Kubernetes API server %s: %w", restCfg.Host, err)
+		}
+		return nil, fmt.Errorf("connect to Kubernetes API server %s: %w", restCfg.Host, err)
+	}
+
+	raw, err := discoveryClient.RESTClient().Get().AbsPath("/version").DoRaw(probeCtx)
+	if err != nil {
+		if apierrors.IsUnauthorized(err) {
+			return nil, fmt.Errorf("authenticate to Kubernetes API server %s: %w", restCfg.Host, err)
+		}
+		return nil, fmt.Errorf("connect to Kubernetes API server %s: %w", restCfg.Host, err)
+	}
+
+	var serverVersion version.Info
+	if err := json.Unmarshal(raw, &serverVersion); err != nil {
+		return nil, fmt.Errorf("decode Kubernetes API server version: %w", err)
+	}
+
+	return &Info{
+		ID:        id,
+		APIServer: restCfg.Host,
+		Version:   serverVersion.GitVersion,
+	}, nil
 }
 
 // ListIDs returns the IDs of all registered clusters.

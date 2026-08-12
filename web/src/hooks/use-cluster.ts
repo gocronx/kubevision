@@ -2,10 +2,12 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import api from "@/lib/api"
 
-interface Cluster {
+export interface Cluster {
   id: string | number
   name: string
   status?: string
+  apiServer?: string
+  version?: string
 }
 
 const CLUSTER_STORAGE_KEY = "kubevision-current-cluster"
@@ -26,11 +28,17 @@ export function useClusterList() {
       // The api interceptor unwraps ApiResponse.data, so res is the array directly
       return Array.isArray(res) ? (res as Cluster[]) : []
     },
+    refetchInterval: 30_000,
   })
 }
 
 export function useCluster() {
-  const { data: clusters = [], isLoading } = useClusterList()
+  const {
+    data: clusters = [],
+    isLoading,
+    isFetching: isFetchingClusters,
+    refetch: refetchClusters,
+  } = useClusterList()
   const [currentClusterID, setCurrentClusterIDState] = useState<string>(getStoredCluster)
 
   const setCurrentCluster = useCallback((clusterID: string | number) => {
@@ -50,10 +58,19 @@ export function useCluster() {
     storeCluster(effectiveClusterID)
   }
 
+  const selectedCluster = clusters.find(
+    (cluster) => String(cluster.id) === effectiveClusterID
+  )
+  const isClusterHealthy = selectedCluster?.status !== "unhealthy"
+
   return {
     currentCluster: effectiveClusterID,
     clusters,
+    selectedCluster,
+    isClusterHealthy,
     setCurrentCluster,
     isLoading,
+    isFetchingClusters,
+    refetchClusters,
   }
 }

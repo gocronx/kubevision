@@ -7,7 +7,6 @@ import {
   ChevronUp,
   ChevronDown,
   RotateCcw,
-  SlidersHorizontal,
   ChevronRight,
 } from "lucide-react"
 import {

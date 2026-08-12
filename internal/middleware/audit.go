@@ -16,25 +16,29 @@ import (
 // redacted before storing a request body in the audit log.
 var sensitiveFields = map[string]bool{
 	"password":     true,
-	"newPassword":  true,
-	"oldPassword":  true,
+	"newpassword":  true,
+	"oldpassword":  true,
+	"bindpassword": true,
 	"secret":       true,
+	"totpcode":     true,
+	"recoverycode": true,
 	"kubeconfig":   true,
 	"token":        true,
-	"refreshToken": true,
+	"refreshtoken": true,
+	"credential":   true,
+	"privatekey":   true,
 }
 
 // redactSensitiveFields parses bodyStr as JSON and replaces the values of any
-// sensitiveFields keys with "[REDACTED]". If the body is not valid JSON it is
-// returned unchanged so we do not lose audit data for non-JSON endpoints.
+// sensitiveFields keys with "[REDACTED]". Invalid or truncated JSON is not
+// retained because its sensitive fields cannot be redacted reliably.
 func redactSensitiveFields(bodyStr string) string {
 	if bodyStr == "" {
 		return bodyStr
 	}
 	var parsed map[string]interface{}
 	if err := json.Unmarshal([]byte(bodyStr), &parsed); err != nil {
-		// Not a JSON object — return as-is (binary or text bodies).
-		return bodyStr
+		return "[UNAVAILABLE]"
 	}
 	redactMapFields(parsed)
 	out, err := json.Marshal(parsed)
@@ -48,13 +52,19 @@ func redactSensitiveFields(bodyStr string) string {
 // of any sensitive fields with "[REDACTED]".
 func redactMapFields(m map[string]interface{}) {
 	for k, v := range m {
-		if sensitiveFields[k] {
+		if sensitiveFields[strings.ToLower(k)] {
 			m[k] = "[REDACTED]"
 			continue
 		}
-		// Recurse into nested objects.
-		if nested, ok := v.(map[string]interface{}); ok {
+		switch nested := v.(type) {
+		case map[string]interface{}:
 			redactMapFields(nested)
+		case []interface{}:
+			for _, item := range nested {
+				if object, ok := item.(map[string]interface{}); ok {
+					redactMapFields(object)
+				}
+			}
 		}
 	}
 }

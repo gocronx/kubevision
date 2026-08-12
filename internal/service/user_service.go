@@ -196,6 +196,9 @@ func (s *UserService) ResetPassword(ctx context.Context, id uint, newPassword st
 	if err != nil {
 		return bizerr.New(bizerr.CodeNotFound, "user not found")
 	}
+	if user.AuthProvider == "directory" && user.PasswordHash == "" {
+		return bizerr.New(bizerr.CodeForbidden, "directory-only accounts do not have a local password")
+	}
 
 	hash, err := auth.HashPassword(newPassword)
 	if err != nil {
@@ -226,6 +229,9 @@ func (s *UserService) ChangePassword(ctx context.Context, userID uint, oldPasswo
 	user, err := s.repo.GetByID(ctx, userID)
 	if err != nil {
 		return bizerr.New(bizerr.CodeNotFound, "user not found")
+	}
+	if user.AuthProvider == "directory" && user.PasswordHash == "" {
+		return bizerr.New(bizerr.CodeForbidden, "directory-only accounts do not have a local password")
 	}
 
 	if !auth.CheckPassword(oldPassword, user.PasswordHash) {

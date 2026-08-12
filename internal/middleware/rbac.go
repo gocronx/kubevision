@@ -166,3 +166,22 @@ func hasPermission(permissions []string, resource, action string) bool {
 	}
 	return false
 }
+
+// RoleHasPermission checks a concrete permission without deriving it from a
+// route. Handlers whose URL contains multiple resource-like segments use this
+// to authorize the actual Kubernetes resource being accessed.
+func RoleHasPermission(ctx *gin.Context, roleRepo repository.RoleRepo, resource, action string) bool {
+	role := GetUserRole(ctx)
+	if role == "super-admin" || role == "admin" {
+		return true
+	}
+	roleRecord, err := roleRepo.GetByName(ctx.Request.Context(), role)
+	if err != nil {
+		return false
+	}
+	var permissions []string
+	if json.Unmarshal([]byte(roleRecord.Permissions), &permissions) != nil {
+		return false
+	}
+	return hasPermission(permissions, resource, action)
+}

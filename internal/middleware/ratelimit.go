@@ -68,8 +68,8 @@ func (rl *ipRateLimiter) cleanupLoop() {
 // login / 2fa:    5 requests per minute per IP  → ~0.0833 r/s, burst=5
 // refresh:       10 requests per minute per IP → ~0.1667 r/s, burst=10
 var (
-	loginLimiter   = newIPRateLimiter(rate.Every(12*time.Second), 5)  // 5/min
-	refreshLimiter = newIPRateLimiter(rate.Every(6*time.Second), 10)  // 10/min
+	loginLimiter   = newIPRateLimiter(rate.Every(12*time.Second), 5) // 5/min
+	refreshLimiter = newIPRateLimiter(rate.Every(6*time.Second), 10) // 10/min
 )
 
 // AuthRateLimit returns a Gin middleware that enforces per-IP rate limits on

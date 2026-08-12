@@ -1,20 +1,28 @@
 APP_NAME := kubevision
 BUILD_DIR := bin
 MAIN_PKG := ./cmd/kubevision
+DEV_PORT ?= 18082
 
 GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
 
-.PHONY: dev build build-frontend build-all test lint clean tidy fmt docs docs-dev docs-deploy
+.PHONY: dev dev-frontend build build-frontend build-all test lint clean tidy fmt fmt-check vet \
+	frontend-install frontend-lint frontend-typecheck frontend-test frontend-build \
+	e2e-install e2e-list e2e-test helm-validate release-chart docs docs-dev docs-deploy
 
 ## dev: Run with air hot-reload (requires: go install github.com/air-verse/air@latest)
 dev:
-	GIN_MODE=debug air -c .air.toml || GIN_MODE=debug $(GO) run $(MAIN_PKG)
+	KUBEVISION_SERVER_PORT=$(DEV_PORT) GIN_MODE=debug air -c .air.toml || \
+	KUBEVISION_SERVER_PORT=$(DEV_PORT) GIN_MODE=debug $(GO) run $(MAIN_PKG)
+
+## dev-frontend: Run the frontend with a proxy to the development backend
+dev-frontend:
+	cd web && VITE_API_PROXY_TARGET=http://127.0.0.1:$(DEV_PORT) pnpm dev --host 127.0.0.1 --port 5178 --strictPort
 
 ## build-frontend: Build the React frontend
 build-frontend:
-	cd web && pnpm install && pnpm build
+	cd web && pnpm install --frozen-lockfile && pnpm build
 
 ## build-all: Build frontend + backend into a single binary
 build-all: build-frontend build
@@ -39,6 +47,65 @@ tidy:
 ## fmt: Format all Go source files
 fmt:
 	$(GO) fmt ./...
+
+## fmt-check: Fail when Go source is not gofmt formatted
+fmt-check:
+	@test -z "$$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+## vet: Run Go static analysis
+vet:
+	$(GO) vet ./...
+
+## frontend-install: Install frontend dependencies from the lockfile
+frontend-install:
+	cd web && pnpm install --frozen-lockfile
+
+## frontend-lint: Lint frontend source
+frontend-lint:
+	cd web && pnpm lint
+
+## frontend-typecheck: Type-check frontend source
+frontend-typecheck:
+	cd web && pnpm typecheck
+
+## frontend-test: Run frontend unit tests once
+frontend-test:
+	cd web && pnpm test
+
+## frontend-build: Create the frontend production bundle
+frontend-build:
+	cd web && pnpm build
+
+## e2e-install: Install the Playwright Chromium browser
+e2e-install:
+	cd web && pnpm exec playwright install --with-deps chromium
+
+## e2e-list: Discover browser smoke tests without starting services
+e2e-list:
+	cd web && pnpm test:e2e:list
+
+## e2e-test: Run browser smoke tests (set KUBEVISION_E2E_BASE_URL for an existing app)
+e2e-test:
+	cd web && pnpm test:e2e
+
+## helm-validate: Lint and render all production baseline fixtures
+helm-validate:
+	helm lint deploy/helm/kubevision
+	@for values in deploy/helm/kubevision/tests/fixtures/helm-values-*.yaml; do \
+		helm template kubevision deploy/helm/kubevision --values "$$values" >/dev/null || exit 1; \
+	done
+	@! helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-existing-secret.yaml \
+		--show-only templates/configmap.yaml | grep -q 'dsn:'
+	@helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-existing-secret.yaml \
+		--show-only templates/deployment.yaml | grep -q 'name: "kubevision-runtime-secrets"'
+
+## release-chart: Package a versioned chart (VERSION=x.y.z OUTPUT_DIR=dist)
+release-chart:
+	@test -n "$(VERSION)" || (echo "VERSION is required" && exit 1)
+	mkdir -p "$(or $(OUTPUT_DIR),dist)"
+	helm package deploy/helm/kubevision --version "$(VERSION)" --app-version "$(VERSION)" --destination "$(or $(OUTPUT_DIR),dist)"
 
 ## clean: Remove build artifacts
 clean:

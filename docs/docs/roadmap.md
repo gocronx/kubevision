@@ -20,6 +20,9 @@ Focus: **Developer experience polish and common daily-use features.**
 
 Manage Helm releases directly from the dashboard — no need to switch to the terminal for routine chart operations.
 
+Release inventory, history, rollback, and removal are available. Repository
+registration plus previewed install and upgrade remain planned.
+
 | Capability | Detail |
 |-----------|--------|
 | List releases | All releases across namespaces, with chart name + version |

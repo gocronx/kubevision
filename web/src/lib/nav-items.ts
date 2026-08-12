@@ -23,6 +23,8 @@ import {
   GitCompareArrows,
   Puzzle,
   Bot,
+	ContactRound,
+	PackageOpen,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -106,6 +108,12 @@ export const navGroups: NavGroup[] = [
       { titleKey: "nav.compare", icon: GitCompareArrows, to: "/compare", iconClass: NAV_ICON },
     ],
   },
+	{
+		labelKey: "nav.packages",
+		items: [
+			{ titleKey: "nav.packageReleases", icon: PackageOpen, to: "/package-releases", iconClass: NAV_ICON },
+		],
+	},
   {
     labelKey: "nav.customResources",
     items: [
@@ -124,6 +132,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { titleKey: "nav.settingsSecurity", icon: Settings, to: "/settings/security", iconClass: NAV_ICON },
       { titleKey: "nav.settingsAI", icon: Bot, to: "/settings/ai", iconClass: NAV_ICON },
+	  { titleKey: "nav.directory", icon: ContactRound, to: "/admin/directory", iconClass: NAV_ICON },
     ],
   },
 ]

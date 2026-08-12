@@ -1,0 +1,7 @@
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 2Gi
+
+deploymentStrategy:
+  type: Recreate

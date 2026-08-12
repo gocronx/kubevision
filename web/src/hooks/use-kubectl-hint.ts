@@ -1,5 +1,3 @@
-import { useMemo } from "react"
-
 /**
  * Supported kubectl actions that map to real kubectl sub-commands.
  */
@@ -126,17 +124,5 @@ export function buildKubectlCommand(params: KubectlHintParams): string {
  * Re-computes only when the relevant parameters change.
  */
 export function useKubectlHint(params: KubectlHintParams): string {
-  return useMemo(() => buildKubectlCommand(params), [
-    // Stringify extraArgs so the memo dependency is stable across renders
-    // without requiring callers to memoize the object themselves.
-    params.action,
-    params.resource,
-    params.name,
-    params.namespace,
-    params.clusterContext,
-    params.extraArgs?.container,
-    params.extraArgs?.follow,
-    params.extraArgs?.replicas,
-    params.extraArgs?.shellCmd,
-  ])
+  return buildKubectlCommand(params)
 }

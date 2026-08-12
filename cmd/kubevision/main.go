@@ -16,18 +16,35 @@ import (
 	"github.com/gocronx/kubevision/internal/auth"
 	"github.com/gocronx/kubevision/internal/cli"
 	"github.com/gocronx/kubevision/internal/config"
+	directoryclient "github.com/gocronx/kubevision/internal/directory"
 	"github.com/gocronx/kubevision/internal/handler"
 	"github.com/gocronx/kubevision/internal/handler/ws"
 	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
 	"github.com/gocronx/kubevision/internal/kubernetes/informer"
 	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 	"github.com/gocronx/kubevision/internal/middleware"
+	packageclient "github.com/gocronx/kubevision/internal/packages"
+	registryclient "github.com/gocronx/kubevision/internal/registry"
 	"github.com/gocronx/kubevision/internal/repository"
 	"github.com/gocronx/kubevision/internal/server"
 	"github.com/gocronx/kubevision/internal/service"
 )
 
+var (
+	version = "dev"
+	commit  = "unknown"
+)
+
+func versionOutput() string {
+	return fmt.Sprintf("kubevision %s (%s)", version, commit)
+}
+
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--version" {
+		fmt.Println(versionOutput())
+		return
+	}
+
 	// Dispatch administrative subcommands before the server bootstraps. A bare
 	// invocation (or "serve") falls through to the HTTP server, preserving the
 	// original `kubevision --config ...` behavior.
@@ -81,6 +98,7 @@ func main() {
 
 	// Repositories
 	userRepo := repository.NewUserRepo(db)
+	directoryUserRepo := repository.NewDirectoryUserRepo(db)
 	clusterRepo := repository.NewClusterRepo(db)
 	favoriteRepo := repository.NewFavoriteRepo(db)
 	roleRepo := repository.NewRoleRepo(db)
@@ -89,6 +107,8 @@ func main() {
 	webhookRepo := repository.NewWebhookRepo(db)
 	terminalSessionRepo := repository.NewTerminalSessionRepo(db)
 	settingRepo := repository.NewSettingRepo(db)
+	publicKeyRepo := repository.NewPublicKeyRepo(db)
+	directoryRepo := repository.NewDirectoryRepo(db)
 
 	// Kubernetes components
 	clusterManager := cluster.NewManager()
@@ -113,6 +133,12 @@ func main() {
 	// Services
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, jwtManager, cfg, logger)
+	publicKeyService, err := service.NewPublicKeyService(publicKeyRepo, userRepo, authService, cfg, logger)
+	if err != nil {
+		logger.Fatal("failed to initialize public key authentication", zap.Error(err))
+	}
+	directoryService := service.NewDirectoryService(directoryRepo, directoryUserRepo, roleRepo, directoryclient.NewLDAPClient(), cfg.EncryptKey)
+	authService.SetDirectoryService(directoryService)
 	clusterService := service.NewClusterService(clusterRepo, clusterManager, informerMgr, resourceRegistry, logger, cfg.EncryptKey)
 	resourceService := service.NewResourceService(k8sRepo, resourceRegistry, clusterRepo)
 	resourceActionService := service.NewResourceActionService(clusterRepo, clusterManager)
@@ -121,12 +147,21 @@ func main() {
 	favoriteService := service.NewFavoriteService(favoriteRepo)
 	searchService := service.NewSearchService(informerMgr, clusterManager, resourceRegistry, clusterRepo)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, userRepo)
+	registryHTTPClient := registryclient.NewClient(registryclient.ClientConfig{
+		AllowedRegistries: cfg.Registry.AllowedRegistries, AllowedAuthHosts: cfg.Registry.AllowedAuthHosts,
+		AllowPrivate: cfg.Registry.AllowPrivate, AllowHTTP: cfg.Registry.AllowHTTP,
+		ConnectTimeout: cfg.Registry.ConnectTimeout, HeaderTimeout: cfg.Registry.HeaderTimeout,
+		TotalTimeout: cfg.Registry.TotalTimeout, MaxResponseBytes: cfg.Registry.MaxResponseBytes,
+	})
+	registryService := registryclient.NewService(registryHTTPClient, cfg.Registry.CacheTTL, cfg.Registry.MaxCacheEntries, cfg.Registry.MaxTagsPerPage)
 
 	// Audit service — start background flush / purge goroutines.
 	auditService := service.NewAuditService(auditRepo, cfg.Audit, logger)
 	if cfg.Audit.Enabled {
 		auditService.Start()
 	}
+	packageAdapter := packageclient.NewHelmAdapter(clusterManager)
+	packageService := packageclient.NewService(packageAdapter, packageclient.NewRoleAuthorizer(roleRepo, db), packageclient.NewAuditBridge(auditService))
 
 	// P3: Webhook, terminal session recording, and compare services.
 	webhookService := service.NewWebhookService(webhookRepo, logger)
@@ -176,6 +211,7 @@ func main() {
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
+	publicKeyHandler := handler.NewPublicKeyHandler(publicKeyService)
 	userHandler := handler.NewUserHandler(userService)
 	clusterHandler := handler.NewClusterHandler(clusterService)
 	resourceHandler := handler.NewResourceHandler(resourceService, resourceActionService)
@@ -186,6 +222,9 @@ func main() {
 	searchHandler := handler.NewSearchHandler(searchService)
 	auditHandler := handler.NewAuditHandler(auditRepo)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
+	registryHandler := handler.NewRegistryHandler(registryService)
+	packageHandler := handler.NewPackageHandler(packageService, clusterService.ResolveClusterID)
+	directoryHandler := handler.NewDirectoryHandler(directoryService)
 
 	// P3: Webhook, terminal session, and compare handlers.
 	webhookHandler := handler.NewWebhookHandler(webhookService)
@@ -204,6 +243,7 @@ func main() {
 	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger).
 		WithSessionService(terminalSessionService)
 	logsHandler := ws.NewLogsHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger)
+	httpAccessHandler := handler.NewHTTPAccessHandler(clusterManager, clusterRepo, roleRepo, auditService, logger)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(jwtManager, userRepo, apiKeyService)
@@ -212,10 +252,13 @@ func main() {
 
 	// Reconnect persisted clusters on startup.
 	clusterService.InitClusters(context.Background())
+	healthCtx, healthCancel := context.WithCancel(context.Background())
+	go clusterService.StartHealthChecks(healthCtx, 30*time.Second)
 
 	// Route dependencies
 	routerDeps := &server.RouterDeps{
 		AuthHandler:            authHandler,
+		PublicKeyHandler:       publicKeyHandler,
 		UserHandler:            userHandler,
 		ClusterHandler:         clusterHandler,
 		ResourceHandler:        resourceHandler,
@@ -235,9 +278,13 @@ func main() {
 		PluginHandler:          pluginHandler,
 		TemplateHandler:        templateHandler,
 		AIHandler:              aiHandler,
+		RegistryHandler:        registryHandler,
+		DirectoryHandler:       directoryHandler,
+		PackageHandler:         packageHandler,
 		WSHub:                  wsHub,
 		TerminalHandler:        terminalHandler,
 		LogsHandler:            logsHandler,
+		HTTPAccessHandler:      httpAccessHandler,
 		AuthMiddleware:         authMiddleware,
 		RBACMiddleware:         rbacMiddleware,
 		AuditMiddleware:        auditMiddleware,
@@ -268,6 +315,7 @@ func main() {
 
 	// Stop CRD discovery.
 	crdCancel()
+	healthCancel()
 
 	// Stop all informers.
 	informerMgr.StopAll()

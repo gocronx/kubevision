@@ -12,15 +12,15 @@ import (
 
 // Application represents an ArgoCD application summary.
 type Application struct {
-	Name       string `json:"name"`
-	Namespace  string `json:"namespace"`
-	Project    string `json:"project"`
-	SyncStatus string `json:"syncStatus"`
-	HealthStatus string `json:"healthStatus"`
-	RepoURL    string `json:"repoURL"`
-	Path       string `json:"path"`
+	Name           string `json:"name"`
+	Namespace      string `json:"namespace"`
+	Project        string `json:"project"`
+	SyncStatus     string `json:"syncStatus"`
+	HealthStatus   string `json:"healthStatus"`
+	RepoURL        string `json:"repoURL"`
+	Path           string `json:"path"`
 	TargetRevision string `json:"targetRevision"`
-	URL        string `json:"url"`
+	URL            string `json:"url"`
 }
 
 // Plugin provides ArgoCD GitOps integration.
@@ -37,9 +37,9 @@ func New() *Plugin {
 }
 
 func (p *Plugin) Name() string        { return "argocd" }
-func (p *Plugin) Description() string  { return "ArgoCD GitOps integration for application sync status" }
-func (p *Plugin) Version() string      { return "1.0.0" }
-func (p *Plugin) Type() string         { return "gitops" }
+func (p *Plugin) Description() string { return "ArgoCD GitOps integration for application sync status" }
+func (p *Plugin) Version() string     { return "1.0.0" }
+func (p *Plugin) Type() string        { return "gitops" }
 
 func (p *Plugin) Init(config map[string]string) error {
 	u, ok := config["url"]

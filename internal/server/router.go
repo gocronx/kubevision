@@ -12,6 +12,7 @@ import (
 // RouterDeps holds all handler and middleware dependencies required to register routes.
 type RouterDeps struct {
 	AuthHandler            *handler.AuthHandler
+	PublicKeyHandler       *handler.PublicKeyHandler
 	UserHandler            *handler.UserHandler
 	ClusterHandler         *handler.ClusterHandler
 	ResourceHandler        *handler.ResourceHandler
@@ -31,9 +32,13 @@ type RouterDeps struct {
 	PluginHandler          *handler.PluginHandler
 	TemplateHandler        *handler.TemplateHandler
 	AIHandler              *handler.AIHandler
+	RegistryHandler        *handler.RegistryHandler
+	DirectoryHandler       *handler.DirectoryHandler
+	PackageHandler         *handler.PackageHandler
 	WSHub                  *ws.Hub
 	TerminalHandler        *ws.TerminalHandler
 	LogsHandler            *ws.LogsHandler
+	HTTPAccessHandler      *handler.HTTPAccessHandler
 	AuthMiddleware         gin.HandlerFunc
 	RBACMiddleware         gin.HandlerFunc
 	AuditMiddleware        gin.HandlerFunc
@@ -70,6 +75,10 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				authGroup.POST("/2fa/verify", deps.AuthHandler.Verify2FA)
 				authGroup.POST("/2fa/recovery", deps.AuthHandler.Recovery2FA)
 			}
+			if deps != nil && deps.PublicKeyHandler != nil {
+				authGroup.POST("/public-key/login/begin", deps.PublicKeyHandler.BeginLogin)
+				authGroup.POST("/public-key/login/finish", deps.PublicKeyHandler.FinishLogin)
+			}
 
 			// OAuth/OIDC routes — public (users are redirected here from providers).
 			if deps != nil && deps.OAuthHandler != nil {
@@ -89,6 +98,15 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			authOnly.Use(middleware.Auth())
 		}
 		{
+			if deps != nil && deps.PackageHandler != nil {
+				packages := authOnly.Group("/clusters/:id/package-releases")
+				packages.GET("", deps.PackageHandler.List)
+				packages.GET("/:namespace/:name", deps.PackageHandler.Get)
+				packages.GET("/:namespace/:name/history", deps.PackageHandler.History)
+				packages.POST("/:namespace/:name/rollback", deps.PackageHandler.Rollback)
+				packages.DELETE("/:namespace/:name", deps.PackageHandler.Remove)
+			}
+
 			// User profile.
 			if deps != nil && deps.AuthHandler != nil {
 				authOnly.GET("/users/me", deps.AuthHandler.Me)
@@ -99,12 +117,19 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				twoFA.POST("/enable", deps.AuthHandler.Enable2FA)
 				twoFA.POST("/disable", deps.AuthHandler.Disable2FA)
 			}
+			if deps != nil && deps.PublicKeyHandler != nil {
+				keys := authOnly.Group("/auth/public-key")
+				keys.POST("/register/begin", deps.PublicKeyHandler.BeginRegistration)
+				keys.POST("/register/finish", deps.PublicKeyHandler.FinishRegistration)
+				keys.GET("/credentials", deps.PublicKeyHandler.List)
+				keys.PUT("/credentials/:id", deps.PublicKeyHandler.Rename)
+				keys.DELETE("/credentials/:id", deps.PublicKeyHandler.Revoke)
+			}
 
 			// Change own password — any authenticated user.
 			if deps != nil && deps.UserHandler != nil {
 				authOnly.PUT("/users/me/password", deps.UserHandler.ChangePassword)
 			}
-
 			// AI assistant routes. Chat streams over SSE and enforces per-tool
 			// RBAC internally, so it lives in the auth-only group (not behind the
 			// path-based RBAC middleware). Config writes are admin-gated in the
@@ -113,9 +138,26 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				aiGroup := authOnly.Group("/ai")
 				aiGroup.GET("/config", deps.AIHandler.GetConfig)
 				aiGroup.PUT("/config", deps.AIHandler.UpdateConfig)
+				aiGroup.POST("/models", deps.AIHandler.ListModels)
 				aiGroup.POST("/chat", deps.AIHandler.Chat)
 				aiGroup.POST("/continue-action", deps.AIHandler.ContinueAction)
 			}
+		}
+
+		// Kubernetes HTTP access uses resource-aware authorization in its handler:
+		// the required permission is pods:get or services:get, not a route-derived
+		// generic permission.
+		httpAccess := v1.Group("")
+		if deps != nil && deps.AuthMiddleware != nil {
+			httpAccess.Use(deps.AuthMiddleware)
+		} else {
+			httpAccess.Use(middleware.Auth())
+		}
+		if deps != nil && deps.HTTPAccessHandler != nil {
+			httpAccess.GET("/clusters/:id/namespaces/:namespace/http/:kind/:name", deps.HTTPAccessHandler.Serve)
+			httpAccess.GET("/clusters/:id/namespaces/:namespace/http/:kind/:name/*path", deps.HTTPAccessHandler.Serve)
+			httpAccess.HEAD("/clusters/:id/namespaces/:namespace/http/:kind/:name", deps.HTTPAccessHandler.Serve)
+			httpAccess.HEAD("/clusters/:id/namespaces/:namespace/http/:kind/:name/*path", deps.HTTPAccessHandler.Serve)
 		}
 
 		// ---- Protected routes (authentication + RBAC + audit) ----
@@ -134,6 +176,19 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			protected.Use(deps.AuditMiddleware)
 		}
 		{
+			if deps != nil && deps.PublicKeyHandler != nil {
+				protected.DELETE("/users/:id/public-key-credentials/:credentialId", deps.PublicKeyHandler.AdminRevoke)
+			}
+			if deps != nil && deps.RegistryHandler != nil {
+				protected.GET("/registry-tags", deps.RegistryHandler.ListTags)
+			}
+			if deps != nil && deps.DirectoryHandler != nil {
+				directory := protected.Group("/directory")
+				directory.GET("/config", deps.DirectoryHandler.Get)
+				directory.PUT("/config", deps.DirectoryHandler.Update)
+				directory.POST("/test", deps.DirectoryHandler.Test)
+				directory.POST("/preview", deps.DirectoryHandler.Preview)
+			}
 
 			// User management routes — admin+ only.
 			// The RBAC middleware already enforces admin bypass; non-admin roles

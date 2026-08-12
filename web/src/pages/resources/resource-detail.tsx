@@ -23,6 +23,7 @@ import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
 import { ResourceEvents } from "@/components/specialized/resource-events"
 import { PodTerminal } from "@/components/specialized/pod-terminal"
 import { PodLogs } from "@/components/specialized/pod-logs"
+import { ImageTagEditor } from "@/components/specialized/image-tag-editor"
 import { resourceUIConfig } from "@/config/resource-ui-config"
 import {
   useResource,
@@ -34,6 +35,9 @@ import { useCluster } from "@/hooks/use-cluster"
 import { useCheckFavorite } from "@/hooks/use-favorites"
 import { toYaml, getResourceStatus, formatAge } from "@/lib/k8s-utils"
 import { toast } from "sonner"
+import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
+import { useAuth } from "@/stores/auth-store"
+import { canAccessAdmin } from "@/lib/permissions"
 
 export function ResourceDetailPage() {
   const { resource = "", name = "" } = useParams<{ resource: string; name: string }>()
@@ -41,7 +45,14 @@ export function ResourceDetailPage() {
   const namespace = searchParams.get("namespace") ?? ""
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { currentCluster, clusters } = useCluster()
+  const {
+    currentCluster,
+    clusters,
+    selectedCluster,
+    isClusterHealthy,
+    refetchClusters,
+  } = useCluster()
+  const { user } = useAuth()
 
   // Resolve the human-readable cluster name for the --context flag.
   const clusterContext = useMemo(
@@ -58,16 +69,22 @@ export function ResourceDetailPage() {
   const [dryRunDialogOpen, setDryRunDialogOpen] = useState(false)
 
   const config = resourceUIConfig[resource]
-  const displayName = config?.displayName ?? resource
+  const displayName = t(`resourceTypes.${resource}`, { defaultValue: config?.displayName ?? resource })
 
-  const { data, isLoading } = useResource(currentCluster, resource, namespace, name)
+  const { data, isLoading } = useResource(
+    currentCluster,
+    resource,
+    namespace,
+    name,
+    isClusterHealthy
+  )
   const updateMutation = useUpdateResource(currentCluster, resource)
   const deleteMutation = useDeleteResource(currentCluster, resource)
   const dryRunUpdateMutation = useDryRunUpdate(currentCluster, resource)
 
   const { data: favoriteCheck } = useCheckFavorite(
     { clusterId: currentCluster, resourceType: resource, name, namespace },
-    !!currentCluster && !!resource && !!name
+    isClusterHealthy && !!currentCluster && !!resource && !!name
   )
 
   const metadata = data?.metadata as {
@@ -107,12 +124,12 @@ export function ResourceDetailPage() {
     try {
       await navigator.clipboard.writeText(yamlContent)
       setCopied(true)
-      toast.success("Copied to clipboard")
+      toast.success(t("resource.copiedToast"))
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error("Failed to copy to clipboard")
+      toast.error(t("resource.copyFailed"))
     }
-  }, [yamlContent])
+  }, [yamlContent, t])
 
   const handleDownloadYaml = useCallback(() => {
     const blob = new Blob([yamlContent], { type: "text/yaml;charset=utf-8" })
@@ -136,10 +153,10 @@ export function ResourceDetailPage() {
     try {
       return JSON.parse(editJson)
     } catch {
-      toast.error("Invalid JSON")
+      toast.error(t("resource.invalidJsonShort"))
       return null
     }
-  }, [editJson])
+  }, [editJson, t])
 
   // "Preview Changes" in the edit dialog — triggers dry-run, opens preview dialog.
   const handlePreviewEdit = useCallback(() => {
@@ -169,14 +186,14 @@ export function ResourceDetailPage() {
       { name, namespace, body },
       {
         onSuccess: () => {
-          toast.success(`${name} updated successfully`)
+          toast.success(t("resource.updatedToast", { name }))
           setDryRunDialogOpen(false)
           setEditDialogOpen(false)
           dryRunUpdateMutation.reset()
         },
       }
     )
-  }, [parseEditBody, name, namespace, updateMutation, dryRunUpdateMutation])
+  }, [parseEditBody, name, namespace, updateMutation, dryRunUpdateMutation, t])
 
   // "Save" directly (bypass dry-run preview).
   const handleEditSave = useCallback(() => {
@@ -187,25 +204,38 @@ export function ResourceDetailPage() {
       { name, namespace, body },
       {
         onSuccess: () => {
-          toast.success(`${name} updated successfully`)
+          toast.success(t("resource.updatedToast", { name }))
           setEditDialogOpen(false)
         },
       }
     )
-  }, [parseEditBody, name, namespace, updateMutation])
+  }, [parseEditBody, name, namespace, updateMutation, t])
 
   const handleDelete = useCallback(() => {
     deleteMutation.mutate(
       { name, namespace },
       {
         onSuccess: () => {
-          toast.success(`${name} deleted successfully`)
+          toast.success(t("resource.deletedToast", { name }))
           setDeleteDialogOpen(false)
           navigate(`/${resource}`)
         },
       }
     )
-  }, [deleteMutation, name, namespace, navigate, resource])
+  }, [deleteMutation, name, namespace, navigate, resource, t])
+
+  if (selectedCluster?.status === "unhealthy") {
+    return (
+      <div className="flex h-full flex-col gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+        <ClusterUnavailable
+          cluster={selectedCluster}
+          onCheckAgain={refetchClusters}
+          canRemove={canAccessAdmin(user?.role ?? "")}
+        />
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -227,7 +257,7 @@ export function ResourceDetailPage() {
   if (!data) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
-        <p className="text-muted-foreground">Resource not found</p>
+        <p className="text-muted-foreground">{t("resource.notFound")}</p>
         <Button variant="outline" onClick={() => navigate(`/${resource}`)}>
           {t("common.back")}
         </Button>
@@ -268,7 +298,7 @@ export function ResourceDetailPage() {
             <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
             {namespace && (
               <p className="text-sm text-muted-foreground">
-                Namespace: {namespace}
+                {t("resource.namespaceValue", { namespace })}
               </p>
             )}
           </div>
@@ -306,7 +336,7 @@ export function ResourceDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">{t("common.overview")}</TabsTrigger>
           <TabsTrigger value="yaml">{t("common.yaml")}</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
+          <TabsTrigger value="events">{t("resource.events")}</TabsTrigger>
           {resource === "pods" && (
             <>
               <TabsTrigger value="logs">{t("pod.logs")}</TabsTrigger>
@@ -321,25 +351,25 @@ export function ResourceDetailPage() {
             {/* Metadata Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Metadata</CardTitle>
+                <CardTitle className="text-base">{t("resource.metadata")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl className="grid gap-3">
-                  <DetailRow label="Name" value={metadata?.name ?? "-"} />
+                  <DetailRow label={t("common.name")} value={metadata?.name ?? "-"} />
                   {namespace && (
-                    <DetailRow label="Namespace" value={namespace} />
+                    <DetailRow label={t("common.namespace")} value={namespace} />
                   )}
-                  <DetailRow label="UID" value={metadata?.uid ?? "-"} mono />
+                  <DetailRow label={t("resource.uid")} value={metadata?.uid ?? "-"} mono />
                   <DetailRow
-                    label="Created"
+                    label={t("resource.created")}
                     value={
                       metadata?.creationTimestamp
-                        ? `${formatAge(metadata.creationTimestamp)} (${new Date(metadata.creationTimestamp).toLocaleString()})`
+                        ? `${formatAge(metadata.creationTimestamp)} (${new Date(metadata.creationTimestamp).toLocaleString(undefined)})`
                         : "-"
                     }
                   />
                   <DetailRow
-                    label="Resource Version"
+                    label={t("resource.resourceVersion")}
                     value={metadata?.resourceVersion ?? "-"}
                     mono
                   />
@@ -350,7 +380,7 @@ export function ResourceDetailPage() {
             {/* Labels Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Labels</CardTitle>
+                <CardTitle className="text-base">{t("resource.labels")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {metadata?.labels && Object.keys(metadata.labels).length > 0 ? (
@@ -366,7 +396,7 @@ export function ResourceDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No labels</p>
+                  <p className="text-sm text-muted-foreground">{t("resource.noLabels")}</p>
                 )}
               </CardContent>
             </Card>
@@ -374,7 +404,7 @@ export function ResourceDetailPage() {
             {/* Annotations Card */}
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle className="text-base">Annotations</CardTitle>
+                <CardTitle className="text-base">{t("resource.annotations")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {metadata?.annotations &&
@@ -391,7 +421,7 @@ export function ResourceDetailPage() {
                   </dl>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No annotations
+                    {t("resource.noAnnotations")}
                   </p>
                 )}
               </CardContent>
@@ -401,7 +431,7 @@ export function ResourceDetailPage() {
             {!!data.status && (
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle className="text-base">Status</CardTitle>
+                  <CardTitle className="text-base">{t("common.status")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="max-h-[300px]">
@@ -420,7 +450,7 @@ export function ResourceDetailPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Resource YAML</CardTitle>
+                <CardTitle className="text-base">{t("resource.resourceYaml")}</CardTitle>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -440,7 +470,7 @@ export function ResourceDetailPage() {
                     ) : (
                       <Copy className="size-4" />
                     )}
-                    {copied ? "Copied" : "Copy"}
+                    {copied ? t("resource.copied") : t("resource.copy")}
                   </Button>
                 </div>
               </div>
@@ -516,10 +546,9 @@ export function ResourceDetailPage() {
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Edit {name}</DialogTitle>
+            <DialogTitle>{t("resource.editTitle", { name })}</DialogTitle>
             <DialogDescription>
-              Modify the resource JSON. Use &quot;Preview Changes&quot; to review the diff
-              before applying, or &quot;Save&quot; to apply directly.
+              {t("resource.editDescription")}
             </DialogDescription>
           </DialogHeader>
           <KubectlHint
@@ -530,6 +559,7 @@ export function ResourceDetailPage() {
             clusterContext={clusterContext}
             defaultOpen
           />
+          <ImageTagEditor json={editJson} onChange={setEditJson} />
           <ScrollArea className="max-h-[500px]">
             <textarea
               className="h-[400px] w-full rounded-md border bg-muted p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
@@ -553,7 +583,7 @@ export function ResourceDetailPage() {
               onClick={handlePreviewEdit}
               disabled={updateMutation.isPending || dryRunUpdateMutation.isPending}
             >
-              {dryRunUpdateMutation.isPending ? t("common.loading") : "Preview Changes"}
+              {dryRunUpdateMutation.isPending ? t("common.loading") : t("resource.previewChanges")}
             </Button>
             <Button
               onClick={handleEditSave}
@@ -576,7 +606,7 @@ export function ResourceDetailPage() {
         }}
         dryRunResult={dryRunUpdateMutation.data}
         isLoading={dryRunUpdateMutation.isPending}
-        title={`Preview Changes: ${name}`}
+        title={t("resource.previewUpdate", { name })}
         operation="update"
         onApply={handleApplyEdit}
         isApplying={updateMutation.isPending}
@@ -588,11 +618,13 @@ export function ResourceDetailPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete {name}?</DialogTitle>
+            <DialogTitle>{t("resource.deleteTitle", { name })}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {resource.slice(0, -1)} &quot;{name}&quot;
-              {namespace ? ` in namespace "${namespace}"` : ""}? This action cannot
-              be undone.
+              {t(namespace ? "resource.deleteDescriptionWithNamespace" : "resource.deleteDescription", {
+                type: displayName,
+                name,
+                namespace,
+              })}
             </DialogDescription>
           </DialogHeader>
           <KubectlHint

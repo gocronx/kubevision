@@ -2,8 +2,154 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
+	"github.com/gocronx/kubevision/internal/kubernetes/informer"
+	"github.com/gocronx/kubevision/internal/kubernetes/resource"
+	"github.com/gocronx/kubevision/internal/pkg/errors"
+	"go.uber.org/zap"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+func serviceTestKubeconfig(t *testing.T, serverURL string) string {
+	t.Helper()
+	data, err := clientcmd.Write(clientcmdapi.Config{
+		CurrentContext: "test",
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"test": {Server: serverURL, InsecureSkipTLSVerify: true},
+		},
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"test": {Token: "test-token"},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"test": {Cluster: "test", AuthInfo: "test"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("write kubeconfig: %v", err)
+	}
+	return string(data)
+}
+
+func newClusterServiceForAddTest(repo *mockClusterRepo) *ClusterService {
+	logger := zap.NewNop()
+	return NewClusterService(
+		repo,
+		cluster.NewManager(),
+		informer.NewManager(logger),
+		resource.NewRegistry(),
+		logger,
+		"test-encrypt-key",
+	)
+}
+
+func TestClusterService_AddRejectsInvalidCredentials(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	}))
+	defer server.Close()
+	repo := newMockClusterRepo()
+	svc := newClusterServiceForAddTest(repo)
+
+	_, err := svc.Add(context.Background(), &AddClusterRequest{
+		Name:       "local",
+		AuthType:   "kubeconfig",
+		Kubeconfig: serviceTestKubeconfig(t, server.URL),
+	})
+	if !errors.Is(err, errors.CodeK8sUnavailable) {
+		t.Fatalf("expected Kubernetes unavailable error, got %v", err)
+	}
+	if len(repo.clusters) != 0 {
+		t.Fatalf("failed import persisted %d clusters", len(repo.clusters))
+	}
+}
+
+func TestClusterService_AddPersistsProbeMetadata(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"kind":"APIVersions","versions":["v1"]}`))
+		case "/version":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"gitVersion":"v1.30.2+k3s1"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	repo := newMockClusterRepo()
+	svc := newClusterServiceForAddTest(repo)
+
+	response, err := svc.Add(context.Background(), &AddClusterRequest{
+		Name:       "local",
+		AuthType:   "kubeconfig",
+		Kubeconfig: serviceTestKubeconfig(t, server.URL),
+	})
+	if err != nil {
+		t.Fatalf("add cluster: %v", err)
+	}
+	if response.Status != "healthy" || response.APIServer != server.URL || response.Version != "v1.30.2+k3s1" {
+		t.Fatalf("unexpected cluster response: %#v", response)
+	}
+}
+
+func TestClusterService_RefreshHealthReconnectsMissingClient(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"kind":"APIVersions","versions":["v1"]}`))
+		case "/version":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"gitVersion":"v1.30.2+k3s1"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	repo := newMockClusterRepo()
+	manager := cluster.NewManager()
+	logger := zap.NewNop()
+	svc := NewClusterService(
+		repo,
+		manager,
+		informer.NewManager(logger),
+		resource.NewRegistry(),
+		logger,
+		"test-encrypt-key",
+	)
+
+	_, err := svc.Add(context.Background(), &AddClusterRequest{
+		Name:       "local",
+		AuthType:   "kubeconfig",
+		Kubeconfig: serviceTestKubeconfig(t, server.URL),
+	})
+	if err != nil {
+		t.Fatalf("add cluster: %v", err)
+	}
+
+	// Simulate another process persisting this cluster, or a lost in-memory
+	// client after a development reload.
+	manager.Remove("local")
+	svc.RefreshHealth(context.Background())
+
+	if _, err := manager.RESTConfig("local"); err != nil {
+		t.Fatalf("health refresh did not reconnect missing client: %v", err)
+	}
+	stored, err := repo.GetByName(context.Background(), "local")
+	if err != nil {
+		t.Fatalf("get cluster: %v", err)
+	}
+	if stored.Status != "healthy" {
+		t.Fatalf("cluster status = %q, want healthy", stored.Status)
+	}
+}
 
 func TestClusterService_List_Empty(t *testing.T) {
 	clusterRepo := newMockClusterRepo()

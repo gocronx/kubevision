@@ -13,7 +13,7 @@ export interface CRDInfo {
 }
 
 export function useCRDs() {
-  const { currentCluster } = useCluster()
+  const { currentCluster, isClusterHealthy } = useCluster()
   return useQuery<CRDInfo[]>({
     queryKey: ["crds", currentCluster],
     queryFn: async () => {
@@ -21,7 +21,7 @@ export function useCRDs() {
       const res = await api.get(`/clusters/${currentCluster}/crds`)
       return (res as unknown as CRDInfo[]) ?? []
     },
-    enabled: !!currentCluster,
+    enabled: isClusterHealthy && !!currentCluster,
   })
 }
 

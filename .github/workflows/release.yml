@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+
+  validate-release:
+    name: Validate release context
+    needs: quality
+    if: github.repository == 'gocronx/kubevision'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      imageTag: ${{ steps.version.outputs.imageTag }}
+    steps:
+      - id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag must be a semantic version prefixed with v" >&2
+            exit 1
+          fi
+          version="${RELEASE_TAG#v}"
+          image_tag="${version//+/-}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "imageTag=$image_tag" >> "$GITHUB_OUTPUT"
+
+  publish-image:
+    name: Publish multi-platform image
+    needs: validate-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.validate-release.outputs.imageTag }}
+          build-args: |
+            VERSION=${{ needs.validate-release.outputs.version }}
+            REVISION=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.validate-release.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-chart:
+    name: Publish Helm OCI artifact
+    needs: validate-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin <<< "$GH_TOKEN"
+      - run: make release-chart VERSION=${{ needs.validate-release.outputs.version }} OUTPUT_DIR=dist
+      - run: helm push dist/kubevision-${{ needs.validate-release.outputs.version }}.tgz oci://ghcr.io/gocronx/charts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart
+          path: dist/*.tgz
+          if-no-files-found: error
+
+  github-release:
+    name: Create GitHub Release
+    needs: [validate-release, publish-image, publish-chart]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: helm-chart
+          path: dist
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" dist/*.tgz --generate-notes --verify-tag

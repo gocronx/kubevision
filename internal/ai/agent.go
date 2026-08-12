@@ -51,6 +51,12 @@ func NewService(
 // Config exposes the persisted configuration (used by the settings endpoints).
 func (s *Service) Config() *ConfigStore { return s.cfg }
 
+// ListModels discovers model IDs using an explicit configuration without
+// persisting it. The settings handler uses this for its model picker.
+func (s *Service) ListModels(ctx context.Context, cfg Config) ([]Model, error) {
+	return NewClient(cfg).ListModels(ctx)
+}
+
 // ChatParams carries everything a single chat turn needs.
 type ChatParams struct {
 	ClusterID    uint

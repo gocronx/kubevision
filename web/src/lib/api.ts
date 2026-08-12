@@ -90,7 +90,7 @@ api.interceptors.response.use(
     const body = res.data as ApiResponse
     if (body.code === 0) {
       // When __preserveMeta flag is set, return data+meta together
-      if ((res.config as Record<string, unknown>).__preserveMeta) {
+      if ((res.config as unknown as Record<string, unknown>).__preserveMeta) {
         return { data: body.data, meta: body.meta } as never
       }
       return body.data as never

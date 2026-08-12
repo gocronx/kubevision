@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/api"
-import type { AIConfigUpdate, AIConfigView } from "./ai-chat-types"
+import type { AIConfigUpdate, AIConfigView, AIModel } from "./ai-chat-types"
 
 const KEY = ["ai", "config"]
 
@@ -19,5 +19,12 @@ export function useUpdateAIConfig() {
     mutationFn: async (payload: AIConfigUpdate) =>
       (await api.put("/ai/config", payload)) as unknown as AIConfigView,
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+export function useDiscoverAIModels() {
+  return useMutation({
+    mutationFn: async (payload: { baseURL: string; apiKey: string }) =>
+      (await api.post("/ai/models", payload)) as unknown as AIModel[],
   })
 }

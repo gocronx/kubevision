@@ -41,6 +41,8 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 	// 自动迁移
 	if err := db.AutoMigrate(
 		&model.User{},
+		&model.PublicKeyCredential{},
+		&model.PublicKeyCeremony{},
 		&model.Cluster{},
 		&model.Role{},
 		&model.UserClusterRole{},
@@ -52,8 +54,17 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 		&model.Favorite{},
 		&model.TerminalSession{},
 		&model.PluginConfig{},
+		&model.DirectoryConfig{},
+		&model.DirectoryRoleMapping{},
 	); err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
+	}
+
+	// Older versions soft-deleted cluster registrations while keeping a global
+	// unique index on name. Those hidden rows prevented importing the same
+	// cluster again and retained credentials after the user chose Remove.
+	if err := purgeDeletedClusters(db); err != nil {
+		return nil, fmt.Errorf("purge removed clusters: %w", err)
 	}
 
 	// 初始化默认 admin 用户（如果不存在）
@@ -62,6 +73,10 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 	initSystemRoles(db, logger)
 
 	return db, nil
+}
+
+func purgeDeletedClusters(db *gorm.DB) error {
+	return db.Unscoped().Where("deleted_at IS NOT NULL").Delete(&model.Cluster{}).Error
 }
 
 // initDefaultAdmin creates the default admin user if no users exist yet.
@@ -114,7 +129,7 @@ func initSystemRoles(db *gorm.DB, logger *zap.Logger) {
 			// pods:exec  — required by the WebSocket terminal handler (checkWSPermission).
 			// pods:list  — required by the WebSocket log-streaming handler (checkWSPermission).
 			// overview:list — required by the cluster overview endpoint.
-			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create","pods:exec","pods:list","overview:list"]`,
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create","pods:exec","pods:list","overview:list","registry-tags:list","package-releases:read","package-releases:rollback","package-releases:remove"]`,
 		},
 		{
 			Name:        "viewer",
@@ -123,7 +138,7 @@ func initSystemRoles(db *gorm.DB, logger *zap.Logger) {
 			// Read-only access to K8s resources and cluster views.
 			// pods:list  — required by the WebSocket log-streaming handler (checkWSPermission).
 			// overview:list — required by the cluster overview endpoint.
-			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","history:list","pods:list","overview:list"]`,
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","history:list","pods:list","overview:list","registry-tags:list","package-releases:read"]`,
 		},
 		{
 			Name:        "custom",

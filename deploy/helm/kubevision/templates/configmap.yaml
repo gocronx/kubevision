@@ -10,10 +10,21 @@ data:
       port: {{ .Values.config.server.port }}
     database:
       driver: {{ .Values.config.database.driver }}
+      {{- if not .Values.existingSecret }}
       dsn: {{ .Values.config.database.dsn }}
+      {{- end }}
     auth:
       access_token_ttl: {{ .Values.config.auth.accessTokenTTL }}
       refresh_token_ttl: {{ .Values.config.auth.refreshTokenTTL }}
+      public_key:
+        enabled: {{ .Values.config.auth.publicKey.enabled }}
+        rp_id: {{ .Values.config.auth.publicKey.rpId | quote }}
+        rp_display_name: {{ .Values.config.auth.publicKey.rpDisplayName | quote }}
+        origins:
+          {{- toYaml .Values.config.auth.publicKey.origins | nindent 10 }}
+        user_verification: {{ .Values.config.auth.publicKey.userVerification | quote }}
+        counter_policy: {{ .Values.config.auth.publicKey.counterPolicy | quote }}
+        challenge_ttl: {{ .Values.config.auth.publicKey.challengeTTL }}
     kubernetes:
       informer_resync: {{ .Values.config.kubernetes.informerResync }}
       crd_discovery_interval: {{ .Values.config.kubernetes.crdDiscoveryInterval }}
@@ -22,6 +33,13 @@ data:
       retention_days: {{ .Values.config.audit.retentionDays }}
     oauth:
       enabled: {{ .Values.config.oauth.enabled }}
+    registry:
+      allowed_registries:
+        {{- toYaml .Values.config.registry.allowedRegistries | nindent 8 }}
+      allowed_auth_hosts:
+        {{- toYaml .Values.config.registry.allowedAuthHosts | nindent 8 }}
+      allow_private: {{ .Values.config.registry.allowPrivate }}
+      allow_http: {{ .Values.config.registry.allowHTTP }}
     {{- if .Values.config.plugins.prometheus.url }}
     plugins:
       prometheus:

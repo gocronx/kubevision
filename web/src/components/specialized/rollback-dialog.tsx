@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { History, TriangleAlert } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,7 @@ export function RollbackDialog({
   namespace,
   name,
 }: RollbackDialogProps) {
+  const { t } = useTranslation()
   const [selectedRevision, setSelectedRevision] = useState<number | null>(null)
 
   const { data: history, isLoading: historyLoading } = useRolloutHistory(
@@ -45,15 +47,13 @@ export function RollbackDialog({
       { namespace, name, revision: selectedRevision },
       {
         onSuccess: () => {
-          toast.success(
-            `Rollback of ${name} to revision ${selectedRevision} initiated`
-          )
+          toast.success(t("resource.rollbackToast", { name, revision: selectedRevision }))
           onOpenChange(false)
           setSelectedRevision(null)
         },
         onError: (err) => {
           toast.error(
-            err instanceof Error ? err.message : "Failed to rollback deployment"
+            err instanceof Error ? err.message : t("resource.rollbackFailed")
           )
         },
       }
@@ -82,22 +82,19 @@ export function RollbackDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Rollback {name}</DialogTitle>
-          <DialogDescription>
-            Select a revision to roll back to. The deployment will be updated to
-            match the pod template from that revision.
-          </DialogDescription>
+          <DialogTitle>{t("resource.rollbackTitle", { name })}</DialogTitle>
+          <DialogDescription>{t("resource.rollbackDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
           {historyLoading ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              Loading history...
+              {t("resource.loadingHistory")}
             </div>
           ) : sortedHistory.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
               <History className="size-8 opacity-40" />
-              <p>No rollout history available for this deployment.</p>
+              <p>{t("resource.noHistory")}</p>
             </div>
           ) : (
             <ScrollArea className="max-h-64 rounded-md border">
@@ -140,7 +137,7 @@ export function RollbackDialog({
                             !rev.changeCause ? "italic opacity-60" : ""
                           }`}
                         >
-                          {rev.changeCause || "no change-cause recorded"}
+                          {rev.changeCause || t("resource.noChangeCause")}
                         </span>
                         {isCurrent && (
                           <span
@@ -150,7 +147,7 @@ export function RollbackDialog({
                                 : "text-muted-foreground"
                             }`}
                           >
-                            current
+                            {t("resource.currentRevision")}
                           </span>
                         )}
                       </div>
@@ -164,11 +161,7 @@ export function RollbackDialog({
           {selectedRevision !== null && (
             <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-              <p>
-                This will restore the pod template from revision{" "}
-                <span className="font-semibold">#{selectedRevision}</span> and
-                trigger a new rollout.
-              </p>
+              <p>{t("resource.rollbackWarning", { revision: selectedRevision })}</p>
             </div>
           )}
         </div>
@@ -179,7 +172,7 @@ export function RollbackDialog({
             onClick={() => handleClose(false)}
             disabled={rollbackMutation.isPending}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -190,10 +183,10 @@ export function RollbackDialog({
             }
           >
             {rollbackMutation.isPending
-              ? "Rolling back..."
+              ? t("resource.rollingBack")
               : selectedRevision !== null
-                ? `Rollback to #${selectedRevision}`
-                : "Rollback"}
+                ? t("resource.rollbackTo", { revision: selectedRevision })
+                : t("resource.rollback")}
           </Button>
         </DialogFooter>
       </DialogContent>

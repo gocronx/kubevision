@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "existingSecret": { "type": "string" },
+    "deploymentStrategy": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["Recreate", "RollingUpdate"] },
+        "rollingUpdate": {
+          "type": "object",
+          "properties": {
+            "maxSurge": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "string" }] },
+            "maxUnavailable": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "string" }] }
+          }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+        "tag": { "type": "string" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "probes": {
+      "type": "object",
+      "required": ["startup", "readiness", "liveness"],
+      "properties": {
+        "startup": { "$ref": "#/definitions/httpProbe" },
+        "readiness": { "$ref": "#/definitions/httpProbe" },
+        "liveness": { "$ref": "#/definitions/httpProbe" }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": { "port": { "type": "integer", "minimum": 1, "maximum": 65535 } }
+        },
+        "database": {
+          "type": "object",
+          "properties": {
+            "driver": { "type": "string", "enum": ["sqlite", "postgres"] },
+            "dsn": { "type": "string" }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "publicKey": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "rpId": { "type": "string" },
+                "rpDisplayName": { "type": "string", "minLength": 1 },
+                "origins": {
+                  "type": "array",
+                  "items": { "type": "string", "pattern": "^https://" }
+                },
+                "userVerification": { "type": "string", "enum": ["required", "preferred", "discouraged"] },
+                "counterPolicy": { "type": "string", "enum": ["deny", "warn"] },
+                "challengeTTL": { "type": "string", "pattern": "^[1-9][0-9]*(ms|s|m)$" }
+              },
+              "allOf": [
+                {
+                  "if": { "properties": { "enabled": { "const": true } } },
+                  "then": {
+                    "properties": {
+                      "rpId": { "minLength": 1 },
+                      "origins": { "minItems": 1 }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "storageClass": { "type": "string" },
+        "accessMode": { "type": "string", "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany", "ReadWriteOncePod"] },
+        "size": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|Pi|Ei)$" }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    }
+  },
+  "definitions": {
+    "httpProbe": {
+      "type": "object",
+      "required": ["enabled", "path", "initialDelaySeconds", "periodSeconds", "timeoutSeconds", "failureThreshold"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "path": { "type": "string", "pattern": "^/" },
+        "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+        "periodSeconds": { "type": "integer", "minimum": 1 },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 },
+        "failureThreshold": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

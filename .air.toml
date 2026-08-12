@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
   cmd = "go build -o ./tmp/main ./cmd/kubevision"
-  bin = "./tmp/main"
+  entrypoint = ["./tmp/main"]
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "web", "node_modules", "bin", "deploy"]
   exclude_regex = ["_test.go"]

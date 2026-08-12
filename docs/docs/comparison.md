@@ -69,7 +69,7 @@ How KubeVision stacks up against other Kubernetes dashboards and CLIs. Stars ref
 | Grafana embed | Yes | Via plugin | No | Yes | No |
 | ArgoCD integration | Planned | Via plugin | No | Partial | No |
 | Plugin / extension API | Partial | Yes (full SDK) | Skins only | No | No |
-| Helm chart management | Planned | Via plugin | Yes | Yes | No |
+| Helm release inventory / rollback / removal | Yes | Via plugin | Yes | Yes | No |
 
 ## Frontend Experience
 

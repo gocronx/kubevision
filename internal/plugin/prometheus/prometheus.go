@@ -24,9 +24,9 @@ func New() *Plugin {
 }
 
 func (p *Plugin) Name() string        { return "prometheus" }
-func (p *Plugin) Description() string  { return "Prometheus metrics integration for pods and nodes" }
-func (p *Plugin) Version() string      { return "1.0.0" }
-func (p *Plugin) Type() string         { return "monitoring" }
+func (p *Plugin) Description() string { return "Prometheus metrics integration for pods and nodes" }
+func (p *Plugin) Version() string     { return "1.0.0" }
+func (p *Plugin) Type() string        { return "monitoring" }
 
 func (p *Plugin) Init(config map[string]string) error {
 	u, ok := config["url"]

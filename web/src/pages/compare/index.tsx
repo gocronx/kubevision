@@ -23,7 +23,7 @@ interface ResourceSelectorProps {
   label: string
   value: CompareTarget
   onChange: (v: CompareTarget) => void
-  clusters: { id: string; name: string }[]
+  clusters: { id: string | number; name: string }[]
 }
 
 function ResourceSelector({ label, value, onChange, clusters }: ResourceSelectorProps) {

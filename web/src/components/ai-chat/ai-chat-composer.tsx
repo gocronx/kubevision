@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react"
+import type { KeyboardEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { Send, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -7,19 +7,19 @@ import { Textarea } from "@/components/ui/textarea"
 interface Props {
   isLoading: boolean
   disabled?: boolean
+  value: string
+  onChange: (value: string) => void
   onSend: (text: string) => void
   onStop: () => void
 }
 
-export function ChatComposer({ isLoading, disabled, onSend, onStop }: Props) {
+export function ChatComposer({ isLoading, disabled, value, onChange, onSend, onStop }: Props) {
   const { t } = useTranslation()
-  const [value, setValue] = useState("")
 
   const send = () => {
     const text = value.trim()
     if (!text) return
     onSend(text)
-    setValue("")
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -34,7 +34,7 @@ export function ChatComposer({ isLoading, disabled, onSend, onStop }: Props) {
       <Textarea
         value={value}
         disabled={disabled}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder={t("ai.placeholder")}
         rows={1}

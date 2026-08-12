@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import api from "@/lib/api"
 import { useVerify2FA, useRecoveryCode } from "@/hooks/use-2fa"
+import { loginWithPublicKey, publicKeyAvailable } from "@/lib/public-key-auth"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -46,6 +47,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+	const [provider, setProvider] = useState<"local" | "directory">("local")
 
   // 2FA step state
   const [step, setStep] = useState<LoginStep>("credentials")
@@ -79,7 +81,7 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const data = await api.post("/auth/login", { username, password }) as LoginResponse
+      const data = await api.post("/auth/login", { username, password, provider }) as LoginResponse
       handleLoginSuccess(data)
     } catch (err: unknown) {
       // Check if it is the 2FA-required signal from the api interceptor
@@ -90,6 +92,16 @@ export function LoginPage() {
         setTotpCode("")
       }
       // All other errors are already toasted by the api interceptor
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handlePublicKeyLogin() {
+    setLoading(true)
+    try {
+		const data = await loginWithPublicKey(username.trim()) as unknown as LoginResponse
+      handleLoginSuccess(data)
     } finally {
       setLoading(false)
     }
@@ -150,6 +162,10 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
+				<div className="grid grid-cols-2 rounded-md border p-1" aria-label={t("login.provider")}>
+					<Button type="button" size="sm" variant={provider === "local" ? "secondary" : "ghost"} onClick={() => setProvider("local")}>{t("login.local")}</Button>
+					<Button type="button" size="sm" variant={provider === "directory" ? "secondary" : "ghost"} onClick={() => setProvider("directory")}>{t("login.directory")}</Button>
+				</div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="username">{t("common.username")}</Label>
                 <Input
@@ -189,6 +205,12 @@ export function LoginPage() {
                 {loading && <Loader2 className="animate-spin" />}
                 {t("login.submit")}
               </Button>
+              {publicKeyAvailable() && (
+				<Button type="button" variant="outline" className="w-full" disabled={loading} onClick={handlePublicKeyLogin}>
+				  <KeyRound className="size-4" />
+				  {t("login.publicKey")}
+				</Button>
+              )}
             </form>
             <div className="mt-4 flex justify-center">
               <a

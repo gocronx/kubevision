@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { useMemo, useState, useEffect, useRef } from "react"
+import { useMemo, useState, useEffect } from "react"
 import api from "@/lib/api"
 
 // ---------------------------------------------------------------------------
@@ -159,17 +159,14 @@ export function useSearchPending(rawQuery: string, debounceMs = 300): boolean {
  * Returns a cleanup function; pass a ref to prevent stale closures.
  */
 export function useSearchShortcut(onTrigger: () => void): void {
-  const handler = useRef(onTrigger)
-  handler.current = onTrigger
-
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        handler.current()
+        onTrigger()
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
+  }, [onTrigger])
 }

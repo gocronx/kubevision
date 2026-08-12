@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Bot, Loader2, Save } from "lucide-react"
+import { Bot, Check, Loader2, RefreshCw, Save, Search } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import {
   useAIConfig,
+  useDiscoverAIModels,
   useUpdateAIConfig,
 } from "@/components/ai-chat/use-ai-config"
 import { Button } from "@/components/ui/button"
@@ -39,12 +40,34 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
   const { user } = useAuth()
   const isAdmin = user?.role === "admin" || user?.role === "super-admin"
   const update = useUpdateAIConfig()
+  const discoverModels = useDiscoverAIModels()
 
   const [enabled, setEnabled] = useState(config.enabled)
   const [baseURL, setBaseURL] = useState(config.baseURL)
   const [model, setModel] = useState(config.model)
   const [apiKey, setApiKey] = useState("")
   const [maxTokens, setMaxTokens] = useState(config.maxTokens)
+  const [modelSearch, setModelSearch] = useState("")
+
+  const models = Array.from(new Set((discoverModels.data ?? []).map((item) => item.id)))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
+  const normalizedSearch = modelSearch.trim().toLowerCase()
+  const filteredModels = normalizedSearch
+    ? models.filter((item) => item.toLowerCase().includes(normalizedSearch))
+    : models
+
+  const discover = () => {
+    discoverModels.mutate(
+      { baseURL: baseURL.trim(), apiKey: apiKey.trim() },
+      {
+        onSuccess: (items) => {
+          if (items.length === 0) toast.info(t("ai.modelsEmpty"))
+          else toast.success(t("ai.modelsFound", { count: items.length }))
+        },
+      }
+    )
+  }
 
   const save = () => {
     update.mutate(
@@ -93,17 +116,6 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ai-model">{t("ai.model")}</Label>
-            <Input
-              id="ai-model"
-              value={model}
-              disabled={!isAdmin}
-              placeholder="gpt-4o-mini"
-              onChange={(e) => setModel(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="ai-key">{t("ai.apiKey")}</Label>
             <Input
               id="ai-key"
@@ -114,6 +126,59 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
               onChange={(e) => setApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">{t("ai.apiKeyHint")}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ai-model">{t("ai.model")}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="ai-model"
+                value={model}
+                disabled={!isAdmin}
+                placeholder="gpt-4o-mini"
+                onChange={(e) => setModel(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!isAdmin || !baseURL.trim() || (!apiKey.trim() && !config.hasApiKey) || discoverModels.isPending}
+                onClick={discover}
+              >
+                {discoverModels.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                {t("ai.discoverModels")}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("ai.modelHint")}</p>
+            {models.length > 0 && (
+              <div className="overflow-hidden rounded-md border">
+                <div className="relative border-b">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={modelSearch}
+                    onChange={(event) => setModelSearch(event.target.value)}
+                    placeholder={t("ai.searchModels")}
+                    className="rounded-none border-0 pl-9 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+                <div className="max-h-56 overflow-y-auto p-1" role="listbox" aria-label={t("ai.availableModels")}>
+                  {filteredModels.length === 0 ? (
+                    <p className="p-4 text-center text-sm text-muted-foreground">{t("ai.noMatchingModels")}</p>
+                  ) : filteredModels.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      role="option"
+                      aria-selected={model === item}
+                      onClick={() => setModel(item)}
+                      className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
+                    >
+                      <Check className={`size-4 ${model === item ? "opacity-100" : "opacity-0"}`} />
+                      <span className="min-w-0 truncate font-mono text-xs">{item}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

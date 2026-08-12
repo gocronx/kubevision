@@ -75,7 +75,7 @@ export function ResourceActions({
       { name, namespace },
       {
         onSuccess: () => {
-          toast.success(`${name} deleted successfully`)
+          toast.success(t("resource.deletedToast", { name }))
           setDeleteDialogOpen(false)
           onDeleted?.()
         },
@@ -124,7 +124,7 @@ export function ResourceActions({
               }}
             >
               <Scale className="size-4" />
-              Scale
+              {t("resource.scale")}
             </DropdownMenuItem>
           )}
 
@@ -136,7 +136,7 @@ export function ResourceActions({
               }}
             >
               <RotateCcw className="size-4" />
-              Restart
+              {t("resource.restart")}
             </DropdownMenuItem>
           )}
 
@@ -148,7 +148,7 @@ export function ResourceActions({
               }}
             >
               <History className="size-4" />
-              Rollback
+              {t("resource.rollback")}
             </DropdownMenuItem>
           )}
 
@@ -175,10 +175,13 @@ export function ResourceActions({
           onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>Delete {name}?</DialogTitle>
+            <DialogTitle>{t("resource.deleteTitle", { name })}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {resource.slice(0, -1)} &quot;{name}&quot;
-              {namespace ? ` in namespace "${namespace}"` : ""}? This action cannot be undone.
+              {t(namespace ? "resource.deleteDescriptionWithNamespace" : "resource.deleteDescription", {
+                type: t(`resourceTypes.${resource}`, { defaultValue: resource }),
+                name,
+                namespace,
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

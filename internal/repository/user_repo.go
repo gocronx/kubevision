@@ -17,6 +17,9 @@ func NewUserRepo(db *gorm.DB) UserRepo {
 	return &userRepo{db: db}
 }
 
+// NewDirectoryUserRepo exposes the directory-specific identity lookup surface.
+func NewDirectoryUserRepo(db *gorm.DB) DirectoryUserRepo { return &userRepo{db: db} }
+
 func (r *userRepo) Create(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
@@ -51,6 +54,22 @@ func (r *userRepo) GetByOAuthID(ctx context.Context, provider, oauthID string) (
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepo) GetByDirectoryID(ctx context.Context, directoryID string) (*model.User, error) {
+	var user model.User
+	if err := r.db.WithContext(ctx).Where("auth_provider = ? AND directory_id = ?", "directory", directoryID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepo) ListByAuthProvider(ctx context.Context, provider string) ([]model.User, error) {
+	var users []model.User
+	if err := r.db.WithContext(ctx).Where("auth_provider = ?", provider).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 func (r *userRepo) Update(ctx context.Context, user *model.User) error {

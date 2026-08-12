@@ -51,11 +51,12 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const { currentCluster, clusters, setCurrentCluster } = useCluster()
   const { user } = useAuth()
-  const { config, isItemHidden, isItemPinned, isGroupCollapsed, toggleGroupCollapsed } = useSidebarConfig()
+  const { config, isItemHidden, isGroupCollapsed } = useSidebarConfig()
   const role = user?.role ?? ""
   const showAdminSection = canAccessAdmin(role)
   const showUserManagement = canManageUsers(role)
-  const currentClusterName = clusters.find((c) => c.id === currentCluster)?.name ?? t("cluster.select")
+  const selectedCluster = clusters.find((c) => String(c.id) === currentCluster)
+  const currentClusterName = selectedCluster?.name ?? t("cluster.select")
   const [showAddCluster, setShowAddCluster] = useState(false)
 
   // Resolve pinned items from config
@@ -100,8 +101,31 @@ export function AppSidebar() {
                   key={cluster.id}
                   onClick={() => setCurrentCluster(cluster.id)}
                 >
-                  <Check className={`size-4 ${cluster.id === currentCluster ? "opacity-100" : "opacity-0"}`} />
-                  {cluster.name}
+                  <Check className={`size-4 ${String(cluster.id) === currentCluster ? "opacity-100" : "opacity-0"}`} />
+                  <span
+                    className={`size-2 shrink-0 rounded-full ${
+                      cluster.status === "healthy"
+                        ? "bg-green-500"
+                        : cluster.status === "unhealthy"
+                          ? "bg-red-500"
+                          : "bg-muted-foreground"
+                    }`}
+                    aria-label={
+                      cluster.status === "healthy"
+                        ? t("plugin.healthy")
+                        : cluster.status === "unhealthy"
+                          ? t("plugin.unhealthy")
+                          : t("overview.unknown")
+                    }
+                    title={
+                      cluster.status === "healthy"
+                        ? t("plugin.healthy")
+                        : cluster.status === "unhealthy"
+                          ? t("plugin.unhealthy")
+                          : t("overview.unknown")
+                    }
+                  />
+                  <span className="truncate">{cluster.name}</span>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />

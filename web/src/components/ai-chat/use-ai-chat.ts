@@ -1,190 +1,291 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { streamSSE } from "./ai-chat-stream"
-import type {
-  APIChatMessage,
-  ChatMessage,
-  PageContext,
-} from "./ai-chat-types"
+import { loadStoredChat, MAX_CHAT_SESSIONS, saveStoredChat } from "./ai-chat-storage"
+import type { APIChatMessage, ChatMessage, ChatSession, ChatWorkspace, PageContext } from "./ai-chat-types"
 
 const CHAT_URL = "/api/v1/ai/chat"
 const CONTINUE_URL = "/api/v1/ai/continue-action"
+const TITLE_LENGTH = 42
 
 function newID(): string {
   return crypto.randomUUID()
 }
 
-/** Manages a single AI conversation: streaming, tool calls, and mutation
- *  approval. */
-export function useAIChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const abortRef = useRef<AbortController | null>(null)
-  // ID of the assistant bubble currently receiving streamed text, if any.
-  const activeAssistantRef = useRef<string | null>(null)
+function createSession(): ChatSession {
+  return { id: newID(), title: "", draft: "", messages: [], updatedAt: Date.now(), isRunning: false }
+}
 
-  const patchMessage = useCallback((id: string, patch: Partial<ChatMessage>) => {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)))
+function createWorkspace(): ChatWorkspace {
+  const session = createSession()
+  return { activeSessionId: session.id, sessions: [session] }
+}
+
+function initialWorkspace(userId?: number): ChatWorkspace {
+  return loadStoredChat(userId) ?? createWorkspace()
+}
+
+function shortTitle(text: string): string {
+  const line = text.replace(/\s+/g, " ").trim()
+  return line.length <= TITLE_LENGTH ? line : `${line.slice(0, TITLE_LENGTH - 1).trimEnd()}…`
+}
+
+/** Manages independently routable local conversations and their streams. */
+export function useAIChat(userId?: number) {
+  const [workspace, setWorkspace] = useState<ChatWorkspace>(() => initialWorkspace(userId))
+  const workspaceRef = useRef(workspace)
+  const loadedUserIDRef = useRef(userId)
+  const workspaceUserIDRef = useRef(userId)
+  const controllersRef = useRef(new Map<string, AbortController>())
+  const activeAssistantsRef = useRef(new Map<string, string>())
+  workspaceRef.current = workspace
+
+  const updateSession = useCallback((sessionId: string, update: (session: ChatSession) => ChatSession) => {
+    setWorkspace((current) => ({
+      ...current,
+      sessions: current.sessions.map((session) => session.id === sessionId ? update(session) : session),
+    }))
   }, [])
 
-  const patchToolByCallID = useCallback(
-    (callID: string, patch: Partial<ChatMessage>) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.toolCallId === callID ? { ...m, ...patch } : m))
-      )
-    },
-    []
-  )
+  useEffect(() => {
+    if (loadedUserIDRef.current === userId) return
+    controllersRef.current.forEach((controller) => controller.abort())
+    controllersRef.current.clear()
+    activeAssistantsRef.current.clear()
+    const nextWorkspace = initialWorkspace(userId)
+    loadedUserIDRef.current = userId
+    workspaceUserIDRef.current = userId
+    workspaceRef.current = nextWorkspace
+    setWorkspace(nextWorkspace)
+  }, [userId])
 
-  // Routes one SSE event into message state.
-  const handleEvent = useCallback(
-    (event: string, data: Record<string, unknown>) => {
-      switch (event) {
-        case "message": {
-          const delta = String(data.content ?? "")
-          if (!delta) return
-          setMessages((prev) => {
-            const activeID = activeAssistantRef.current
-            if (activeID) {
-              return prev.map((m) =>
-                m.id === activeID ? { ...m, content: m.content + delta } : m
-              )
-            }
-            const id = newID()
-            activeAssistantRef.current = id
-            return [...prev, { id, role: "assistant", content: delta }]
-          })
-          break
+  useEffect(() => {
+    if (loadedUserIDRef.current !== userId) return
+    const timer = window.setTimeout(() => {
+      if (workspaceUserIDRef.current === userId) saveStoredChat(userId, workspaceRef.current)
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [workspace, userId])
+
+  useEffect(() => {
+    const persistLatest = () => {
+      if (workspaceUserIDRef.current === userId) saveStoredChat(userId, workspaceRef.current)
+    }
+    window.addEventListener("pagehide", persistLatest)
+    return () => window.removeEventListener("pagehide", persistLatest)
+  }, [userId])
+
+  useEffect(() => () => {
+    controllersRef.current.forEach((controller) => controller.abort())
+  }, [])
+
+  const patchMessage = useCallback((sessionId: string, id: string, patch: Partial<ChatMessage>) => {
+    updateSession(sessionId, (session) => ({
+      ...session,
+      messages: session.messages.map((message) => message.id === id ? { ...message, ...patch } : message),
+      updatedAt: Date.now(),
+    }))
+  }, [updateSession])
+
+  const handleEvent = useCallback((sessionId: string, event: string, data: Record<string, unknown>) => {
+    if (!workspaceRef.current.sessions.some((session) => session.id === sessionId)) return
+    const append = (message: ChatMessage) => updateSession(sessionId, (session) => ({
+      ...session,
+      messages: [...session.messages, message],
+      updatedAt: Date.now(),
+    }))
+
+    switch (event) {
+      case "message": {
+        const delta = String(data.content ?? "")
+        if (!delta) return
+        const activeID = activeAssistantsRef.current.get(sessionId)
+        if (activeID) {
+          updateSession(sessionId, (session) => ({
+            ...session,
+            messages: session.messages.map((message) =>
+              message.id === activeID ? { ...message, content: message.content + delta } : message
+            ),
+            updatedAt: Date.now(),
+          }))
+        } else {
+          const id = newID()
+          activeAssistantsRef.current.set(sessionId, id)
+          append({ id, role: "assistant", content: delta })
         }
-        case "tool_call": {
-          activeAssistantRef.current = null
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: newID(),
-              role: "tool",
-              content: "",
-              toolCallId: String(data.tool_call_id ?? ""),
-              toolName: String(data.tool ?? ""),
-              toolArgs: (data.args as Record<string, unknown>) ?? {},
-              actionStatus: "running",
-            },
-          ])
-          break
-        }
-        case "tool_result": {
-          const callID = String(data.tool_call_id ?? "")
-          patchToolByCallID(callID, {
+        break
+      }
+      case "tool_call":
+        activeAssistantsRef.current.delete(sessionId)
+        append({
+          id: newID(), role: "tool", content: "",
+          toolCallId: String(data.tool_call_id ?? ""), toolName: String(data.tool ?? ""),
+          toolArgs: (data.args as Record<string, unknown>) ?? {}, actionStatus: "running",
+        })
+        break
+      case "tool_result": {
+        const callID = String(data.tool_call_id ?? "")
+        updateSession(sessionId, (session) => ({
+          ...session,
+          messages: session.messages.map((message) => message.toolCallId === callID ? {
+            ...message,
             toolResult: String(data.result ?? ""),
             isError: Boolean(data.is_error),
             actionStatus: data.is_error ? "error" : "confirmed",
-          })
-          break
-        }
-        case "action_required": {
-          activeAssistantRef.current = null
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: newID(),
-              role: "tool",
-              content: "",
-              toolCallId: String(data.tool_call_id ?? ""),
-              toolName: String(data.tool ?? ""),
-              toolArgs: (data.args as Record<string, unknown>) ?? {},
-              pendingSessionId: String(data.session_id ?? ""),
-              actionStatus: "pending",
-            },
-          ])
-          break
-        }
-        case "error": {
-          activeAssistantRef.current = null
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: newID(),
-              role: "assistant",
-              content: `⚠️ ${String(data.message ?? "Something went wrong")}`,
-              isError: true,
-            },
-          ])
-          break
-        }
-        // "done" needs no state change; loading is cleared by the caller.
+          } : message),
+          updatedAt: Date.now(),
+        }))
+        break
       }
-    },
-    [patchToolByCallID]
-  )
-
-  const runStream = useCallback(
-    async (url: string, body: unknown) => {
-      setIsLoading(true)
-      const controller = new AbortController()
-      abortRef.current = controller
-      try {
-        await streamSSE(url, body, {
-          onEvent: handleEvent,
-          signal: controller.signal,
+      case "action_required":
+        activeAssistantsRef.current.delete(sessionId)
+        append({
+          id: newID(), role: "tool", content: "",
+          toolCallId: String(data.tool_call_id ?? ""), toolName: String(data.tool ?? ""),
+          toolArgs: (data.args as Record<string, unknown>) ?? {},
+          pendingSessionId: String(data.session_id ?? ""), actionStatus: "pending",
         })
-      } catch (err) {
-        handleEvent("error", { message: (err as Error)?.message ?? "Request failed" })
-      } finally {
-        activeAssistantRef.current = null
-        setIsLoading(false)
-        abortRef.current = null
+        break
+      case "error":
+        activeAssistantsRef.current.delete(sessionId)
+        append({
+          id: newID(), role: "assistant",
+          content: `⚠️ ${String(data.message ?? "Something went wrong")}`, isError: true,
+        })
+        break
+    }
+  }, [updateSession])
+
+  const runStream = useCallback(async (sessionId: string, url: string, body: unknown) => {
+    if (controllersRef.current.has(sessionId)) return
+    const controller = new AbortController()
+    controllersRef.current.set(sessionId, controller)
+    updateSession(sessionId, (session) => ({ ...session, isRunning: true, updatedAt: Date.now() }))
+    try {
+      await streamSSE(url, body, {
+        onEvent: (event, data) => handleEvent(sessionId, event, data),
+        signal: controller.signal,
+      })
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        handleEvent(sessionId, "error", { message: (error as Error)?.message ?? "Request failed" })
       }
-    },
-    [handleEvent]
-  )
+    } finally {
+      activeAssistantsRef.current.delete(sessionId)
+      if (controllersRef.current.get(sessionId) === controller) {
+        controllersRef.current.delete(sessionId)
+        updateSession(sessionId, (session) => ({ ...session, isRunning: false, updatedAt: Date.now() }))
+      }
+    }
+  }, [handleEvent, updateSession])
 
-  const sendMessage = useCallback(
-    (text: string, clusterId: number, pageContext?: PageContext) => {
-      const trimmed = text.trim()
-      if (!trimmed || isLoading) return
-
-      const userMsg: ChatMessage = { id: newID(), role: "user", content: trimmed }
-      // Build history from the messages we already have plus the new turn.
-      const history: APIChatMessage[] = [...messages, userMsg]
-        .filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
-
-      setMessages((prev) => [...prev, userMsg])
-      void runStream(CHAT_URL, { clusterId, messages: history, pageContext })
-    },
-    [messages, isLoading, runStream]
-  )
-
-  const approveAction = useCallback(
-    (message: ChatMessage) => {
-      if (!message.pendingSessionId) return
-      patchMessage(message.id, { actionStatus: "running", pendingSessionId: undefined })
-      void runStream(CONTINUE_URL, { sessionId: message.pendingSessionId })
-    },
-    [patchMessage, runStream]
-  )
-
-  const denyAction = useCallback(
-    (message: ChatMessage) => {
-      patchMessage(message.id, { actionStatus: "denied", pendingSessionId: undefined })
-      setMessages((prev) => [
-        ...prev,
-        { id: newID(), role: "assistant", content: "Action cancelled." },
-      ])
-    },
-    [patchMessage]
-  )
-
-  const stop = useCallback(() => {
-    abortRef.current?.abort()
-    setIsLoading(false)
+  const createNewSession = useCallback(() => {
+    const session = createSession()
+    setWorkspace((current) => {
+      const retained = current.sessions
+        .slice()
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, MAX_CHAT_SESSIONS - 1)
+      const retainedIDs = new Set(retained.map((item) => item.id))
+      current.sessions.forEach((item) => {
+        if (!retainedIDs.has(item.id)) controllersRef.current.get(item.id)?.abort()
+      })
+      return { activeSessionId: session.id, sessions: [session, ...retained] }
+    })
   }, [])
 
-  const clear = useCallback(() => {
-    abortRef.current?.abort()
-    activeAssistantRef.current = null
-    setMessages([])
-    setIsLoading(false)
+  const selectSession = useCallback((sessionId: string) => {
+    setWorkspace((current) => current.sessions.some((session) => session.id === sessionId)
+      ? { ...current, activeSessionId: sessionId }
+      : current)
   }, [])
 
-  return { messages, isLoading, sendMessage, approveAction, denyAction, stop, clear }
+  const updateDraft = useCallback((sessionId: string, draft: string) => {
+    updateSession(sessionId, (session) => ({ ...session, draft }))
+  }, [updateSession])
+
+  const renameSession = useCallback((sessionId: string, title: string) => {
+    const trimmed = title.trim()
+    if (!trimmed || trimmed.length > 60) return
+    updateSession(sessionId, (session) => {
+      if (session.isRunning || session.title === trimmed) return session
+      return { ...session, title: trimmed, updatedAt: Date.now() }
+    })
+  }, [updateSession])
+
+  const deleteSession = useCallback((sessionId: string) => {
+    controllersRef.current.get(sessionId)?.abort()
+    controllersRef.current.delete(sessionId)
+    activeAssistantsRef.current.delete(sessionId)
+    setWorkspace((current) => {
+      if (!current.sessions.some((session) => session.id === sessionId)) return current
+      const remaining = current.sessions
+        .filter((session) => session.id !== sessionId)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+      if (!remaining.length) {
+        const replacement = createSession()
+        return { activeSessionId: replacement.id, sessions: [replacement] }
+      }
+      return {
+        activeSessionId: current.activeSessionId === sessionId ? remaining[0].id : current.activeSessionId,
+        sessions: remaining,
+      }
+    })
+  }, [])
+
+  const sendMessage = useCallback((sessionId: string, text: string, clusterId: number, pageContext?: PageContext) => {
+    const trimmed = text.trim()
+    const session = workspaceRef.current.sessions.find((item) => item.id === sessionId)
+    if (!trimmed || !session || session.isRunning || controllersRef.current.has(sessionId)) return
+    const userMessage: ChatMessage = { id: newID(), role: "user", content: trimmed }
+    const history: APIChatMessage[] = [...session.messages, userMessage]
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => ({ role: message.role as "user" | "assistant", content: message.content }))
+    updateSession(sessionId, (current) => ({
+      ...current,
+      title: current.messages.some((message) => message.role === "user") ? current.title : shortTitle(trimmed),
+      draft: "",
+      messages: [...current.messages, userMessage],
+      updatedAt: Date.now(),
+    }))
+    void runStream(sessionId, CHAT_URL, { clusterId, messages: history, pageContext })
+  }, [runStream, updateSession])
+
+  const approveAction = useCallback((sessionId: string, message: ChatMessage) => {
+    if (!message.pendingSessionId || controllersRef.current.has(sessionId)) return
+    const pendingSessionId = message.pendingSessionId
+    patchMessage(sessionId, message.id, { actionStatus: "running", pendingSessionId: undefined })
+    void runStream(sessionId, CONTINUE_URL, { sessionId: pendingSessionId })
+  }, [patchMessage, runStream])
+
+  const denyAction = useCallback((sessionId: string, message: ChatMessage, cancellationText: string) => {
+    patchMessage(sessionId, message.id, { actionStatus: "denied", pendingSessionId: undefined })
+    updateSession(sessionId, (session) => ({
+      ...session,
+      messages: [...session.messages, { id: newID(), role: "assistant", content: cancellationText }],
+      updatedAt: Date.now(),
+    }))
+  }, [patchMessage, updateSession])
+
+  const stop = useCallback((sessionId: string) => {
+    controllersRef.current.get(sessionId)?.abort()
+  }, [])
+
+  const activeSession = useMemo(
+    () => workspace.sessions.find((session) => session.id === workspace.activeSessionId) ?? workspace.sessions[0],
+    [workspace]
+  )
+
+  return {
+    sessions: workspace.sessions,
+    activeSession,
+    createNewSession,
+    selectSession,
+    updateDraft,
+    renameSession,
+    deleteSession,
+    sendMessage,
+    approveAction,
+    denyAction,
+    stop,
+  }
 }

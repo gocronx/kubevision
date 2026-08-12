@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { ShieldCheck, ShieldOff, Copy, CheckCircle, Loader2, Eye, EyeOff, Lock } from "lucide-react"
+import { ShieldCheck, ShieldOff, Copy, CheckCircle, Loader2, Eye, EyeOff, Lock, KeyRound, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import {
@@ -30,8 +30,73 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { listPublicKeys, publicKeyAvailable, registerPublicKey, renamePublicKey, revokePublicKey, type PublicKeyCredentialInfo } from "@/lib/public-key-auth"
 
 type SetupStep = "idle" | "qrcode" | "verify" | "recovery"
+
+function PublicKeyCredentialsCard() {
+  const { t, i18n } = useTranslation()
+  const [credentials, setCredentials] = useState<PublicKeyCredentialInfo[]>([])
+  const [label, setLabel] = useState("")
+  const [password, setPassword] = useState("")
+  const [totpCode, setTotpCode] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  async function refresh() {
+    try { setCredentials(await listPublicKeys()) } catch { setCredentials([]) }
+  }
+  useEffect(() => { void refresh() }, [])
+
+  async function register() {
+    setBusy(true)
+    try {
+      await registerPublicKey(label.trim(), password, totpCode)
+      setLabel(""); setPassword(""); setTotpCode("")
+      toast.success(t("publicKey.registeredToast"))
+      await refresh()
+    } finally { setBusy(false) }
+  }
+
+  async function rename(item: PublicKeyCredentialInfo) {
+    const next = window.prompt(t("publicKey.label"), item.label)?.trim()
+    if (!next || next === item.label) return
+    await renamePublicKey(item.id, next)
+    await refresh()
+  }
+
+  async function revoke(item: PublicKeyCredentialInfo) {
+    if (!window.confirm(t("publicKey.revokeConfirm", { label: item.label }))) return
+    await revokePublicKey(item.id)
+    toast.success(t("publicKey.revokedToast"))
+    await refresh()
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3"><KeyRound className="size-5" /><div><CardTitle className="text-base">{t("publicKey.title")}</CardTitle><CardDescription>{t("publicKey.description")}</CardDescription></div></div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {publicKeyAvailable() && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input aria-label={t("publicKey.label")} placeholder={t("publicKey.label")} value={label} onChange={(event) => setLabel(event.target.value)} />
+            <Input aria-label={t("users.oldPassword")} type="password" autoComplete="current-password" placeholder={t("users.oldPassword")} value={password} onChange={(event) => setPassword(event.target.value)} />
+            <Input aria-label={t("publicKey.authenticatorCode")} inputMode="numeric" placeholder={t("publicKey.authenticatorCodeOptional")} value={totpCode} onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
+            <Button disabled={busy || !label.trim() || (!password && totpCode.length !== 6)} onClick={register}>{busy ? <Loader2 className="animate-spin" /> : <KeyRound />}{t("publicKey.register")}</Button>
+          </div>
+        )}
+        <div className="divide-y rounded-md border">
+          {credentials.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{t("publicKey.empty")}</p> : credentials.map((item) => (
+            <div key={item.id} className="flex items-center justify-between gap-3 p-3">
+              <div className="min-w-0"><p className="truncate text-sm font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.lastUsedAt ? t("publicKey.lastUsed", { date: new Date(item.lastUsedAt).toLocaleDateString(i18n.language) }) : t("publicKey.added", { date: new Date(item.createdAt).toLocaleDateString(i18n.language) })}</p></div>
+              <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" title={t("publicKey.rename")} onClick={() => void rename(item)}><Pencil /></Button><Button variant="ghost" size="icon" title={t("publicKey.revoke")} onClick={() => void revoke(item)}><Trash2 /></Button></div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Change Password Card
@@ -307,7 +372,7 @@ export function SecuritySettingsPage() {
                     size="icon"
                     variant="ghost"
                     onClick={() => setShowSecret((v) => !v)}
-                    title={showSecret ? "Hide" : "Show"}
+                    title={showSecret ? t("twofa.hideSecret") : t("twofa.showSecret")}
                   >
                     {showSecret ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </Button>
@@ -315,7 +380,7 @@ export function SecuritySettingsPage() {
                     size="icon"
                     variant="ghost"
                     onClick={() => copyToClipboard(setupData.secret, -1)}
-                    title="Copy"
+                    title={t("twofa.copySecret")}
                   >
                     {copiedIndex === -1 ? (
                       <CheckCircle className="size-4 text-green-500" />
@@ -404,6 +469,8 @@ export function SecuritySettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <PublicKeyCredentialsCard />
 
       {/* Change password */}
       <ChangePasswordCard />

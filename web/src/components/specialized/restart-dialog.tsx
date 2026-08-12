@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +30,7 @@ export function RestartDialog({
   namespace,
   name,
 }: RestartDialogProps) {
+  const { t } = useTranslation()
   const restartMutation = useRestartResource(clusterID, kind)
 
   function handleConfirm() {
@@ -36,19 +38,17 @@ export function RestartDialog({
       { namespace, name },
       {
         onSuccess: () => {
-          toast.success(`${name} restart initiated`)
+          toast.success(t("resource.restartToast", { name }))
           onOpenChange(false)
         },
         onError: (err) => {
           toast.error(
-            err instanceof Error ? err.message : "Failed to restart resource"
+            err instanceof Error ? err.message : t("resource.restartFailed")
           )
         },
       }
     )
   }
-
-  const kindLabel = kind.slice(0, -1).toLowerCase()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,21 +58,13 @@ export function RestartDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Restart {name}?</DialogTitle>
-          <DialogDescription>
-            This will trigger a rolling restart of the {kindLabel}{" "}
-            <span className="font-medium text-foreground">{name}</span> in
-            namespace{" "}
-            <span className="font-medium text-foreground">{namespace}</span>.
-          </DialogDescription>
+          <DialogTitle>{t("resource.restartTitle", { name })}</DialogTitle>
+          <DialogDescription>{t("resource.restartDescription", { name, namespace })}</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Pods will be replaced one at a time according to the update strategy.
-            There may be brief disruption during the rollout.
-          </p>
+          <p>{t("resource.restartWarning")}</p>
         </div>
 
         <DialogFooter>
@@ -81,13 +73,13 @@ export function RestartDialog({
             onClick={() => onOpenChange(false)}
             disabled={restartMutation.isPending}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={restartMutation.isPending}
           >
-            {restartMutation.isPending ? "Restarting..." : "Restart"}
+            {restartMutation.isPending ? t("resource.restarting") : t("resource.restart")}
           </Button>
         </DialogFooter>
       </DialogContent>

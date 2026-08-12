@@ -40,6 +40,14 @@ web/dist/*
 !web/dist/.gitkeep
 web/.next/
 web/.cache/
+.pnpm-store/
+web/playwright-report/
+web/test-results/
+
+# Local AI workflow artifacts
+.autonomous/
+clean-room/
+*-scout.html
 
 # Build artifacts
 dist/

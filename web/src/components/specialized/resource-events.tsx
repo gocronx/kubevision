@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import { Activity } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,7 @@ export function ResourceEvents({
   name,
   namespace,
 }: ResourceEventsProps) {
+  const { t } = useTranslation()
   const isWorkload = WORKLOAD_KINDS.has(resource)
 
   // For Pods and other simple resources we can use a precise fieldSelector.
@@ -88,7 +90,7 @@ export function ResourceEvents({
         <CardContent className="flex flex-col items-center justify-center gap-2 py-12">
           <Activity className="size-8 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
-            No events found for this resource
+            {t("resource.noEvents")}
           </p>
         </CardContent>
       </Card>

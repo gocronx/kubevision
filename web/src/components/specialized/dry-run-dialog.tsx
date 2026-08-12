@@ -1,4 +1,5 @@
 import { useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -71,11 +72,12 @@ export function DryRunDialog({
   onOpenChange,
   dryRunResult,
   isLoading,
-  title = "Preview Changes",
+  title,
   onApply,
   isApplying = false,
   operation = "update",
 }: DryRunDialogProps) {
+  const { t } = useTranslation()
   const handleApply = useCallback(() => {
     onApply()
   }, [onApply])
@@ -104,12 +106,12 @@ export function DryRunDialog({
                 <AlertTriangle className="size-5 text-destructive shrink-0" />
               )
             )}
-            {title}
+            {title ?? t("resource.previewChanges")}
           </DialogTitle>
           <DialogDescription>
             {operation === "create"
-              ? "Review what the Kubernetes API server would create before applying."
-              : "Review the diff between the current resource and your proposed changes before applying."}
+              ? t("resource.previewCreateDescription")
+              : t("resource.previewUpdateDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -118,7 +120,7 @@ export function DryRunDialog({
           <div className="flex flex-col items-center justify-center gap-3 py-16">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Running dry-run against the Kubernetes API server…
+              {t("resource.runningDryRun")}
             </p>
           </div>
         )}
@@ -127,7 +129,7 @@ export function DryRunDialog({
         {!isLoading && dryRunResult && !isValid && errors.length > 0 && (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
             <p className="mb-2 text-sm font-semibold text-destructive">
-              Validation failed — the resource was rejected by the API server:
+              {t("resource.validationFailed")}
             </p>
             <ul className="list-inside list-disc space-y-1">
               {errors.map((msg, i) => (
@@ -143,7 +145,7 @@ export function DryRunDialog({
         {!isLoading && dryRunResult && isValid && operation === "create" && proposedYaml && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">
-              The following resource will be created (showing the API server response with defaults applied):
+              {t("resource.createPreviewResult")}
             </p>
             <ScrollArea className="max-h-[500px] rounded-md border">
               <pre className="p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
@@ -158,8 +160,8 @@ export function DryRunDialog({
           <YamlDiffViewer
             original={originalYaml}
             proposed={proposedYaml}
-            originalLabel="Current"
-            proposedLabel="Proposed"
+            originalLabel={t("resource.currentValue")}
+            proposedLabel={t("resource.proposedValue")}
           />
         )}
 
@@ -167,7 +169,7 @@ export function DryRunDialog({
         {!isLoading && !dryRunResult && (
           <div className="flex items-center justify-center py-12">
             <p className="text-sm text-muted-foreground">
-              No preview available yet.
+              {t("resource.noPreview")}
             </p>
           </div>
         )}
@@ -178,7 +180,7 @@ export function DryRunDialog({
             onClick={() => onOpenChange(false)}
             disabled={isApplying}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleApply}
@@ -187,10 +189,10 @@ export function DryRunDialog({
             {isApplying ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Applying…
+                {t("resource.applying")}
               </>
             ) : (
-              "Apply"
+              t("resource.apply")
             )}
           </Button>
         </DialogFooter>

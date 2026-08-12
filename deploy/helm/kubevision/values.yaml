@@ -1,5 +1,10 @@
 replicaCount: 1
 
+# Persistent SQLite uses a single-writer volume. Keep Recreate unless an
+# external database is configured and rolling updates are safe.
+deploymentStrategy:
+  type: Recreate
+
 image:
   repository: gocronx/kubevision
   pullPolicy: IfNotPresent
@@ -17,6 +22,11 @@ serviceAccount:
 podAnnotations: {}
 podSecurityContext: {}
 securityContext: {}
+
+# Name of a pre-created Secret whose keys are KubeVision environment variables,
+# for example KUBEVISION_JWT_SECRET, KUBEVISION_ENCRYPT_KEY, and
+# KUBEVISION_DB_DSN. The chart never reads or renders the Secret's values.
+existingSecret: ""
 
 service:
   type: ClusterIP
@@ -41,6 +51,29 @@ resources:
     cpu: 100m
     memory: 128Mi
 
+probes:
+  startup:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 0
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 30
+  readiness:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 2
+    failureThreshold: 3
+
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -62,6 +95,14 @@ config:
     jwtSecret: ""  # Auto-generated if empty
     accessTokenTTL: 30m
     refreshTokenTTL: 12h
+    publicKey:
+      enabled: false
+      rpId: ""
+      rpDisplayName: KubeVision
+      origins: []
+      userVerification: required
+      counterPolicy: deny
+      challengeTTL: 5m
   kubernetes:
     informerResync: 30m
     crdDiscoveryInterval: 5m
@@ -71,6 +112,14 @@ config:
   oauth:
     enabled: false
     providers: []
+  registry:
+    allowedRegistries:
+      - docker.io
+      - registry-1.docker.io
+    allowedAuthHosts:
+      - auth.docker.io
+    allowPrivate: false
+    allowHTTP: false
   plugins:
     prometheus:
       url: ""
@@ -82,6 +131,8 @@ config:
       token: ""
 
 persistence:
+  # SQLite persistence supports one writer and therefore one application Pod.
+  # Disable persistence and configure an external database before scaling out.
   enabled: true
   storageClass: ""
   accessMode: ReadWriteOnce

@@ -165,11 +165,11 @@ func TestResourceActionService_Scale_Validation(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestResourceActionService_Restart_Validation(t *testing.T) {
-	t.Run("unsupported kind returns param-invalid error", func(t *testing.T) {
+	t.Run("pods pass kind validation before cluster lookup", func(t *testing.T) {
 		svc := newActionSvc(newMockClusterRepo())
 
 		err := svc.Restart(context.Background(), 1, "pods", "default", "my-pod")
-		assertBizError(t, err, bizerr.CodeParamInvalid)
+		assertBizError(t, err, bizerr.CodeNotFound)
 	})
 
 	t.Run("replicasets is not restartable — returns param-invalid", func(t *testing.T) {

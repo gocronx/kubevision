@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Minus, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -35,12 +36,15 @@ export function ScaleDialog({
   name,
   currentReplicas,
 }: ScaleDialogProps) {
+  const { t } = useTranslation()
   const [desired, setDesired] = useState(currentReplicas)
   const scaleMutation = useScaleResource(clusterID, kind)
 
   // Reset desired replicas whenever the dialog opens or the current value changes.
   useEffect(() => {
     if (open) {
+      // Opening starts a new edit session from the latest server value.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDesired(currentReplicas)
     }
   }, [open, currentReplicas])
@@ -67,14 +71,12 @@ export function ScaleDialog({
       { namespace, name, replicas: desired },
       {
         onSuccess: () => {
-          toast.success(
-            `${name} scaled to ${desired} replica${desired !== 1 ? "s" : ""}`
-          )
+          toast.success(t("resource.scaledToast", { name, count: desired }))
           onOpenChange(false)
         },
         onError: (err) => {
           toast.error(
-            err instanceof Error ? err.message : "Failed to scale resource"
+            err instanceof Error ? err.message : t("resource.scaleFailed")
           )
         },
       }
@@ -91,23 +93,20 @@ export function ScaleDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Scale {name}</DialogTitle>
-          <DialogDescription>
-            Adjust the number of replicas for this{" "}
-            {kind.slice(0, -1).toLowerCase()}.
-          </DialogDescription>
+          <DialogTitle>{t("resource.scaleTitle", { name })}</DialogTitle>
+          <DialogDescription>{t("resource.scaleDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Current vs desired summary */}
           <div className="flex items-center justify-between rounded-md border bg-muted/40 px-4 py-3 text-sm">
             <div className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground">Current</span>
+              <span className="text-muted-foreground">{t("resource.currentValue")}</span>
               <span className="text-xl font-semibold">{currentReplicas}</span>
             </div>
             <div className="text-muted-foreground">→</div>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="text-muted-foreground">Desired</span>
+              <span className="text-muted-foreground">{t("resourceColumns.desired")}</span>
               <span
                 className={`text-xl font-semibold ${
                   desired > currentReplicas
@@ -124,14 +123,14 @@ export function ScaleDialog({
 
           {/* Stepper control */}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="replicas-input">Replicas</Label>
+            <Label htmlFor="replicas-input">{t("resource.replicas")}</Label>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleDecrement}
                 disabled={desired <= 0 || scaleMutation.isPending}
-                aria-label="Decrease replicas"
+                aria-label={t("resource.decreaseReplicas")}
               >
                 <Minus className="size-4" />
               </Button>
@@ -149,7 +148,7 @@ export function ScaleDialog({
                 size="icon"
                 onClick={handleIncrement}
                 disabled={scaleMutation.isPending}
-                aria-label="Increase replicas"
+                aria-label={t("resource.increaseReplicas")}
               >
                 <Plus className="size-4" />
               </Button>
@@ -158,7 +157,7 @@ export function ScaleDialog({
 
           {desired === 0 && (
             <p className="text-sm text-amber-600 dark:text-amber-400">
-              Scaling to 0 will stop all pods for this workload.
+              {t("resource.scaleZeroWarning")}
             </p>
           )}
         </div>
@@ -169,13 +168,13 @@ export function ScaleDialog({
             onClick={() => onOpenChange(false)}
             disabled={scaleMutation.isPending}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={scaleMutation.isPending || !hasChanged}
           >
-            {scaleMutation.isPending ? "Scaling..." : "Apply"}
+            {scaleMutation.isPending ? t("resource.scaling") : t("resource.apply")}
           </Button>
         </DialogFooter>
       </DialogContent>

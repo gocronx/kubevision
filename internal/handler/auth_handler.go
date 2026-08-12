@@ -24,6 +24,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 type loginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	Provider string `json:"provider"`
 }
 
 // refreshRequest is the expected JSON body for the refresh endpoint.
@@ -57,7 +58,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	result, err := h.authService.Login(c.Request.Context(), req.Username, req.Password)
+	var result *service.LoginResult
+	var err error
+	if req.Provider == "directory" {
+		result, err = h.authService.LoginDirectory(c.Request.Context(), req.Username, req.Password)
+	} else {
+		result, err = h.authService.Login(c.Request.Context(), req.Username, req.Password)
+	}
 	if err != nil {
 		if bizErr, ok := err.(*bizerr.BizError); ok {
 			response.ErrorWithBizErr(c, bizErr)

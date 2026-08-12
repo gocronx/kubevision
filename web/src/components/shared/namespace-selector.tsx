@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import { ChevronsUpDown, Check, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +26,7 @@ export function NamespaceSelector({
   onChange,
   className,
 }: NamespaceSelectorProps) {
+  const { t } = useTranslation()
   const { data } = useResourceList(clusterID, "namespaces", {
     enabled: !!clusterID,
   })
@@ -46,7 +48,7 @@ export function NamespaceSelector({
         <Button variant="outline" size="sm" className={cn("gap-2", className)}>
           <FolderOpen className="size-4" />
           <span className="max-w-[150px] truncate">
-            {value ? value : "All Namespaces"}
+            {value ? value : t("common.allNamespaces")}
           </span>
           <ChevronsUpDown className="size-3 opacity-50" />
         </Button>
@@ -62,7 +64,7 @@ export function NamespaceSelector({
                 value === "" ? "opacity-100" : "opacity-0"
               )}
             />
-            All Namespaces
+            {t("common.allNamespaces")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {namespaces.map((ns) => (

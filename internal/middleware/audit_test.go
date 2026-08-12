@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -16,6 +17,36 @@ import (
 	"github.com/gocronx/kubevision/internal/service"
 	"go.uber.org/zap"
 )
+
+func TestRedactSensitiveFieldsRecursivelyAndCaseInsensitively(t *testing.T) {
+	body := `{"bindPassword":"bind-secret","nested":{"refreshToken":"refresh-secret","TOTPCode":"123456"},"items":[{"privateKey":"key"}],"serverUrl":"ldaps://directory.example.test"}`
+	redacted := redactSensitiveFields(body)
+
+	var got map[string]any
+	if err := json.Unmarshal([]byte(redacted), &got); err != nil {
+		t.Fatalf("redacted body is invalid JSON: %v", err)
+	}
+	if got["bindPassword"] != "[REDACTED]" {
+		t.Fatalf("bind password was not redacted: %s", redacted)
+	}
+	nested := got["nested"].(map[string]any)
+	if nested["refreshToken"] != "[REDACTED]" || nested["TOTPCode"] != "[REDACTED]" {
+		t.Fatalf("nested authentication material was not redacted: %s", redacted)
+	}
+	item := got["items"].([]any)[0].(map[string]any)
+	if item["privateKey"] != "[REDACTED]" {
+		t.Fatalf("authentication material in an array was not redacted: %s", redacted)
+	}
+	if got["serverUrl"] != "ldaps://directory.example.test" {
+		t.Fatalf("non-sensitive audit context was removed: %s", redacted)
+	}
+}
+
+func TestRedactSensitiveFieldsDropsUnparseableInput(t *testing.T) {
+	if got := redactSensitiveFields(`{"bindPassword":"truncated`); got != "[UNAVAILABLE]" {
+		t.Fatalf("unparseable input must not be retained, got %q", got)
+	}
+}
 
 // mockAuditRepo implements repository.AuditRepo for tests.
 type mockAuditRepo struct {

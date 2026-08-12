@@ -59,6 +59,15 @@ type Client struct {
 	httpClient *http.Client
 }
 
+// Model is the minimal model metadata used by the settings model picker.
+type Model struct {
+	ID string `json:"id"`
+}
+
+type modelsResponse struct {
+	Data []Model `json:"data"`
+}
+
 // NewClient builds a client from the given config.
 func NewClient(cfg Config) *Client {
 	cfg = cfg.withDefaults()
@@ -69,6 +78,36 @@ func NewClient(cfg Config) *Client {
 		maxTokens:  cfg.MaxTokens,
 		httpClient: &http.Client{Timeout: 5 * time.Minute},
 	}
+}
+
+// ListModels returns model IDs exposed by an OpenAI-compatible /models endpoint.
+func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/models", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("list LLM models: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("model provider returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var result modelsResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode model list: %w", err)
+	}
+	return result.Data, nil
 }
 
 type chatRequest struct {

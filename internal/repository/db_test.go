@@ -65,6 +65,20 @@ func TestNewDB_CreatesDatabaseAndRunsMigrations(t *testing.T) {
 	require.NoError(t, err, "webhooks table should exist after migration")
 }
 
+func TestPurgeDeletedClustersReleasesNames(t *testing.T) {
+	db := setupTestDB(t)
+	cluster := &model.Cluster{Name: "local", AuthType: "kubeconfig", Status: "unhealthy"}
+	require.NoError(t, db.Create(cluster).Error)
+	require.NoError(t, db.Delete(cluster).Error)
+
+	require.NoError(t, purgeDeletedClusters(db))
+	require.NoError(t, db.Create(&model.Cluster{
+		Name:     "local",
+		AuthType: "kubeconfig",
+		Status:   "healthy",
+	}).Error, "purging a removed registration should release its unique name")
+}
+
 func TestNewDB_DefaultAdminUserCreated(t *testing.T) {
 	db := setupTestDB(t)
 

@@ -18,6 +18,9 @@ import { PluginsPage } from "@/pages/admin/plugins"
 import { OAuthCallbackPage } from "@/pages/auth/oauth-callback"
 import { CRDListPage } from "@/pages/crds/index"
 import { NotFoundPage } from "@/pages/not-found"
+import { DirectorySettingsPage } from "@/pages/admin/directory"
+import { PackageReleasesPage } from "@/pages/packages/index"
+import { PackageReleaseDetailPage } from "@/pages/packages/detail"
 
 export function AppRoutes() {
   return (
@@ -43,8 +46,11 @@ export function AppRoutes() {
         <Route path="admin/terminal-sessions" element={<TerminalSessionsPage />} />
         <Route path="admin/users" element={<UsersPage />} />
         <Route path="admin/plugins" element={<PluginsPage />} />
+        <Route path="admin/directory" element={<DirectorySettingsPage />} />
         <Route path="compare" element={<ComparePage />} />
         <Route path="crds" element={<CRDListPage />} />
+        <Route path="package-releases" element={<PackageReleasesPage />} />
+        <Route path="package-releases/:namespace/:name" element={<PackageReleaseDetailPage />} />
         <Route path=":resource" element={<ResourceListPage />} />
         <Route path=":resource/:name" element={<ResourceDetailPage />} />
       </Route>

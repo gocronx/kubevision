@@ -59,6 +59,49 @@ type updateConfigRequest struct {
 	MaxTokens int    `json:"maxTokens"`
 }
 
+type listModelsRequest struct {
+	BaseURL string `json:"baseURL"`
+	APIKey  string `json:"apiKey"`
+}
+
+// ListModels discovers model IDs from an OpenAI-compatible provider. An empty
+// API key reuses the persisted key, allowing the UI to refresh models without
+// exposing or resending stored credentials.
+func (h *AIHandler) ListModels(c *gin.Context) {
+	if role := middleware.GetUserRole(c); role != "super-admin" && role != "admin" {
+		response.Error(c, bizerr.CodeForbidden, "only administrators can discover AI models")
+		return
+	}
+
+	var req listModelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid request body")
+		return
+	}
+	existing, err := h.svc.Config().Load(c.Request.Context())
+	if err != nil {
+		response.Error(c, bizerr.CodeInternal, "failed to load AI configuration")
+		return
+	}
+	if req.BaseURL != "" {
+		existing.BaseURL = req.BaseURL
+	}
+	if req.APIKey != "" {
+		existing.APIKey = req.APIKey
+	}
+	if existing.APIKey == "" {
+		response.Error(c, bizerr.CodeParamMissing, "API key is required")
+		return
+	}
+
+	models, err := h.svc.ListModels(c.Request.Context(), existing)
+	if err != nil {
+		response.Error(c, bizerr.CodeInternal, err.Error())
+		return
+	}
+	response.Success(c, models)
+}
+
 // UpdateConfig handles PUT /api/v1/ai/config. Restricted to admins. An empty
 // apiKey preserves the previously stored key so the UI need not re-send it.
 func (h *AIHandler) UpdateConfig(c *gin.Context) {

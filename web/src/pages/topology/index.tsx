@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
 import { useCluster } from "@/hooks/use-cluster"
 import { useTopology, type TopologyData } from "@/hooks/use-topology"
+import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
+import { useAuth } from "@/stores/auth-store"
+import { canAccessAdmin } from "@/lib/permissions"
 
 const kindIcons: Record<string, typeof Box> = {
   pods: Box,
@@ -35,10 +38,16 @@ const relationColors: Record<string, string> = {
 export function TopologyPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { currentCluster } = useCluster()
+  const {
+    currentCluster,
+    selectedCluster,
+    isClusterHealthy,
+    refetchClusters,
+  } = useCluster()
+  const { user } = useAuth()
   const [namespace, setNamespace] = useState("")
 
-  const { data, isLoading } = useTopology(currentCluster, namespace)
+  const { data, isLoading } = useTopology(currentCluster, namespace, isClusterHealthy)
 
   // Build adjacency list for a hierarchical layout
   const { layers, edgeList } = useMemo(() => {
@@ -80,6 +89,19 @@ export function TopologyPage() {
     },
     [navigate, namespace]
   )
+
+  if (selectedCluster?.status === "unhealthy") {
+    return (
+      <div className="flex h-full flex-col gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">{t("topology.title")}</h1>
+        <ClusterUnavailable
+          cluster={selectedCluster}
+          onCheckAgain={refetchClusters}
+          canRemove={canAccessAdmin(user?.role ?? "")}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

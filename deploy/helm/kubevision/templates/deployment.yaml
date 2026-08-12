@@ -1,3 +1,9 @@
+{{- if and .Values.persistence.enabled (eq .Values.config.database.driver "sqlite") (ne (int .Values.replicaCount) 1) -}}
+{{- fail "persistent SQLite requires replicaCount=1" -}}
+{{- end -}}
+{{- if and .Values.persistence.enabled (eq .Values.config.database.driver "sqlite") .Values.autoscaling.enabled -}}
+{{- fail "autoscaling cannot be enabled with persistent SQLite" -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,6 +11,14 @@ metadata:
   labels:
     {{- include "kubevision.labels" . | nindent 4 }}
 spec:
+  strategy:
+    type: {{ .Values.deploymentStrategy.type }}
+    {{- with .Values.deploymentStrategy.rollingUpdate }}
+    {{- if eq $.Values.deploymentStrategy.type "RollingUpdate" }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
@@ -40,22 +54,45 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - --config=/etc/kubevision/config.yaml
+          {{- with .Values.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ . | quote }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.config.server.port }}
               protocol: TCP
-          livenessProbe:
+          {{- if .Values.probes.startup.enabled }}
+          startupProbe:
             httpGet:
-              path: /healthz
+              path: {{ .Values.probes.startup.path }}
               port: http
-            initialDelaySeconds: 10
-            periodSeconds: 15
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: {{ .Values.probes.readiness.path }}
               port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

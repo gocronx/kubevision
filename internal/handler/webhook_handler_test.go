@@ -104,7 +104,7 @@ func TestWebhookHandler_Create_Success(t *testing.T) {
 
 	body := service.WebhookRequest{
 		Name:     "hook-1",
-		URL:      "https://example.com/webhook",
+		URL:      "https://8.8.8.8/webhook",
 		Events:   []string{"create"},
 		IsActive: true,
 	}
@@ -156,10 +156,10 @@ func TestWebhookHandler_List_WithData(t *testing.T) {
 
 	// Create two webhooks.
 	performRequest(router, "POST", "/api/v1/webhooks", service.WebhookRequest{
-		Name: "wh1", URL: "https://a.com", IsActive: true,
+		Name: "wh1", URL: "https://8.8.8.8/a", IsActive: true,
 	})
 	performRequest(router, "POST", "/api/v1/webhooks", service.WebhookRequest{
-		Name: "wh2", URL: "https://b.com", IsActive: true,
+		Name: "wh2", URL: "https://1.1.1.1/b", IsActive: true,
 	})
 
 	w := performRequest(router, "GET", "/api/v1/webhooks", nil)
@@ -199,7 +199,7 @@ func TestWebhookHandler_Delete_Success(t *testing.T) {
 
 	// Create then delete.
 	performRequest(router, "POST", "/api/v1/webhooks", service.WebhookRequest{
-		Name: "del-me", URL: "https://del.com", IsActive: true,
+		Name: "del-me", URL: "https://8.8.4.4/delete", IsActive: true,
 	})
 
 	w := performRequest(router, "DELETE", "/api/v1/webhooks/1", nil)

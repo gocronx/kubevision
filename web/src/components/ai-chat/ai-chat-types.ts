@@ -22,6 +22,20 @@ export interface ChatMessage {
   actionStatus?: ActionStatus
 }
 
+export interface ChatSession {
+  id: string
+  title: string
+  draft: string
+  messages: ChatMessage[]
+  updatedAt: number
+  isRunning: boolean
+}
+
+export interface ChatWorkspace {
+  activeSessionId: string
+  sessions: ChatSession[]
+}
+
 /** What gets sent to the backend as conversation history. */
 export interface APIChatMessage {
   role: "user" | "assistant"
@@ -53,4 +67,8 @@ export interface AIConfigUpdate {
   apiKey: string
   model: string
   maxTokens: number
+}
+
+export interface AIModel {
+  id: string
 }

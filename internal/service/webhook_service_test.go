@@ -84,7 +84,7 @@ func TestWebhookService_CreateAndList(t *testing.T) {
 
 	resp, err := svc.Create(ctx, &WebhookRequest{
 		Name:     "test-hook",
-		URL:      "https://example.com",
+		URL:      "https://8.8.8.8/webhook",
 		Events:   []string{"create", "delete"},
 		IsActive: true,
 	})
@@ -109,18 +109,21 @@ func TestWebhookService_Update(t *testing.T) {
 	svc := NewWebhookService(repo, nil)
 	ctx := context.Background()
 
-	resp, _ := svc.Create(ctx, &WebhookRequest{Name: "hook1", URL: "https://old.com", IsActive: true})
+	resp, err := svc.Create(ctx, &WebhookRequest{Name: "hook1", URL: "https://8.8.8.8/old", IsActive: true})
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
 
 	updated, err := svc.Update(ctx, resp.ID, &WebhookRequest{
 		Name:     "hook1",
-		URL:      "https://new.com",
+		URL:      "https://1.1.1.1/new",
 		IsActive: false,
 	})
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
 	}
-	if updated.URL != "https://new.com" {
-		t.Errorf("expected URL 'https://new.com', got %q", updated.URL)
+	if updated.URL != "https://1.1.1.1/new" {
+		t.Errorf("expected updated URL, got %q", updated.URL)
 	}
 	if updated.IsActive {
 		t.Error("expected IsActive to be false")
@@ -132,7 +135,10 @@ func TestWebhookService_Delete(t *testing.T) {
 	svc := NewWebhookService(repo, nil)
 	ctx := context.Background()
 
-	resp, _ := svc.Create(ctx, &WebhookRequest{Name: "delete-me", URL: "https://del.com"})
+	resp, createErr := svc.Create(ctx, &WebhookRequest{Name: "delete-me", URL: "https://8.8.4.4/delete"})
+	if createErr != nil {
+		t.Fatalf("Create failed: %v", createErr)
+	}
 
 	err := svc.Delete(ctx, resp.ID)
 	if err != nil {

@@ -6,7 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
+import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
 import { useCluster } from "@/hooks/use-cluster"
+import { useAuth } from "@/stores/auth-store"
+import { canAccessAdmin } from "@/lib/permissions"
 import api from "@/lib/api"
 
 // ---------------------------------------------------------------------------
@@ -266,7 +269,7 @@ function QuotaOverviewSkeleton() {
 // Data fetching hook
 // ---------------------------------------------------------------------------
 
-function useQuotaSummary(clusterID: string, namespace: string) {
+function useQuotaSummary(clusterID: string, namespace: string, enabled: boolean) {
   return useQuery<QuotaSummaryResponse>({
     queryKey: ["quota-summary", clusterID, namespace],
     queryFn: async () => {
@@ -275,8 +278,8 @@ function useQuotaSummary(clusterID: string, namespace: string) {
       const res = await api.get(`/clusters/${clusterID}/quota-summary`, { params })
       return res as unknown as QuotaSummaryResponse
     },
-    enabled: !!clusterID,
-    refetchInterval: 30_000,
+    enabled: enabled && !!clusterID,
+    refetchInterval: enabled ? 30_000 : false,
   })
 }
 
@@ -286,13 +289,36 @@ function useQuotaSummary(clusterID: string, namespace: string) {
 
 export function QuotaOverview() {
   const { t } = useTranslation()
-  const { currentCluster } = useCluster()
+  const {
+    currentCluster,
+    selectedCluster,
+    isClusterHealthy,
+    refetchClusters,
+  } = useCluster()
+  const { user } = useAuth()
   const [namespace, setNamespace] = useState("")
 
-  const { data, isLoading, isError, error } = useQuotaSummary(currentCluster, namespace)
+  const { data, isLoading, isError, error } = useQuotaSummary(
+    currentCluster,
+    namespace,
+    isClusterHealthy
+  )
 
   const namespaceSummaries = data?.namespaces ?? []
   const totalQuotas = namespaceSummaries.reduce((acc, ns) => acc + ns.quotas.length, 0)
+
+  if (selectedCluster?.status === "unhealthy") {
+    return (
+      <div className="flex h-full flex-col gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">{t("quota.title")}</h1>
+        <ClusterUnavailable
+          cluster={selectedCluster}
+          onCheckAgain={refetchClusters}
+          canRemove={canAccessAdmin(user?.role ?? "")}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">

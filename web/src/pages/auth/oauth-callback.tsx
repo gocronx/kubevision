@@ -20,8 +20,9 @@ export function OAuthCallbackPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setAuth } = useAuth()
+  const { login } = useAuth()
   const [error, setError] = useState<string | null>(null)
+  const missingParameters = !searchParams.get("code") || !searchParams.get("state")
 
   useEffect(() => {
     const provider = window.location.pathname.split("/").at(-2) ?? ""
@@ -29,7 +30,6 @@ export function OAuthCallbackPage() {
     const state = searchParams.get("state")
 
     if (!code || !state) {
-      setError("Missing OAuth callback parameters")
       return
     }
 
@@ -37,26 +37,21 @@ export function OAuthCallbackPage() {
       .get(`/auth/oauth/${provider}/callback`, { params: { code, state } })
       .then((res) => {
         const data = res as unknown as OAuthCallbackResponse
-        localStorage.setItem("token", data.accessToken)
-        localStorage.setItem("refreshToken", data.refreshToken)
-        setAuth({
-          id: data.user.id,
-          username: data.user.username,
-          role: data.user.role,
-          totpEnabled: data.user.totpEnabled,
-        })
+        login(data.accessToken, data.user, data.refreshToken)
         navigate("/overview", { replace: true })
       })
       .catch(() => {
         setError(t("oauth.callbackError"))
       })
-  }, [searchParams, navigate, setAuth, t])
+  }, [searchParams, navigate, login, t])
 
-  if (error) {
+  const displayedError = missingParameters ? "Missing OAuth callback parameters" : error
+
+  if (displayedError) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="text-destructive">{error}</p>
+          <p className="text-destructive">{displayedError}</p>
           <button
             className="mt-4 text-primary underline"
             onClick={() => navigate("/login")}

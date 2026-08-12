@@ -14,15 +14,16 @@ import (
 
 // Config holds all configuration for the application.
 type Config struct {
-	Server    ServerConfig    `yaml:"server"`
-	Database  DatabaseConfig  `yaml:"database"`
-	Auth      AuthConfig      `yaml:"auth"`
-	Kube      KubeConfig      `yaml:"kubernetes"`
-	WebSocket WebSocketConfig `yaml:"websocket"`
-	Audit     AuditConfig     `yaml:"audit"`
-	OAuth     OAuthConfig     `yaml:"oauth"`
-	Plugins   PluginsConfig   `yaml:"plugins"`
-	EncryptKey string         `yaml:"encrypt_key"`
+	Server     ServerConfig    `yaml:"server"`
+	Database   DatabaseConfig  `yaml:"database"`
+	Auth       AuthConfig      `yaml:"auth"`
+	Kube       KubeConfig      `yaml:"kubernetes"`
+	WebSocket  WebSocketConfig `yaml:"websocket"`
+	Audit      AuditConfig     `yaml:"audit"`
+	OAuth      OAuthConfig     `yaml:"oauth"`
+	Plugins    PluginsConfig   `yaml:"plugins"`
+	Registry   RegistryConfig  `yaml:"registry"`
+	EncryptKey string          `yaml:"encrypt_key"`
 }
 
 // ServerConfig holds HTTP server settings.
@@ -38,9 +39,22 @@ type DatabaseConfig struct {
 
 // AuthConfig holds authentication settings.
 type AuthConfig struct {
-	JWTSecret       string        `yaml:"jwt_secret"`
-	AccessTokenTTL  time.Duration `yaml:"access_token_ttl"`
-	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl"`
+	JWTSecret       string              `yaml:"jwt_secret"`
+	AccessTokenTTL  time.Duration       `yaml:"access_token_ttl"`
+	RefreshTokenTTL time.Duration       `yaml:"refresh_token_ttl"`
+	PublicKey       PublicKeyAuthConfig `yaml:"public_key"`
+}
+
+// PublicKeyAuthConfig defines the stable relying-party security boundary.
+// Changing RPID or Origins can make existing credentials unusable.
+type PublicKeyAuthConfig struct {
+	Enabled          bool          `yaml:"enabled"`
+	RPID             string        `yaml:"rp_id"`
+	RPDisplayName    string        `yaml:"rp_display_name"`
+	Origins          []string      `yaml:"origins"`
+	UserVerification string        `yaml:"user_verification"`
+	CounterPolicy    string        `yaml:"counter_policy"`
+	ChallengeTTL     time.Duration `yaml:"challenge_ttl"`
 }
 
 // KubeConfig holds Kubernetes client settings.
@@ -82,6 +96,21 @@ type PluginEndpoint struct {
 	Token string `yaml:"token"`
 }
 
+// RegistryConfig controls read-only image tag discovery and its outbound boundary.
+type RegistryConfig struct {
+	AllowedRegistries []string      `yaml:"allowed_registries"`
+	AllowedAuthHosts  []string      `yaml:"allowed_auth_hosts"`
+	AllowPrivate      bool          `yaml:"allow_private"`
+	AllowHTTP         bool          `yaml:"allow_http"`
+	ConnectTimeout    time.Duration `yaml:"connect_timeout"`
+	HeaderTimeout     time.Duration `yaml:"response_header_timeout"`
+	TotalTimeout      time.Duration `yaml:"total_timeout"`
+	CacheTTL          time.Duration `yaml:"cache_ttl"`
+	MaxResponseBytes  int64         `yaml:"max_response_bytes"`
+	MaxCacheEntries   int           `yaml:"max_cache_entries"`
+	MaxTagsPerPage    int           `yaml:"max_tags_per_page"`
+}
+
 // WebSocketConfig holds WebSocket settings.
 type WebSocketConfig struct {
 	BroadcastBuffer   int           `yaml:"broadcast_buffer"`
@@ -110,6 +139,12 @@ func Default() *Config {
 			JWTSecret:       "",
 			AccessTokenTTL:  30 * time.Minute,
 			RefreshTokenTTL: 12 * time.Hour,
+			PublicKey: PublicKeyAuthConfig{
+				RPDisplayName:    "KubeVision",
+				UserVerification: "required",
+				CounterPolicy:    "deny",
+				ChallengeTTL:     5 * time.Minute,
+			},
 		},
 		Kube: KubeConfig{
 			Kubeconfig:           "",
@@ -125,6 +160,17 @@ func Default() *Config {
 			RetentionDays: 90,
 			BatchSize:     100,
 			FlushInterval: 5 * time.Second,
+		},
+		Registry: RegistryConfig{
+			AllowedRegistries: []string{"docker.io", "registry-1.docker.io"},
+			AllowedAuthHosts:  []string{"auth.docker.io"},
+			ConnectTimeout:    3 * time.Second,
+			HeaderTimeout:     5 * time.Second,
+			TotalTimeout:      10 * time.Second,
+			CacheTTL:          30 * time.Second,
+			MaxResponseBytes:  2 << 20,
+			MaxCacheEntries:   128,
+			MaxTagsPerPage:    100,
 		},
 		EncryptKey: "",
 	}
@@ -199,7 +245,7 @@ const secretsFile = ".kubevision-secrets.yaml"
 
 // secretsData is the minimal struct written to the secrets file.
 type secretsData struct {
-	Auth       struct {
+	Auth struct {
 		JWTSecret string `yaml:"jwt_secret"`
 	} `yaml:"auth"`
 	EncryptKey string `yaml:"encrypt_key"`
@@ -270,6 +316,29 @@ func applyEnvOverrides(cfg *Config) {
 			cfg.Auth.RefreshTokenTTL = d
 		}
 	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_ENABLED"); v != "" {
+		cfg.Auth.PublicKey.Enabled = strings.EqualFold(v, "true") || v == "1"
+	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_RP_ID"); v != "" {
+		cfg.Auth.PublicKey.RPID = strings.TrimSpace(v)
+	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_RP_NAME"); v != "" {
+		cfg.Auth.PublicKey.RPDisplayName = strings.TrimSpace(v)
+	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_ORIGINS"); v != "" {
+		cfg.Auth.PublicKey.Origins = splitCSV(v)
+	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_UV"); v != "" {
+		cfg.Auth.PublicKey.UserVerification = strings.ToLower(strings.TrimSpace(v))
+	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_COUNTER_POLICY"); v != "" {
+		cfg.Auth.PublicKey.CounterPolicy = strings.ToLower(strings.TrimSpace(v))
+	}
+	if v := os.Getenv("KUBEVISION_PUBLIC_KEY_CHALLENGE_TTL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Auth.PublicKey.ChallengeTTL = d
+		}
+	}
 	if v := os.Getenv("KUBECONFIG"); v != "" {
 		cfg.Kube.Kubeconfig = v
 	}
@@ -310,6 +379,28 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("KUBEVISION_OAUTH_ENABLED"); v != "" {
 		cfg.OAuth.Enabled = strings.EqualFold(v, "true") || v == "1"
 	}
+	if v := os.Getenv("KUBEVISION_REGISTRY_ALLOWED"); v != "" {
+		cfg.Registry.AllowedRegistries = splitCSV(v)
+	}
+	if v := os.Getenv("KUBEVISION_REGISTRY_AUTH_HOSTS"); v != "" {
+		cfg.Registry.AllowedAuthHosts = splitCSV(v)
+	}
+	if v := os.Getenv("KUBEVISION_REGISTRY_ALLOW_PRIVATE"); v != "" {
+		cfg.Registry.AllowPrivate = strings.EqualFold(v, "true") || v == "1"
+	}
+	if v := os.Getenv("KUBEVISION_REGISTRY_ALLOW_HTTP"); v != "" {
+		cfg.Registry.AllowHTTP = strings.EqualFold(v, "true") || v == "1"
+	}
+}
+
+func splitCSV(value string) []string {
+	var result []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 // randomHex returns a random hex string of n bytes (2n hex chars).

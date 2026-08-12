@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import api from "@/lib/api"
+import { readFileAsText } from "@/lib/read-file"
 
 interface AddClusterDialogProps {
   open: boolean
@@ -26,15 +27,14 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState("")
-  const [displayName, setDisplayName] = useState("")
   const [authType, setAuthType] = useState<"kubeconfig" | "in-cluster">("kubeconfig")
   const [kubeconfig, setKubeconfig] = useState("")
+  const [kubeconfigFileName, setKubeconfigFileName] = useState("")
 
   const mutation = useMutation({
     mutationFn: async () => {
       return api.post("/clusters", {
         name,
-        displayName: displayName || undefined,
         authType,
         kubeconfig: authType === "kubeconfig" ? kubeconfig : undefined,
       })
@@ -52,17 +52,29 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
 
   function resetAndClose() {
     setName("")
-    setDisplayName("")
     setAuthType("kubeconfig")
     setKubeconfig("")
+    setKubeconfigFileName("")
+    if (fileInputRef.current) fileInputRef.current.value = ""
     onOpenChange(false)
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const text = await file.text()
-    setKubeconfig(text)
+    try {
+      const text = await readFileAsText(file)
+      if (!text.trim()) {
+        toast.error(t("cluster.file_empty"))
+        return
+      }
+      setKubeconfig(text)
+      setKubeconfigFileName(file.name)
+    } catch {
+      toast.error(t("cluster.file_read_error"))
+    } finally {
+      e.target.value = ""
+    }
   }
 
   return (
@@ -89,16 +101,6 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
               placeholder="e.g. production"
               value={name}
               onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="cluster-display-name">{t("cluster.display_name")}</Label>
-            <Input
-              id="cluster-display-name"
-              placeholder="e.g. Production Cluster"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
             />
           </div>
 
@@ -147,16 +149,17 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".yaml,.yml,.conf,*"
                   className="hidden"
+                  aria-label={t("cluster.upload_file")}
                   onChange={handleFileUpload}
                 />
-                {kubeconfig && (
-                  <span className="text-xs text-muted-foreground">
-                    {t("cluster.file_loaded")}
+                {kubeconfigFileName && (
+                  <span className="min-w-0 truncate text-xs text-muted-foreground" title={kubeconfigFileName}>
+                    {t("cluster.file_loaded", { name: kubeconfigFileName })}
                   </span>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground">{t("cluster.file_hint")}</p>
               <Textarea
                 id="cluster-kubeconfig"
                 className="min-h-[120px] font-mono text-xs"

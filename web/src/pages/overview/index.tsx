@@ -14,8 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { LucideIcon } from "lucide-react"
 import { useCluster } from "@/hooks/use-cluster"
 import { AddClusterDialog } from "@/components/shared/add-cluster-dialog"
+import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
 import { useState } from "react"
 import api from "@/lib/api"
+import { useAuth } from "@/stores/auth-store"
+import { canAccessAdmin } from "@/lib/permissions"
 
 // ---------------------------------------------------------------------------
 // API types
@@ -91,15 +94,15 @@ interface OverviewData {
 // Data fetching hook
 // ---------------------------------------------------------------------------
 
-function useOverview(clusterID: string, refetchInterval: number | false) {
+function useOverview(clusterID: string, enabled: boolean, refetchInterval: number | false) {
   return useQuery<OverviewData>({
     queryKey: ["overview", clusterID],
     queryFn: async () => {
       const res = await api.get(`/clusters/${clusterID}/overview`)
       return res as unknown as OverviewData
     },
-    enabled: !!clusterID,
-    refetchInterval,
+    enabled: enabled && !!clusterID,
+    refetchInterval: enabled ? refetchInterval : false,
   })
 }
 
@@ -700,10 +703,22 @@ function OverviewSkeleton() {
 
 export function OverviewPage() {
   const { t } = useTranslation()
-  const { currentCluster, clusters, isLoading: clustersLoading } = useCluster()
+  const {
+    currentCluster,
+    clusters,
+    selectedCluster,
+    isClusterHealthy,
+    isLoading: clustersLoading,
+    refetchClusters,
+  } = useCluster()
+  const { user } = useAuth()
   const [refreshInterval, setRefreshInterval] = useState<string>("30000")
   const interval = refreshInterval === "0" ? false as const : Number(refreshInterval)
-  const { data, isLoading, isError, error, refetch, isFetching } = useOverview(currentCluster, interval)
+  const { data, isLoading, isError, error, refetch, isFetching } = useOverview(
+    currentCluster,
+    isClusterHealthy,
+    interval
+  )
   const [showAddCluster, setShowAddCluster] = useState(false)
 
   const noClusters = !clustersLoading && clusters.length === 0
@@ -712,7 +727,7 @@ export function OverviewPage() {
     <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between">
         <h1 className="text-lg font-bold tracking-tight">{t("overview.title")}</h1>
-        {!noClusters && !clustersLoading && (
+        {!noClusters && !clustersLoading && isClusterHealthy && (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -760,6 +775,12 @@ export function OverviewPage() {
           </Card>
           <AddClusterDialog open={showAddCluster} onOpenChange={setShowAddCluster} />
         </>
+      ) : selectedCluster?.status === "unhealthy" ? (
+        <ClusterUnavailable
+          cluster={selectedCluster}
+          onCheckAgain={refetchClusters}
+          canRemove={canAccessAdmin(user?.role ?? "")}
+        />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           {isError && (

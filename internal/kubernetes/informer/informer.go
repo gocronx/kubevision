@@ -27,7 +27,7 @@ type EventListener interface {
 
 // ResourceEvent represents a single Kubernetes resource change event.
 type ResourceEvent struct {
-	Type      string                 `json:"type"`                // ADDED | MODIFIED | DELETED
+	Type      string                 `json:"type"` // ADDED | MODIFIED | DELETED
 	ClusterID string                 `json:"clusterId"`
 	Resource  string                 `json:"resource"`
 	Namespace string                 `json:"namespace"`
@@ -41,6 +41,27 @@ type clusterRuntime struct {
 	cancel   context.CancelFunc
 	synced   bool
 	lastSync time.Time
+}
+
+type cacheSyncResult struct {
+	canceled  bool
+	allSynced bool
+	failed    []schema.GroupVersionResource
+}
+
+func summarizeCacheSync(ctx context.Context, syncs map[schema.GroupVersionResource]bool) cacheSyncResult {
+	if ctx.Err() != nil {
+		return cacheSyncResult{canceled: true}
+	}
+
+	result := cacheSyncResult{allSynced: true}
+	for gvr, synced := range syncs {
+		if !synced {
+			result.allSynced = false
+			result.failed = append(result.failed, gvr)
+		}
+	}
+	return result
 }
 
 // Manager sets up and manages Kubernetes shared informers for real-time
@@ -127,26 +148,29 @@ func (m *Manager) StartForCluster(
 		)
 
 		syncs := factory.WaitForCacheSync(ctx.Done())
+		result := summarizeCacheSync(ctx, syncs)
+		if result.canceled {
+			m.logger.Info("informer cache sync stopped",
+				zap.String("cluster", clusterID),
+			)
+			return
+		}
 
-		allSynced := true
-		for gvr, synced := range syncs {
-			if !synced {
-				allSynced = false
-				m.logger.Warn("informer cache sync failed",
-					zap.String("cluster", clusterID),
-					zap.String("resource", gvr.Resource),
-				)
-			}
+		for _, gvr := range result.failed {
+			m.logger.Warn("informer cache sync failed",
+				zap.String("cluster", clusterID),
+				zap.String("resource", gvr.Resource),
+			)
 		}
 
 		m.mu.Lock()
 		if rt, ok := m.clusters[clusterID]; ok {
-			rt.synced = allSynced
+			rt.synced = result.allSynced
 			rt.lastSync = time.Now()
 		}
 		m.mu.Unlock()
 
-		if allSynced {
+		if result.allSynced {
 			m.logger.Info("informer cache synced",
 				zap.String("cluster", clusterID),
 			)

@@ -32,6 +32,8 @@ import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
 import { useTemplates, type Template } from "@/hooks/use-templates"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
+import { canAccessAdmin } from "@/lib/permissions"
 
 type K8sItem = Record<string, unknown>
 
@@ -43,7 +45,13 @@ export function ResourceListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { currentCluster, clusters } = useCluster()
+  const {
+    currentCluster,
+    clusters,
+    selectedCluster,
+    isClusterHealthy,
+    refetchClusters,
+  } = useCluster()
   const { user } = useAuth()
   const userCanMutate = canMutateResources(user?.role ?? "")
 
@@ -74,12 +82,12 @@ export function ResourceListPage() {
   const { data: favorites = [] } = useFavorites()
 
   const config = resourceUIConfig[resource]
-  const displayName = config?.displayName ?? resource
+  const displayName = t(`resourceTypes.${resource}`, { defaultValue: config?.displayName ?? resource })
   const namespaced = isNamespaced(resource)
 
   const { data, isLoading } = useResourceList(currentCluster, resource, {
     namespace: namespaced ? namespace : undefined,
-    enabled: !!currentCluster,
+    enabled: !!currentCluster && isClusterHealthy,
   })
 
   const createMutation = useCreateResource(currentCluster, resource)
@@ -120,10 +128,10 @@ export function ResourceListPage() {
     try {
       return JSON.parse(createYaml)
     } catch {
-      toast.error("Invalid JSON. Please provide valid resource JSON.")
+      toast.error(t("resource.invalidJson"))
       return null
     }
-  }, [createYaml])
+  }, [createYaml, t])
 
   // "Preview Changes" — run dry-run, then open the preview dialog.
   const handlePreviewCreate = useCallback(() => {
@@ -162,7 +170,7 @@ export function ResourceListPage() {
       { namespace: ns, body },
       {
         onSuccess: () => {
-          toast.success("Resource created successfully")
+          toast.success(t("resource.createdToast"))
           setDryRunDialogOpen(false)
           setCreateDialogOpen(false)
           setCreateYaml("")
@@ -170,7 +178,7 @@ export function ResourceListPage() {
         },
       }
     )
-  }, [parseCreateBody, namespace, createMutation, dryRunCreateMutation])
+  }, [parseCreateBody, namespace, createMutation, dryRunCreateMutation, t])
 
   // "Create" directly (bypass the dry-run preview).
   const handleCreate = useCallback(() => {
@@ -185,13 +193,13 @@ export function ResourceListPage() {
       { namespace: ns, body },
       {
         onSuccess: () => {
-          toast.success("Resource created successfully")
+          toast.success(t("resource.createdToast"))
           setCreateDialogOpen(false)
           setCreateYaml("")
         },
       }
     )
-  }, [parseCreateBody, namespace, createMutation])
+  }, [parseCreateBody, namespace, createMutation, t])
 
   // Batch selection helpers
   const selectedItems = useMemo(() => {
@@ -278,7 +286,7 @@ export function ResourceListPage() {
 
     const mapped: DataTableColumn<K8sItem>[] = [...leadingCols, ...cols.map((col) => ({
       key: col.key,
-      label: col.label,
+      label: t(`resourceColumns.${col.key}`, { defaultValue: col.label }),
       sortable: col.sortable,
       render: (item: K8sItem) => {
         const value = extractColumnValue(resource, item, col.key)
@@ -354,12 +362,25 @@ export function ResourceListPage() {
     })
 
     return mapped
-  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect, userCanMutate, favorites])
+  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect, userCanMutate, favorites, navigate])
 
   const getRowKey = useCallback((item: K8sItem) => {
     const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
     return meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
   }, [])
+
+  if (selectedCluster?.status === "unhealthy") {
+    return (
+      <div className="flex h-full flex-col gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+        <ClusterUnavailable
+          cluster={selectedCluster}
+          onCheckAgain={refetchClusters}
+          canRemove={canAccessAdmin(user?.role ?? "")}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -402,7 +423,7 @@ export function ResourceListPage() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder={`${t("common.search")} ${displayName.toLowerCase()}...`}
+            placeholder={t("resource.searchPlaceholder", { type: displayName })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -454,11 +475,11 @@ export function ResourceListPage() {
       >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create {config?.displayName ?? resource}</DialogTitle>
+            <DialogTitle>{t("resource.createTitle", { type: displayName })}</DialogTitle>
             <DialogDescription>
               {resourceTemplates.length > 0
-                ? "Select a template to get started, or paste your own JSON."
-                : "Paste the resource JSON below. Use \"Preview Changes\" to validate against the API server before applying."}
+                ? t("resource.createWithTemplate")
+                : t("resource.createDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -475,7 +496,7 @@ export function ResourceListPage() {
                   {tmpl.name}
                   {tmpl.isBuiltin && (
                     <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                      built-in
+                      {t("resource.builtIn")}
                     </Badge>
                   )}
                 </button>
@@ -512,7 +533,7 @@ export function ResourceListPage() {
                 !createYaml.trim()
               }
             >
-              {dryRunCreateMutation.isPending ? t("common.loading") : "Preview Changes"}
+              {dryRunCreateMutation.isPending ? t("common.loading") : t("resource.previewChanges")}
             </Button>
             <Button
               onClick={handleCreate}
@@ -539,7 +560,7 @@ export function ResourceListPage() {
         }}
         dryRunResult={dryRunCreateMutation.data}
         isLoading={dryRunCreateMutation.isPending}
-        title={`Preview Create: ${config?.displayName ?? resource}`}
+        title={t("resource.previewCreate", { type: displayName })}
         operation="create"
         onApply={handleApplyCreate}
         isApplying={createMutation.isPending}

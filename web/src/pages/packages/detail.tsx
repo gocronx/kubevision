@@ -1,0 +1,31 @@
+import { useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { RotateCcw, Trash2 } from "lucide-react"
+import { useCluster } from "@/hooks/use-cluster"
+import { usePackageHistory, usePackageRelease, usePackageRemove, usePackageRollback } from "@/hooks/use-package-releases"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+
+export function PackageReleaseDetailPage() {
+  const { t, i18n } = useTranslation()
+  const { namespace = "", name = "" } = useParams(); const { currentCluster } = useCluster(); const navigate = useNavigate()
+  const release = usePackageRelease(currentCluster, namespace, name); const history = usePackageHistory(currentCluster, namespace, name)
+  const rollback = usePackageRollback(currentCluster, namespace, name); const remove = usePackageRemove(currentCluster, namespace, name)
+  const [rollbackOpen, setRollbackOpen] = useState(false); const [removeOpen, setRemoveOpen] = useState(false); const [revision, setRevision] = useState(""); const [confirmation, setConfirmation] = useState(""); const [keepHistory, setKeepHistory] = useState(false)
+  const item = release.data
+  return <div className="mx-auto w-full max-w-7xl space-y-5 p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-semibold">{name}</h1><p className="text-sm text-muted-foreground">{namespace} · {item?.chart} {item?.chartVersion} · {t("packages.revisionValue", { revision: item?.revision })}</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => setRollbackOpen(true)}><RotateCcw className="size-4" />{t("packages.rollback")}</Button><Button variant="destructive" onClick={() => setRemoveOpen(true)}><Trash2 className="size-4" />{t("packages.remove")}</Button></div></div>
+    <Tabs defaultValue="overview"><TabsList><TabsTrigger value="overview">{t("common.overview")}</TabsTrigger><TabsTrigger value="history">{t("packages.history")}</TabsTrigger><TabsTrigger value="values">{t("packages.values")}</TabsTrigger><TabsTrigger value="resources">{t("packages.resources")}</TabsTrigger><TabsTrigger value="notes">{t("packages.notes")}</TabsTrigger></TabsList>
+      <TabsContent value="overview" className="grid gap-3 py-4 sm:grid-cols-2 lg:grid-cols-4"><Metric label={t("common.status")} value={item?.status} /><Metric label={t("packages.appVersion")} value={item?.appVersion} /><Metric label={t("packages.chartVersion")} value={item?.chartVersion} /><Metric label={t("packages.updated")} value={item?.updatedAt ? new Date(item.updatedAt).toLocaleString(i18n.language) : "-"} /></TabsContent>
+      <TabsContent value="history" className="py-4"><div className="overflow-hidden rounded-md border">{history.data?.map((entry) => <button className="flex w-full items-center justify-between border-b p-3 text-left last:border-0 hover:bg-muted/30" key={entry.revision} onClick={() => { setRevision(String(entry.revision)); setRollbackOpen(true) }}><span>{t("packages.revisionValue", { revision: entry.revision })} · {entry.chartVersion}</span><span className="text-muted-foreground">{entry.status}</span></button>)}</div></TabsContent>
+      <TabsContent value="values"><pre className="max-h-[60vh] overflow-auto rounded-md border bg-muted/30 p-4 text-xs">{JSON.stringify(item?.values ?? {}, null, 2)}</pre></TabsContent>
+      <TabsContent value="resources"><div className="overflow-hidden rounded-md border">{item?.resources?.map((resource) => <div className="flex justify-between border-b p-3 text-sm last:border-0" key={`${resource.kind}/${resource.namespace}/${resource.name}`}><span>{resource.kind}/{resource.name}</span><span className="text-muted-foreground">{resource.namespace || t("packages.clusterScoped")}</span></div>)}</div></TabsContent>
+      <TabsContent value="notes"><pre className="whitespace-pre-wrap rounded-md border p-4 text-sm">{item?.notes || t("packages.noNotes")}</pre></TabsContent></Tabs>
+    <Dialog open={rollbackOpen} onOpenChange={setRollbackOpen}><DialogContent><DialogHeader><DialogTitle>{t("packages.rollbackTitle")}</DialogTitle></DialogHeader><Input type="number" min={1} placeholder={t("packages.targetRevision")} value={revision} onChange={(e) => setRevision(e.target.value)} /><DialogFooter><Button variant="outline" onClick={() => setRollbackOpen(false)}>{t("common.cancel")}</Button><Button disabled={!revision || rollback.isPending} onClick={() => rollback.mutate(Number(revision), { onSuccess: () => { setRollbackOpen(false); release.refetch(); history.refetch() } })}>{t("packages.rollback")}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={removeOpen} onOpenChange={setRemoveOpen}><DialogContent><DialogHeader><DialogTitle>{t("packages.removeTitle", { name })}</DialogTitle></DialogHeader><Input placeholder={t("packages.confirmPlaceholder", { name })} value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={keepHistory} onChange={(e) => setKeepHistory(e.target.checked)} />{t("packages.keepHistory")}</label><DialogFooter><Button variant="outline" onClick={() => setRemoveOpen(false)}>{t("common.cancel")}</Button><Button variant="destructive" disabled={confirmation !== name || remove.isPending} onClick={() => remove.mutate({ confirmation, keepHistory }, { onSuccess: () => navigate("/package-releases") })}>{t("packages.remove")}</Button></DialogFooter></DialogContent></Dialog>
+  </div>
+}
+
+function Metric({ label, value }: { label: string; value?: string }) { return <div className="border-l-2 border-green-600 px-3 py-2"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 text-sm font-medium">{value || "-"}</div></div> }

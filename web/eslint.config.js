@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -18,6 +18,19 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+  },
+  {
+    // Provider modules intentionally export their context hook alongside the
+    // component so consumers share one context instance.
+    files: [
+      'src/components/appearance-provider.tsx',
+      'src/components/color-theme-provider.tsx',
+      'src/components/font-provider.tsx',
+      'src/components/sidebar-config-provider.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])

@@ -20,8 +20,8 @@ func TestHashPassword(t *testing.T) {
 		if err != nil {
 			t.Fatalf("hash is not valid bcrypt: %v", err)
 		}
-		if cost != bcrypt.DefaultCost {
-			t.Errorf("expected cost %d, got %d", bcrypt.DefaultCost, cost)
+		if cost != bcryptCost {
+			t.Errorf("expected cost %d, got %d", bcryptCost, cost)
 		}
 	})
 

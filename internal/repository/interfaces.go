@@ -142,6 +142,24 @@ type UserRepo interface {
 	List(ctx context.Context) ([]model.User, error)
 }
 
+// DirectoryUserRepo is the user-store surface required by directory identity
+// reconciliation. It stays separate so unrelated service mocks remain small.
+type DirectoryUserRepo interface {
+	Create(ctx context.Context, user *model.User) error
+	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByDirectoryID(ctx context.Context, directoryID string) (*model.User, error)
+	ListByAuthProvider(ctx context.Context, provider string) ([]model.User, error)
+	Update(ctx context.Context, user *model.User) error
+}
+
+// DirectoryRepo persists the directory provider and its ordered role mappings.
+type DirectoryRepo interface {
+	GetConfig(ctx context.Context) (*model.DirectoryConfig, error)
+	SaveConfig(ctx context.Context, cfg *model.DirectoryConfig, mappings []model.DirectoryRoleMapping) error
+	ListMappings(ctx context.Context) ([]model.DirectoryRoleMapping, error)
+}
+
 // ClusterRepo handles cluster record CRUD in the database.
 type ClusterRepo interface {
 	Create(ctx context.Context, cluster *model.Cluster) error

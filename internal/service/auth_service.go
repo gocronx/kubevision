@@ -59,7 +59,11 @@ type AuthService struct {
 	jwtManager *auth.JWTManager
 	cfg        *config.Config
 	logger     *zap.Logger
+	directory  *DirectoryService
 }
+
+// SetDirectoryService enables the optional directory login provider.
+func (s *AuthService) SetDirectoryService(directory *DirectoryService) { s.directory = directory }
 
 // NewAuthService creates a new AuthService with the given dependencies.
 func NewAuthService(userRepo repository.UserRepo, jwtManager *auth.JWTManager, cfg *config.Config, logger *zap.Logger) *AuthService {
@@ -116,6 +120,30 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
 	return &LoginResult{FullTokens: tokens}, nil
 }
 
+// LoginDirectory authenticates through the configured directory provider, then
+// follows the same active-user, 2FA, and token issuance path as local login.
+func (s *AuthService) LoginDirectory(ctx context.Context, username, password string) (*LoginResult, error) {
+	if s.directory == nil {
+		return nil, bizerr.New(bizerr.CodeUnauthorized, "invalid username or password")
+	}
+	user, err := s.directory.Authenticate(ctx, username, password)
+	if err != nil {
+		return nil, err
+	}
+	if user.TOTPEnabled {
+		tempToken, err := s.jwtManager.GenerateTempToken(user.ID)
+		if err != nil {
+			return nil, bizerr.New(bizerr.CodeInternal, "failed to generate temp token")
+		}
+		return &LoginResult{TwoFARequired: &Login2FARequiredResponse{TempToken: tempToken}}, nil
+	}
+	tokens, err := s.buildLoginResponse(user)
+	if err != nil {
+		return nil, err
+	}
+	return &LoginResult{FullTokens: tokens}, nil
+}
+
 // RefreshToken validates a refresh token and returns a new token pair.
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*LoginResponse, error) {
 	// Parse the refresh token to extract user ID and token version.
@@ -132,6 +160,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 
 	if !user.IsActive {
 		return nil, bizerr.New(bizerr.CodeForbidden, "account is disabled")
+	}
+	if user.AuthProvider == "directory" && s.directory != nil {
+		if err := s.directory.RefreshUser(ctx, user); err != nil {
+			return nil, bizerr.New(bizerr.CodeTokenExpired, "directory session must be renewed")
+		}
 	}
 
 	// Verify the token version matches the stored version.
@@ -392,4 +425,22 @@ func (s *AuthService) buildLoginResponse(user *model.User) (*LoginResponse, erro
 			TOTPEnabled: user.TOTPEnabled,
 		},
 	}, nil
+}
+
+// IssueLoginForUser reuses the normal session issuance path after another
+// authentication method has established the user's identity.
+func (s *AuthService) IssueLoginForUser(ctx context.Context, userID uint) (*LoginResponse, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, bizerr.New(bizerr.CodeUnauthorized, "authentication failed")
+	}
+	if !user.IsActive {
+		return nil, bizerr.New(bizerr.CodeForbidden, "account is disabled")
+	}
+	now := time.Now()
+	user.LastLoginAt = &now
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		s.logger.Warn("failed to update last login time", zap.Uint("user_id", user.ID), zap.Error(err))
+	}
+	return s.buildLoginResponse(user)
 }

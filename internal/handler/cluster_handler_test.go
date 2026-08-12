@@ -61,14 +61,13 @@ func setupClusterHandler(t *testing.T) (*ClusterHandler, *gorm.DB) {
 }
 
 // seedCluster inserts a cluster directly into the database for testing.
-func seedCluster(t *testing.T, db *gorm.DB, name, displayName string) *model.Cluster {
+func seedCluster(t *testing.T, db *gorm.DB, name string) *model.Cluster {
 	t.Helper()
 	c := &model.Cluster{
-		Name:        name,
-		DisplayName: displayName,
-		AuthType:    "kubeconfig",
-		Status:      "healthy",
-		APIServer:   "https://test:6443",
+		Name:      name,
+		AuthType:  "kubeconfig",
+		Status:    "healthy",
+		APIServer: "https://test:6443",
 	}
 	err := db.Create(c).Error
 	require.NoError(t, err)
@@ -107,8 +106,8 @@ func TestClusterHandler_List_ReturnsClusters(t *testing.T) {
 	handler, db := setupClusterHandler(t)
 
 	// Seed some clusters directly in the DB.
-	seedCluster(t, db, "prod", "Production")
-	seedCluster(t, db, "staging", "Staging")
+	seedCluster(t, db, "prod")
+	seedCluster(t, db, "staging")
 
 	router := gin.New()
 	router.GET("/api/v1/clusters", handler.List)
@@ -197,7 +196,7 @@ func TestClusterHandler_Create_DuplicateName(t *testing.T) {
 	handler, db := setupClusterHandler(t)
 
 	// Seed a cluster with the name we will try to create.
-	seedCluster(t, db, "existing-cluster", "Existing")
+	seedCluster(t, db, "existing-cluster")
 
 	router := gin.New()
 	router.POST("/api/v1/clusters", handler.Create)
@@ -221,7 +220,7 @@ func TestClusterHandler_Create_DuplicateName(t *testing.T) {
 func TestClusterHandler_Delete_ValidCluster(t *testing.T) {
 	handler, db := setupClusterHandler(t)
 
-	c := seedCluster(t, db, "delete-me", "Delete Me")
+	c := seedCluster(t, db, "delete-me")
 
 	router := gin.New()
 	router.DELETE("/api/v1/clusters/:id", handler.Delete)
@@ -276,7 +275,7 @@ func TestClusterHandler_Delete_InvalidID(t *testing.T) {
 func TestClusterHandler_Get_ValidCluster(t *testing.T) {
 	handler, db := setupClusterHandler(t)
 
-	c := seedCluster(t, db, "get-me", "Get Me")
+	c := seedCluster(t, db, "get-me")
 
 	router := gin.New()
 	router.GET("/api/v1/clusters/:id", handler.Get)
@@ -294,7 +293,6 @@ func TestClusterHandler_Get_ValidCluster(t *testing.T) {
 	err = json.Unmarshal(resp.Data, &clusterResp)
 	require.NoError(t, err)
 	assert.Equal(t, "get-me", clusterResp.Name)
-	assert.Equal(t, "Get Me", clusterResp.DisplayName)
 	assert.Equal(t, "healthy", clusterResp.Status)
 }
 
@@ -317,8 +315,8 @@ func TestClusterHandler_Get_NonExistent(t *testing.T) {
 func TestClusterHandler_Delete_ThenListExcludes(t *testing.T) {
 	handler, db := setupClusterHandler(t)
 
-	c1 := seedCluster(t, db, "keep", "Keep")
-	seedCluster(t, db, "remove", "Remove")
+	c1 := seedCluster(t, db, "keep")
+	seedCluster(t, db, "remove")
 
 	router := gin.New()
 	router.GET("/api/v1/clusters", handler.List)

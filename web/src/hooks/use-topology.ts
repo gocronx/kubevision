@@ -21,7 +21,7 @@ export interface TopologyData {
   edges: TopologyEdge[]
 }
 
-export function useTopology(clusterID: string, namespace: string) {
+export function useTopology(clusterID: string, namespace: string, enabled = true) {
   return useQuery<TopologyData>({
     queryKey: ["topology", clusterID, namespace],
     queryFn: async () => {
@@ -30,7 +30,7 @@ export function useTopology(clusterID: string, namespace: string) {
       )
       return res as unknown as TopologyData
     },
-    enabled: !!clusterID && !!namespace,
-    refetchInterval: 30000,
+    enabled: enabled && !!clusterID && !!namespace,
+    refetchInterval: enabled ? 30000 : false,
   })
 }

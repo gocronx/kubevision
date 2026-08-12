@@ -42,7 +42,10 @@ func (r *clusterRepo) Update(ctx context.Context, cluster *model.Cluster) error 
 }
 
 func (r *clusterRepo) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&model.Cluster{}, id).Error
+	// A cluster record is a removable connection registration, not retained
+	// domain data. Hard deletion releases the unique name and removes encrypted
+	// credentials so the cluster can later be imported again.
+	return r.db.WithContext(ctx).Unscoped().Delete(&model.Cluster{}, id).Error
 }
 
 func (r *clusterRepo) List(ctx context.Context) ([]model.Cluster, error) {
