@@ -48,6 +48,7 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
   const [apiKey, setApiKey] = useState("")
   const [maxTokens, setMaxTokens] = useState(config.maxTokens)
   const [modelSearch, setModelSearch] = useState("")
+  const [modelPickerOpen, setModelPickerOpen] = useState(false)
 
   const models = Array.from(new Set((discoverModels.data ?? []).map((item) => item.id)))
     .filter(Boolean)
@@ -62,6 +63,8 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
       { baseURL: baseURL.trim(), apiKey: apiKey.trim() },
       {
         onSuccess: (items) => {
+          setModelPickerOpen(items.length > 0)
+          setModelSearch("")
           if (items.length === 0) toast.info(t("ai.modelsEmpty"))
           else toast.success(t("ai.modelsFound", { count: items.length }))
         },
@@ -75,6 +78,8 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
       {
         onSuccess: () => {
           setApiKey("")
+          setModelPickerOpen(false)
+          setModelSearch("")
           toast.success(t("ai.saved"))
         },
       }
@@ -149,7 +154,7 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">{t("ai.modelHint")}</p>
-            {models.length > 0 && (
+            {modelPickerOpen && models.length > 0 && (
               <div className="overflow-hidden rounded-md border">
                 <div className="relative border-b">
                   <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -169,7 +174,11 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
                       type="button"
                       role="option"
                       aria-selected={model === item}
-                      onClick={() => setModel(item)}
+                      onClick={() => {
+                        setModel(item)
+                        setModelPickerOpen(false)
+                        setModelSearch("")
+                      }}
                       className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
                     >
                       <Check className={`size-4 ${model === item ? "opacity-100" : "opacity-0"}`} />

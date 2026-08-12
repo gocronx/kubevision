@@ -135,22 +135,26 @@ type UserClusterRole struct {
 
 // AuditLog 审计日志
 type AuditLog struct {
-	ID          uint      `gorm:"primarykey;autoIncrement" json:"id"`
-	CreatedAt   time.Time `gorm:"index" json:"createdAt"`
-	UserID      uint      `json:"userId"`
-	Username    string    `gorm:"size:64" json:"username"`
-	Action      string    `gorm:"size:32;index" json:"action"` // create|update|delete|exec
-	Resource    string    `gorm:"size:64" json:"resource"`
-	Name        string    `gorm:"size:256" json:"name"`
-	Namespace   string    `gorm:"size:64" json:"namespace"`
-	Cluster     string    `gorm:"size:64" json:"cluster"`
-	StatusCode  int       `json:"statusCode"`
-	DurationMs  int64     `json:"durationMs"`
-	Method      string    `gorm:"size:8" json:"method,omitempty"`
-	Port        string    `gorm:"size:64" json:"port,omitempty"`
-	Path        string    `gorm:"size:1024" json:"path,omitempty"`
-	ClientIP    string    `gorm:"size:64" json:"clientIp"`
-	RequestBody string    `gorm:"type:text" json:"-"` // ≤4KB
+	ID            uint      `gorm:"primarykey;autoIncrement" json:"id"`
+	CreatedAt     time.Time `gorm:"index" json:"createdAt"`
+	UserID        uint      `json:"userId"`
+	Username      string    `gorm:"size:64" json:"username"`
+	Action        string    `gorm:"size:32;index" json:"action"` // create|update|delete|exec
+	Resource      string    `gorm:"size:64" json:"resource"`
+	Name          string    `gorm:"size:256" json:"name"`
+	Namespace     string    `gorm:"size:64" json:"namespace"`
+	Cluster       string    `gorm:"size:64" json:"cluster"`
+	StatusCode    int       `json:"statusCode"`
+	DurationMs    int64     `json:"durationMs"`
+	Method        string    `gorm:"size:8" json:"method,omitempty"`
+	Port          string    `gorm:"size:64" json:"port,omitempty"`
+	Path          string    `gorm:"size:1024" json:"path,omitempty"`
+	ClientIP      string    `gorm:"size:64" json:"clientIp"`
+	Source        string    `gorm:"size:32;index" json:"source"` // http|ai-assistant
+	Tool          string    `gorm:"size:64" json:"tool,omitempty"`
+	CorrelationID string    `gorm:"size:64;index" json:"correlationId,omitempty"`
+	Outcome       string    `gorm:"size:32;index" json:"outcome"` // succeeded|failed|denied
+	RequestBody   string    `gorm:"type:text" json:"-"`           // ≤4KB
 }
 
 // APIKey API密钥

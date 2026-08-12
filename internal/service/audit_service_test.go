@@ -122,3 +122,21 @@ func TestAuditService_RecordNonBlocking(t *testing.T) {
 		t.Fatal("Record blocked — should silently drop when channel is full")
 	}
 }
+
+func TestAuditService_RecordDisabledIsNoop(t *testing.T) {
+	repo := newMockAuditRepo()
+	svc := NewAuditService(repo, config.AuditConfig{}, zap.NewNop())
+	svc.Record(model.AuditLog{Action: "delete"})
+	if repo.count() != 0 || len(svc.logCh) != 0 {
+		t.Fatal("disabled audit service must not retain entries")
+	}
+}
+
+func TestAuditService_RecordSyncPersistsImmediately(t *testing.T) {
+	repo := newMockAuditRepo()
+	svc := NewAuditService(repo, config.AuditConfig{Enabled: true, Sync: true}, zap.NewNop())
+	svc.Record(model.AuditLog{Action: "delete"})
+	if repo.count() != 1 {
+		t.Fatalf("sync audit count = %d, want 1", repo.count())
+	}
+}

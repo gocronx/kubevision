@@ -192,7 +192,10 @@ func (h *AIHandler) Chat(c *gin.Context) {
 
 	params := ai.ChatParams{
 		ClusterID: req.ClusterID,
+		UserID:    middleware.GetUserID(c),
+		Username:  middleware.GetUsername(c),
 		UserRole:  middleware.GetUserRole(c),
+		ClientIP:  c.ClientIP(),
 		History:   history,
 	}
 	if req.PageContext != nil {
@@ -224,7 +227,10 @@ func (h *AIHandler) ContinueAction(c *gin.Context) {
 	}
 
 	emit := newSSEWriter(c)
-	h.svc.ContinueAction(c.Request.Context(), req.SessionID, emit)
+	h.svc.ContinueAction(c.Request.Context(), req.SessionID, ai.Actor{
+		UserID: middleware.GetUserID(c), Username: middleware.GetUsername(c),
+		Role: middleware.GetUserRole(c), ClientIP: c.ClientIP(),
+	}, emit)
 }
 
 // newSSEWriter prepares the response for Server-Sent Events and returns an emit

@@ -191,6 +191,7 @@ func main() {
 		resourceRegistry,
 		roleRepo,
 		pluginService.GetPrometheus,
+		auditService,
 	)
 
 	// Start periodic CRD discovery in the background.

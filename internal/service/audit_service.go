@@ -47,6 +47,17 @@ func NewAuditService(repo repository.AuditRepo, cfg config.AuditConfig, logger *
 // internal buffer is full the entry is silently dropped rather than blocking
 // the request path.
 func (s *AuditService) Record(log model.AuditLog) {
+	if !s.cfg.Enabled {
+		return
+	}
+	if s.cfg.Sync {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := s.repo.BatchCreate(ctx, []model.AuditLog{log}); err != nil {
+			s.logger.Error("failed to persist audit log", zap.Error(err))
+		}
+		return
+	}
 	select {
 	case s.logCh <- log:
 	default:
@@ -88,7 +99,11 @@ func (s *AuditService) flushLoop() {
 	ticker := time.NewTicker(flushInterval)
 	defer ticker.Stop()
 
-	batch := make([]model.AuditLog, 0, auditBatchSize)
+	batchSize := s.cfg.BatchSize
+	if batchSize <= 0 {
+		batchSize = auditBatchSize
+	}
+	batch := make([]model.AuditLog, 0, batchSize)
 
 	flush := func() {
 		if len(batch) == 0 {
@@ -110,7 +125,7 @@ func (s *AuditService) flushLoop() {
 				return
 			}
 			batch = append(batch, entry)
-			if len(batch) >= auditBatchSize {
+			if len(batch) >= batchSize {
 				flush()
 			}
 

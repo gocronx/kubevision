@@ -123,6 +123,7 @@ type AuditConfig struct {
 	RetentionDays int           `yaml:"retention_days"`
 	BatchSize     int           `yaml:"batch_size"`
 	FlushInterval time.Duration `yaml:"flush_interval"`
+	Sync          bool          `yaml:"sync"`
 }
 
 // Default returns a Config populated with sane defaults.

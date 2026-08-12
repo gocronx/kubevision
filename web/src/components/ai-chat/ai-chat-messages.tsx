@@ -5,10 +5,12 @@ import {
   ArrowDown,
   Check,
   ChevronRight,
+  Copy,
   Loader2,
   Wrench,
   X,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -180,12 +182,32 @@ function ToolActivity({ message }: { message: ChatMessage }) {
 }
 
 function TextMessage({ message }: { message: ChatMessage }) {
+  const { t } = useTranslation()
   const isUser = message.role === "user"
+  const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+  }, [])
+
+  const copyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      toast.success(t("ai.copiedMessage"))
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error(t("ai.copyMessageFailed"))
+    }
+  }
+
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-3 py-2",
+          "group/message max-w-[85%] rounded-lg px-3 py-2",
           isUser
             ? "bg-primary text-primary-foreground"
             : message.isError
@@ -199,6 +221,26 @@ function TextMessage({ message }: { message: ChatMessage }) {
           <Suspense fallback={<p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>}>
             <ChatMarkdown content={message.content} />
           </Suspense>
+        )}
+        {message.content && (
+          <div className={cn("mt-1.5 flex", isUser ? "justify-start" : "justify-end")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              className={cn(
+                "opacity-60 transition-opacity sm:opacity-0 sm:group-hover/message:opacity-70 sm:focus-visible:opacity-100",
+                isUser
+                  ? "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              onClick={() => void copyMessage()}
+              aria-label={copied ? t("ai.copiedMessage") : t("ai.copyMessage")}
+              title={copied ? t("ai.copiedMessage") : t("ai.copyMessage")}
+            >
+              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            </Button>
+          </div>
         )}
       </div>
     </div>

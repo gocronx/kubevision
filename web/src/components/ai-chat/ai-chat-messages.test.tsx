@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { vi } from "vitest"
 import { ChatMessages } from "./ai-chat-messages"
 import type { ChatMessage } from "./ai-chat-types"
@@ -69,5 +69,34 @@ describe("ChatMessages", () => {
 
     expect(viewport.scrollTop).toBe(100)
     expect(screen.getByRole("button", { name: "ai.jumpToLatest" })).toBeInTheDocument()
+  })
+
+  it("copies the raw content of user and assistant messages", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+    render(
+      <ChatMessages
+        messages={[
+          { id: "user", role: "user", content: "inspect nginx" },
+          { id: "assistant", role: "assistant", content: "**Nginx** is healthy." },
+        ]}
+        isLoading={false}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+      />
+    )
+
+    const copyButtons = screen.getAllByRole("button", { name: "ai.copyMessage" })
+    fireEvent.click(copyButtons[0])
+    fireEvent.click(copyButtons[1])
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenNthCalledWith(1, "inspect nginx")
+      expect(writeText).toHaveBeenNthCalledWith(2, "**Nginx** is healthy.")
+    })
+    expect(screen.getAllByRole("button", { name: "ai.copiedMessage" })).toHaveLength(2)
   })
 })

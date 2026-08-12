@@ -38,6 +38,7 @@ interface SidebarConfigContextValue {
   isItemHidden: (route: string) => boolean
   isItemPinned: (route: string) => boolean
   isGroupCollapsed: (groupKey: string) => boolean
+  setGroupCollapsed: (groupKey: string, collapsed: boolean) => void
   toggleItemVisibility: (route: string) => void
   toggleItemPinned: (route: string) => void
   toggleGroupCollapsed: (groupKey: string) => void
@@ -116,6 +117,20 @@ export function SidebarConfigProvider({ children }: { children: ReactNode }) {
     })
   }, [update])
 
+  const setGroupCollapsed = useCallback((groupKey: string, collapsed: boolean) => {
+    update((prev) => {
+      const isCollapsed = prev.collapsedGroups.includes(groupKey)
+      if (isCollapsed === collapsed) return prev
+
+      return {
+        ...prev,
+        collapsedGroups: collapsed
+          ? [...prev.collapsedGroups, groupKey]
+          : prev.collapsedGroups.filter((key) => key !== groupKey),
+      }
+    })
+  }, [update])
+
   const moveGroup = useCallback((groupKey: string, direction: "up" | "down") => {
     update((prev) => {
       const order = [...prev.groupOrder]
@@ -139,12 +154,13 @@ export function SidebarConfigProvider({ children }: { children: ReactNode }) {
     isItemHidden,
     isItemPinned,
     isGroupCollapsed,
+    setGroupCollapsed,
     toggleItemVisibility,
     toggleItemPinned,
     toggleGroupCollapsed,
     moveGroup,
     resetToDefault,
-  }), [config, isItemHidden, isItemPinned, isGroupCollapsed, toggleItemVisibility, toggleItemPinned, toggleGroupCollapsed, moveGroup, resetToDefault])
+  }), [config, isItemHidden, isItemPinned, isGroupCollapsed, setGroupCollapsed, toggleItemVisibility, toggleItemPinned, toggleGroupCollapsed, moveGroup, resetToDefault])
 
   return (
     <SidebarConfigContext.Provider value={value}>

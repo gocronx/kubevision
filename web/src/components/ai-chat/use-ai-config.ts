@@ -18,7 +18,11 @@ export function useUpdateAIConfig() {
   return useMutation({
     mutationFn: async (payload: AIConfigUpdate) =>
       (await api.put("/ai/config", payload)) as unknown as AIConfigView,
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: (config) => {
+      // The update response is authoritative. Publishing it immediately keeps
+      // the global chat entry in sync without waiting for a follow-up request.
+      qc.setQueryData(KEY, config)
+    },
   })
 }
 

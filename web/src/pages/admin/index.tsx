@@ -100,13 +100,14 @@ function AuditLogsTab() {
       </Card>
 
       {/* Table */}
-      <div className="rounded-md border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-muted/50">
             <tr className="border-b">
               <th className="px-3 py-2 text-left font-medium">{t("audit.time")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("audit.user")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("audit.action")}</th>
+              <th className="px-3 py-2 text-left font-medium">{t("audit.source")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("audit.resource")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("audit.cluster")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("audit.status")}</th>
@@ -117,7 +118,7 @@ function AuditLogsTab() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b">
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-3 py-2">
                       <Skeleton className="h-4 w-full" />
                     </td>
@@ -126,7 +127,7 @@ function AuditLogsTab() {
               ))
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
                   {t("common.noData")}
                 </td>
               </tr>
@@ -140,13 +141,17 @@ function AuditLogsTab() {
                   <td className="px-3 py-2">
                     <Badge variant="outline" className="text-xs">{log.action}</Badge>
                   </td>
+                  <td className="px-3 py-2 text-xs">
+                    <div>{log.source === "ai-assistant" ? t("audit.sourceAI") : t("audit.sourceHTTP")}</div>
+                    {log.tool ? <div className="text-muted-foreground">{log.tool}</div> : null}
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground">
                     {log.resource}{log.name ? `/${log.name}` : ""}
                   </td>
                   <td className="px-3 py-2 text-xs">{log.cluster || "-"}</td>
                   <td className="px-3 py-2">
                     <Badge variant={statusColor(log.statusCode)} className="text-xs">
-                      {log.statusCode}
+                      {log.outcome || log.statusCode}
                     </Badge>
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{log.durationMs}ms</td>

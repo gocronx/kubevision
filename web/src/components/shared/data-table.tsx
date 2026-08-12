@@ -51,27 +51,18 @@ export function DataTable<T = Record<string, unknown>>({
   }, [])
 
   const sortedData = useMemo(() => {
-    if (!sort) return data
-
     return [...data].sort((a, b) => {
-      const aCol = columns.find((c) => c.key === sort.key)
-      if (!aCol?.render) return 0
-
-      // We need string representations for comparison
-      // For simple sorting, we compare the raw extracted values
-      const aVal = String(getColumnSortValue(a, sort.key))
-      const bVal = String(getColumnSortValue(b, sort.key))
-
-      // Try numeric comparison first
-      const aNum = Number(aVal)
-      const bNum = Number(bVal)
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        return sort.direction === "asc" ? aNum - bNum : bNum - aNum
+      if (sort && columns.some((column) => column.key === sort.key)) {
+        const primary = compareSortValues(
+          getColumnSortValue(a, sort.key),
+          getColumnSortValue(b, sort.key),
+        )
+        if (primary !== 0) {
+          return sort.direction === "asc" ? primary : -primary
+        }
       }
 
-      // Fallback to string comparison
-      const cmp = aVal.localeCompare(bVal)
-      return sort.direction === "asc" ? cmp : -cmp
+      return compareResourceIdentity(a, b)
     })
   }, [data, sort, columns])
 
@@ -184,6 +175,38 @@ export function DataTable<T = Record<string, unknown>>({
       </table>
     </div>
   )
+}
+
+function compareSortValues(a: string | number, b: string | number): number {
+  if (typeof a === "number" && typeof b === "number") {
+    return a - b
+  }
+  return String(a).localeCompare(String(b))
+}
+
+// Informer-backed lists originate from a Go map and therefore have no stable
+// iteration order. This identity comparator keeps rows deterministic across
+// refreshes and also resolves ties in user-selected sorts.
+function compareResourceIdentity(a: unknown, b: unknown): number {
+  const aIdentity = getResourceIdentity(a)
+  const bIdentity = getResourceIdentity(b)
+
+  return aIdentity.namespace.localeCompare(bIdentity.namespace) ||
+    aIdentity.name.localeCompare(bIdentity.name) ||
+    aIdentity.uid.localeCompare(bIdentity.uid)
+}
+
+function getResourceIdentity(item: unknown) {
+  if (!item || typeof item !== "object") {
+    return { namespace: "", name: "", uid: "" }
+  }
+  const obj = item as Record<string, unknown>
+  const meta = obj.metadata as Record<string, unknown> | undefined
+  return {
+    namespace: String(meta?.namespace ?? obj.namespace ?? ""),
+    name: String(meta?.name ?? obj.name ?? ""),
+    uid: String(meta?.uid ?? obj.uid ?? ""),
+  }
 }
 
 /**

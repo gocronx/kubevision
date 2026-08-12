@@ -3,9 +3,12 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"time"
 
 	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
 	"github.com/gocronx/kubevision/internal/kubernetes/resource"
+	"github.com/gocronx/kubevision/internal/model"
 	"github.com/gocronx/kubevision/internal/repository"
 )
 
@@ -24,6 +27,12 @@ type Service struct {
 	authz       *authorizer
 	prom        promGetter
 	sessions    *sessionStore
+	audit       AuditRecorder
+}
+
+// AuditRecorder is the narrow audit dependency used by AI mutations.
+type AuditRecorder interface {
+	Record(model.AuditLog)
 }
 
 // NewService wires the assistant with its collaborators.
@@ -35,6 +44,7 @@ func NewService(
 	registry *resource.Registry,
 	roles repository.RoleRepo,
 	prom promGetter,
+	audit AuditRecorder,
 ) *Service {
 	return &Service{
 		cfg:         cfg,
@@ -45,6 +55,7 @@ func NewService(
 		authz:       newAuthorizer(roles),
 		prom:        prom,
 		sessions:    newSessionStore(),
+		audit:       audit,
 	}
 }
 
@@ -60,7 +71,10 @@ func (s *Service) ListModels(ctx context.Context, cfg Config) ([]Model, error) {
 // ChatParams carries everything a single chat turn needs.
 type ChatParams struct {
 	ClusterID    uint
+	UserID       uint
+	Username     string
 	UserRole     string
+	ClientIP     string
 	History      []Message // prior user/assistant turns (content only)
 	Page         string
 	Namespace    string
@@ -87,7 +101,9 @@ func (s *Service) Chat(ctx context.Context, p ChatParams, emit EmitFunc) {
 		return
 	}
 
-	r := s.newRun(cfg, cl.Name, p.ClusterID, p.UserRole, emit)
+	r := s.newRun(cfg, cl.Name, p.ClusterID, Actor{
+		UserID: p.UserID, Username: p.Username, Role: p.UserRole, ClientIP: p.ClientIP,
+	}, emit)
 	system := buildSystemPrompt(promptContext{
 		clusterName:  cl.Name,
 		userRole:     p.UserRole,
@@ -102,9 +118,23 @@ func (s *Service) Chat(ctx context.Context, p ChatParams, emit EmitFunc) {
 
 // ContinueAction resumes a paused conversation after the user approves a
 // mutation identified by sessionID.
-func (s *Service) ContinueAction(ctx context.Context, sessionID string, emit EmitFunc) {
-	sess, ok := s.sessions.take(sessionID)
-	if !ok {
+type Actor struct {
+	UserID   uint
+	Username string
+	Role     string
+	ClientIP string
+}
+
+func (s *Service) ContinueAction(ctx context.Context, sessionID string, actor Actor, emit EmitFunc) {
+	sess, takeResult := s.sessions.takeOwned(sessionID, actor.UserID)
+	if takeResult != sessionTaken {
+		if sess != nil {
+			s.recordApprovalAudit(sess, actor, takeResult)
+		}
+		if takeResult == sessionForbidden {
+			emit(errorEvent("this action belongs to another user"))
+			return
+		}
 		emit(errorEvent("this action has expired or was already handled"))
 		return
 	}
@@ -115,20 +145,26 @@ func (s *Service) ContinueAction(ctx context.Context, sessionID string, emit Emi
 		return
 	}
 
-	r := s.newRun(cfg, sess.clusterName, sess.clusterID, sess.userRole, emit)
+	r := s.newRun(cfg, sess.clusterName, sess.clusterID, actor, emit)
 	tc := sess.toolCall
 	args := decodeArgs(tc.Function.Arguments)
+	started := time.Now()
 
 	// Re-authorize at execution time as defense in depth.
 	var result string
 	var isErr bool
-	if deny := r.authz.authorize(ctx, sess.userRole, tc.Function.Name, args); deny != "" {
+	statusCode := http.StatusOK
+	outcome := "succeeded"
+	if deny := r.authz.authorize(ctx, actor.Role, tc.Function.Name, args); deny != "" {
 		result, isErr = "Forbidden: "+deny, true
+		statusCode, outcome = http.StatusForbidden, "denied"
 	} else if res, execErr := r.exec.execute(ctx, tc.Function.Name, args); execErr != nil {
 		result, isErr = "Tool error: "+execErr.Error(), true
+		statusCode, outcome = http.StatusInternalServerError, "failed"
 	} else {
 		result = res
 	}
+	s.recordMutationAudit(sess, actor, args, statusCode, outcome, time.Since(started))
 	emit(toolResultEvent(tc.Function.Name, tc.ID, result, isErr))
 
 	messages := append(sess.messages, toolResultMessage(tc.ID, result))
@@ -148,12 +184,15 @@ type run struct {
 	authz       *authorizer
 	sessions    *sessionStore
 	role        string
+	userID      uint
+	username    string
+	clientIP    string
 	clusterID   uint
 	clusterName string
 	emit        EmitFunc
 }
 
-func (s *Service) newRun(cfg Config, clusterName string, clusterID uint, role string, emit EmitFunc) *run {
+func (s *Service) newRun(cfg Config, clusterName string, clusterID uint, actor Actor, emit EmitFunc) *run {
 	return &run{
 		client: NewClient(cfg),
 		exec: &executor{
@@ -165,7 +204,10 @@ func (s *Service) newRun(cfg Config, clusterName string, clusterID uint, role st
 		},
 		authz:       s.authz,
 		sessions:    s.sessions,
-		role:        role,
+		role:        actor.Role,
+		userID:      actor.UserID,
+		username:    actor.Username,
+		clientIP:    actor.ClientIP,
 		clusterID:   clusterID,
 		clusterName: clusterName,
 		emit:        emit,
@@ -237,7 +279,9 @@ func (r *run) loop(ctx context.Context, messages []Message) {
 				toolCall:    *pending,
 				clusterID:   r.clusterID,
 				clusterName: r.clusterName,
-				userRole:    r.role,
+				userID:      r.userID,
+				username:    r.username,
+				clientIP:    r.clientIP,
 			})
 			r.emit(actionRequiredEvent(pending.Function.Name, pending.ID, pendingArgs, sid))
 			return // wait for approval; the resume continues the loop
@@ -245,6 +289,67 @@ func (r *run) loop(ctx context.Context, messages []Message) {
 	}
 
 	r.emit(errorEvent("reached the maximum number of tool iterations"))
+}
+
+func (s *Service) recordApprovalAudit(sess *pendingSession, actor Actor, result sessionTakeResult) {
+	if s.audit == nil {
+		return
+	}
+	outcome := "denied"
+	status := http.StatusForbidden
+	if result == sessionExpired {
+		outcome, status = "expired", http.StatusGone
+	}
+	s.audit.Record(model.AuditLog{
+		CreatedAt: time.Now().UTC(), UserID: actor.UserID, Username: actor.Username,
+		Action: "approve", Resource: "ai-action", Cluster: sess.clusterName,
+		StatusCode: status, ClientIP: actor.ClientIP, Source: "ai-assistant",
+		Tool: sess.toolCall.Function.Name, CorrelationID: sess.correlationID, Outcome: outcome,
+	})
+}
+
+func (s *Service) recordMutationAudit(sess *pendingSession, actor Actor, args map[string]any, status int, outcome string, duration time.Duration) {
+	if s.audit == nil {
+		return
+	}
+	resource, name, namespace := mutationTarget(sess.toolCall.Function.Name, args)
+	s.audit.Record(model.AuditLog{
+		CreatedAt: time.Now().UTC(), UserID: actor.UserID, Username: actor.Username,
+		Action: mutationAction(sess.toolCall.Function.Name), Resource: resource, Name: name,
+		Namespace: namespace, Cluster: sess.clusterName, StatusCode: status,
+		DurationMs: duration.Milliseconds(), ClientIP: actor.ClientIP, Source: "ai-assistant",
+		Tool: sess.toolCall.Function.Name, CorrelationID: sess.correlationID, Outcome: outcome,
+	})
+}
+
+func mutationAction(tool string) string {
+	switch tool {
+	case "create_resource":
+		return "create"
+	case "delete_resource":
+		return "delete"
+	default:
+		return "update"
+	}
+}
+
+func mutationTarget(tool string, args map[string]any) (resource, name, namespace string) {
+	resource = argString(args, "kind")
+	name = argString(args, "name")
+	namespace = argString(args, "namespace")
+	if tool == "create_resource" || tool == "update_resource" {
+		if obj, err := parseManifest(argString(args, "yaml")); err == nil {
+			if namespace == "" {
+				namespace = manifestNamespace(obj)
+			}
+			if name == "" {
+				if meta, ok := obj["metadata"].(map[string]any); ok {
+					name, _ = meta["name"].(string)
+				}
+			}
+		}
+	}
+	return
 }
 
 // decodeArgs parses a tool call's raw JSON arguments into a map, tolerating an

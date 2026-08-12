@@ -97,6 +97,10 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 		} else {
 			authOnly.Use(middleware.Auth())
 		}
+		auditWrite := func(c *gin.Context) { c.Next() }
+		if deps != nil && deps.AuditMiddleware != nil {
+			auditWrite = deps.AuditMiddleware
+		}
 		{
 			if deps != nil && deps.PackageHandler != nil {
 				packages := authOnly.Group("/clusters/:id/package-releases")
@@ -113,22 +117,22 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 
 				// 2FA management — require a valid session JWT.
 				twoFA := authOnly.Group("/auth/2fa")
-				twoFA.POST("/setup", deps.AuthHandler.Setup2FA)
-				twoFA.POST("/enable", deps.AuthHandler.Enable2FA)
-				twoFA.POST("/disable", deps.AuthHandler.Disable2FA)
+				twoFA.POST("/setup", auditWrite, deps.AuthHandler.Setup2FA)
+				twoFA.POST("/enable", auditWrite, deps.AuthHandler.Enable2FA)
+				twoFA.POST("/disable", auditWrite, deps.AuthHandler.Disable2FA)
 			}
 			if deps != nil && deps.PublicKeyHandler != nil {
 				keys := authOnly.Group("/auth/public-key")
-				keys.POST("/register/begin", deps.PublicKeyHandler.BeginRegistration)
-				keys.POST("/register/finish", deps.PublicKeyHandler.FinishRegistration)
+				keys.POST("/register/begin", auditWrite, deps.PublicKeyHandler.BeginRegistration)
+				keys.POST("/register/finish", auditWrite, deps.PublicKeyHandler.FinishRegistration)
 				keys.GET("/credentials", deps.PublicKeyHandler.List)
-				keys.PUT("/credentials/:id", deps.PublicKeyHandler.Rename)
-				keys.DELETE("/credentials/:id", deps.PublicKeyHandler.Revoke)
+				keys.PUT("/credentials/:id", auditWrite, deps.PublicKeyHandler.Rename)
+				keys.DELETE("/credentials/:id", auditWrite, deps.PublicKeyHandler.Revoke)
 			}
 
 			// Change own password — any authenticated user.
 			if deps != nil && deps.UserHandler != nil {
-				authOnly.PUT("/users/me/password", deps.UserHandler.ChangePassword)
+				authOnly.PUT("/users/me/password", auditWrite, deps.UserHandler.ChangePassword)
 			}
 			// AI assistant routes. Chat streams over SSE and enforces per-tool
 			// RBAC internally, so it lives in the auth-only group (not behind the
@@ -137,7 +141,7 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			if deps != nil && deps.AIHandler != nil {
 				aiGroup := authOnly.Group("/ai")
 				aiGroup.GET("/config", deps.AIHandler.GetConfig)
-				aiGroup.PUT("/config", deps.AIHandler.UpdateConfig)
+				aiGroup.PUT("/config", auditWrite, deps.AIHandler.UpdateConfig)
 				aiGroup.POST("/models", deps.AIHandler.ListModels)
 				aiGroup.POST("/chat", deps.AIHandler.Chat)
 				aiGroup.POST("/continue-action", deps.AIHandler.ContinueAction)

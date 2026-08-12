@@ -19,7 +19,7 @@ import (
 )
 
 func TestRedactSensitiveFieldsRecursivelyAndCaseInsensitively(t *testing.T) {
-	body := `{"bindPassword":"bind-secret","nested":{"refreshToken":"refresh-secret","TOTPCode":"123456"},"items":[{"privateKey":"key"}],"serverUrl":"ldaps://directory.example.test"}`
+	body := `{"bindPassword":"bind-secret","apiKey":"sk-secret","nested":{"refreshToken":"refresh-secret","TOTPCode":"123456"},"items":[{"privateKey":"key"}],"serverUrl":"ldaps://directory.example.test"}`
 	redacted := redactSensitiveFields(body)
 
 	var got map[string]any
@@ -28,6 +28,9 @@ func TestRedactSensitiveFieldsRecursivelyAndCaseInsensitively(t *testing.T) {
 	}
 	if got["bindPassword"] != "[REDACTED]" {
 		t.Fatalf("bind password was not redacted: %s", redacted)
+	}
+	if got["apiKey"] != "[REDACTED]" {
+		t.Fatalf("API key was not redacted: %s", redacted)
 	}
 	nested := got["nested"].(map[string]any)
 	if nested["refreshToken"] != "[REDACTED]" || nested["TOTPCode"] != "[REDACTED]" {
@@ -202,6 +205,49 @@ func TestAuditMiddleware_BodyCapped(t *testing.T) {
 	}
 	if len(repo.logs[0].RequestBody) > maxRequestBodySize {
 		t.Errorf("request body should be capped at %d bytes, got %d", maxRequestBodySize, len(repo.logs[0].RequestBody))
+	}
+}
+
+func TestAuditMiddleware_OmitsAIAndPublicKeyBodies(t *testing.T) {
+	for _, path := range []string{"/api/v1/ai/chat", "/api/v1/ai/continue-action", "/api/v1/auth/public-key/register/finish"} {
+		t.Run(path, func(t *testing.T) {
+			repo := &mockAuditRepo{}
+			svc := newTestAuditService(repo)
+			router := gin.New()
+			router.Use(AuditMiddleware(svc))
+			router.POST(path, func(c *gin.Context) { c.Status(200) })
+
+			req := httptest.NewRequest("POST", path, strings.NewReader(`{"messages":[{"content":"secret"}],"sessionId":"token","credential":"key"}`))
+			router.ServeHTTP(httptest.NewRecorder(), req)
+			svc.Stop()
+
+			if len(repo.logs) != 1 || repo.logs[0].RequestBody != "" {
+				t.Fatalf("sensitive body retained: %+v", repo.logs)
+			}
+		})
+	}
+}
+
+func TestAuditMiddleware_OmitsSecretResourceBodies(t *testing.T) {
+	repo := &mockAuditRepo{}
+	svc := newTestAuditService(repo)
+	router := gin.New()
+	router.Use(AuditMiddleware(svc))
+	router.PUT("/api/v1/clusters/:id/resources/:resource/:name/dry-run", func(c *gin.Context) { c.Status(200) })
+
+	body := `{"stringData":{"REDIS_PASSWORD":"root1"}}`
+	req := httptest.NewRequest("PUT", "/api/v1/clusters/1/resources/secrets/redis-secret/dry-run", strings.NewReader(body))
+	router.ServeHTTP(httptest.NewRecorder(), req)
+	svc.Stop()
+
+	if len(repo.logs) != 1 {
+		t.Fatalf("logs = %d, want 1", len(repo.logs))
+	}
+	if repo.logs[0].RequestBody != "" {
+		t.Fatalf("Secret body retained in audit log: %q", repo.logs[0].RequestBody)
+	}
+	if repo.logs[0].Resource == "" || repo.logs[0].Name != "redis-secret" {
+		t.Fatalf("safe audit metadata missing: %+v", repo.logs[0])
 	}
 }
 

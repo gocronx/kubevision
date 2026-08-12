@@ -70,6 +70,7 @@ func AIChat(args []string) error {
 		registry,
 		&staticRoleRepo{},
 		func() (*prometheus.Plugin, bool) { return nil, false },
+		nil,
 	)
 
 	r := &aiRunner{
@@ -150,7 +151,7 @@ func (r *aiRunner) ask(ctx context.Context, text string) {
 		sid := pending
 		pending = ""
 		if r.confirm("  Apply this change? [y/N] ") {
-			r.svc.ContinueAction(ctx, sid, emit)
+			r.svc.ContinueAction(ctx, sid, ai.Actor{Role: "super-admin"}, emit)
 		} else {
 			fmt.Fprintln(r.out, r.dim("  cancelled."))
 		}

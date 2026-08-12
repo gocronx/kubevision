@@ -14,14 +14,26 @@ const sessionTTL = 15 * time.Minute
 // mutation tool requested user approval, so the agent loop can resume exactly
 // where it paused once the user confirms.
 type pendingSession struct {
-	id          string
-	messages    []Message // full history up to and including the assistant tool-call turn
-	toolCall    ToolCall  // the mutation awaiting approval
-	clusterID   uint
-	clusterName string
-	userRole    string
-	expiresAt   time.Time
+	id            string
+	messages      []Message // full history up to and including the assistant tool-call turn
+	toolCall      ToolCall  // the mutation awaiting approval
+	clusterID     uint
+	clusterName   string
+	userID        uint
+	username      string
+	clientIP      string
+	correlationID string
+	expiresAt     time.Time
 }
+
+type sessionTakeResult int
+
+const (
+	sessionTaken sessionTakeResult = iota
+	sessionMissing
+	sessionExpired
+	sessionForbidden
+)
 
 // sessionStore is a TTL-bounded in-memory store of pending mutation sessions.
 // Sessions are single-use: resuming consumes them.
@@ -42,6 +54,9 @@ func (s *sessionStore) save(sess *pendingSession) string {
 	s.evictExpiredLocked()
 	id := uuid.NewString()
 	sess.id = id
+	if sess.correlationID == "" {
+		sess.correlationID = uuid.NewString()
+	}
 	sess.expiresAt = time.Now().Add(sessionTTL)
 	s.sessions[id] = sess
 	return id
@@ -49,19 +64,23 @@ func (s *sessionStore) save(sess *pendingSession) string {
 
 // take removes and returns the session for id, or (nil, false) if it is absent
 // or expired.
-func (s *sessionStore) take(id string) (*pendingSession, bool) {
+func (s *sessionStore) takeOwned(id string, userID uint) (*pendingSession, sessionTakeResult) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	sess, ok := s.sessions[id]
 	if !ok {
-		return nil, false
+		return nil, sessionMissing
+	}
+	if time.Now().After(sess.expiresAt) {
+		delete(s.sessions, id)
+		return sess, sessionExpired
+	}
+	if sess.userID != userID {
+		return sess, sessionForbidden
 	}
 	delete(s.sessions, id)
-	if time.Now().After(sess.expiresAt) {
-		return nil, false
-	}
-	return sess, true
+	return sess, sessionTaken
 }
 
 // evictExpiredLocked drops expired sessions. Callers must hold s.mu.

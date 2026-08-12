@@ -4,11 +4,12 @@ import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { AIChatWidget } from "@/components/ai-chat/ai-chat-widget"
 import { Outlet } from "react-router-dom"
+import { readSidebarOpen } from "./sidebar-state-preference"
 
 export function AppLayout() {
   return (
     <SidebarConfigProvider>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={readSidebarOpen()}>
         <AppSidebar />
         <SidebarInset>
           <AppHeader />

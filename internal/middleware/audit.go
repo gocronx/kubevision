@@ -27,6 +27,7 @@ var sensitiveFields = map[string]bool{
 	"refreshtoken": true,
 	"credential":   true,
 	"privatekey":   true,
+	"apikey":       true,
 }
 
 // redactSensitiveFields parses bodyStr as JSON and replaces the values of any
@@ -79,6 +80,15 @@ var writeMethods = map[string]bool{
 	"PATCH":  true,
 }
 
+// omitAuditBody prevents high-risk request payloads from ever reaching audit
+// storage. Metadata about the operation is still recorded.
+func omitAuditBody(c *gin.Context) bool {
+	path := c.FullPath()
+	return strings.HasPrefix(path, "/api/v1/auth/public-key/") ||
+		path == "/api/v1/ai/chat" || path == "/api/v1/ai/continue-action" ||
+		(strings.Contains(path, "/resources/:resource") && strings.EqualFold(c.Param("resource"), "secrets"))
+}
+
 // AuditMiddleware returns a Gin middleware that records mutating HTTP requests
 // to the audit log via the provided AuditService.
 //
@@ -98,7 +108,7 @@ func AuditMiddleware(auditService *service.AuditService) gin.HandlerFunc {
 
 		// Snapshot the request body (bounded to maxRequestBodySize).
 		var bodyStr string
-		if c.Request.Body != nil {
+		if c.Request.Body != nil && !omitAuditBody(c) {
 			raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxRequestBodySize))
 			if err == nil {
 				// Restore the FULL body for downstream handlers. raw holds the
@@ -132,11 +142,25 @@ func AuditMiddleware(auditService *service.AuditService) gin.HandlerFunc {
 			StatusCode:  c.Writer.Status(),
 			DurationMs:  durationMs,
 			ClientIP:    c.ClientIP(),
+			Method:      c.Request.Method,
+			Path:        c.FullPath(),
+			Source:      "http",
+			Outcome:     auditOutcome(c.Writer.Status()),
 			RequestBody: bodyStr,
 		}
 
 		auditService.Record(entry)
 	}
+}
+
+func auditOutcome(status int) string {
+	if status >= 200 && status < 400 {
+		return "succeeded"
+	}
+	if status == 401 || status == 403 {
+		return "denied"
+	}
+	return "failed"
 }
 
 // Audit returns a no-op Gin middleware stub retained for compatibility.

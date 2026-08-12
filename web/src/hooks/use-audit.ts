@@ -14,6 +14,10 @@ export interface AuditLog {
   statusCode: number
   durationMs: number
   clientIp: string
+  source: string
+  tool?: string
+  correlationId?: string
+  outcome: string
 }
 
 export interface AuditLogFilter {

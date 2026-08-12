@@ -93,14 +93,14 @@ func (a *AuditBridge) RecordPackageAudit(event AuditEvent) {
 		UserID: event.Actor.UserID, Username: event.Actor.Username, Action: event.Action,
 		Resource: "package-releases", Name: event.Release, Namespace: event.Namespace,
 		Cluster: event.Cluster, StatusCode: auditStatus(event.Outcome), DurationMs: event.Duration.Milliseconds(),
-		ClientIP:    event.Actor.ClientIP,
+		ClientIP: event.Actor.ClientIP, Source: "http", Outcome: event.Outcome,
 		RequestBody: fmt.Sprintf(`{"revision":%d,"options":%q,"outcome":%q}`, event.Revision, event.Options, event.Outcome),
 	})
 }
 
 func auditStatus(outcome string) int {
 	if outcome == "succeeded" {
-		return 0
+		return 200
 	}
-	return 50000
+	return 500
 }

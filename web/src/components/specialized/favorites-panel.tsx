@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { useFavorites, useRemoveFavorite, useReorderFavorites, type Favorite } from "@/hooks/use-favorites"
+import { useAuth } from "@/stores/auth-store"
+import { readFavoritesPanelOpen, writeFavoritesPanelOpen } from "./favorites-panel-preference"
 import { toast } from "sonner"
 
 // ---------------------------------------------------------------------------
@@ -99,11 +101,18 @@ interface FavoritesPanelProps {
 export function FavoritesPanel({ className }: FavoritesPanelProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [isOpen, setIsOpen] = useState(true)
+  const { user } = useAuth()
+  const userID = user?.id ?? 0
+  const [isOpen, setIsOpen] = useState(() => readFavoritesPanelOpen(userID))
 
   const { data: favorites = [], isLoading } = useFavorites()
   const removeMutation = useRemoveFavorite()
   const reorderMutation = useReorderFavorites()
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    setIsOpen(open)
+    writeFavoritesPanelOpen(userID, open)
+  }, [userID])
 
   // Drag-and-drop state
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -175,7 +184,7 @@ export function FavoritesPanel({ className }: FavoritesPanelProps) {
   }, [])
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("group/collapsible", className)}>
+    <Collapsible open={isOpen} onOpenChange={handleOpenChange} className={cn("group/collapsible", className)}>
       <SidebarGroup className="py-0">
         <SidebarGroupLabel asChild>
           <CollapsibleTrigger className="flex w-full items-center justify-between px-2 py-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">

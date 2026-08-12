@@ -51,7 +51,7 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const { currentCluster, clusters, setCurrentCluster } = useCluster()
   const { user } = useAuth()
-  const { config, isItemHidden, isGroupCollapsed } = useSidebarConfig()
+  const { config, isItemHidden, isGroupCollapsed, setGroupCollapsed } = useSidebarConfig()
   const role = user?.role ?? ""
   const showAdminSection = canAccessAdmin(role)
   const showUserManagement = canManageUsers(role)
@@ -213,7 +213,11 @@ export function AppSidebar() {
           const collapsed = isGroupCollapsed(group.labelKey)
 
           return (
-            <Collapsible key={group.labelKey} defaultOpen={!collapsed}>
+            <Collapsible
+              key={group.labelKey}
+              open={!collapsed}
+              onOpenChange={(open) => setGroupCollapsed(group.labelKey, !open)}
+            >
               <SidebarGroup>
                 <CollapsibleTrigger asChild>
                   <SidebarGroupLabel className="cursor-pointer">

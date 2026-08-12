@@ -34,6 +34,7 @@ import {
 import { useCluster } from "@/hooks/use-cluster"
 import { useCheckFavorite } from "@/hooks/use-favorites"
 import { toYaml, getResourceStatus, formatAge } from "@/lib/k8s-utils"
+import { prepareSecretForEditing } from "@/lib/secret-edit"
 import { toast } from "sonner"
 import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
 import { useAuth } from "@/stores/auth-store"
@@ -143,10 +144,11 @@ export function ResourceDetailPage() {
 
   const handleEditOpen = useCallback(() => {
     if (!data) return
-    setEditJson(JSON.stringify(data, null, 2))
+    const editable = resource === "secrets" ? prepareSecretForEditing(data) : data
+    setEditJson(JSON.stringify(editable, null, 2))
     dryRunUpdateMutation.reset()
     setEditDialogOpen(true)
-  }, [data, dryRunUpdateMutation])
+  }, [data, dryRunUpdateMutation, resource])
 
   // Parse the edit textarea JSON; return null and toast on failure.
   const parseEditBody = useCallback((): Record<string, unknown> | null => {
@@ -189,6 +191,7 @@ export function ResourceDetailPage() {
           toast.success(t("resource.updatedToast", { name }))
           setDryRunDialogOpen(false)
           setEditDialogOpen(false)
+          setEditJson("")
           dryRunUpdateMutation.reset()
         },
       }
@@ -206,6 +209,7 @@ export function ResourceDetailPage() {
         onSuccess: () => {
           toast.success(t("resource.updatedToast", { name }))
           setEditDialogOpen(false)
+          setEditJson("")
         },
       }
     )
@@ -541,7 +545,10 @@ export function ResourceDetailPage() {
         open={editDialogOpen}
         onOpenChange={(open) => {
           setEditDialogOpen(open)
-          if (!open) dryRunUpdateMutation.reset()
+          if (!open) {
+            setEditJson("")
+            dryRunUpdateMutation.reset()
+          }
         }}
       >
         <DialogContent className="sm:max-w-3xl">
@@ -560,6 +567,11 @@ export function ResourceDetailPage() {
             defaultOpen
           />
           <ImageTagEditor json={editJson} onChange={setEditJson} />
+          {resource === "secrets" && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground">
+              {t("resource.secretEditHint")}
+            </div>
+          )}
           <ScrollArea className="max-h-[500px]">
             <textarea
               className="h-[400px] w-full rounded-md border bg-muted p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
@@ -572,6 +584,7 @@ export function ResourceDetailPage() {
               variant="outline"
               onClick={() => {
                 setEditDialogOpen(false)
+                setEditJson("")
                 dryRunUpdateMutation.reset()
               }}
               disabled={updateMutation.isPending || dryRunUpdateMutation.isPending}
