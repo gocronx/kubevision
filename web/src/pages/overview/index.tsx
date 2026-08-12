@@ -138,26 +138,26 @@ function getSubtitleColor(active: number, total: number): string {
 
 function StatCard({ title, icon: Icon, value, subtitle, subtitleColor, isLoading, iconClass }: StatCardProps) {
   return (
-    <Card className="py-0">
-      <CardHeader className="flex flex-row items-center justify-between px-3 pt-2.5 pb-0.5">
-        <CardTitle className="text-[11px] font-medium text-muted-foreground">{title}</CardTitle>
-        <div className={`rounded p-0.5 ${iconClass ?? "bg-muted"}`}>
-          <Icon className="size-3 text-foreground" />
+    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 transition-all duration-200 hover:shadow-md h-full">
+      <CardHeader className="flex flex-row items-center justify-between p-5 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className={`rounded-xl p-2 ${iconClass ?? "bg-secondary text-secondary-foreground"}`}>
+          <Icon className="size-4 opacity-80" />
         </div>
       </CardHeader>
-      <CardContent className="px-3 pb-2.5">
+      <CardContent className="p-5 pt-0">
         {isLoading || value === undefined ? (
-          <>
-            <Skeleton className="h-5 w-12" />
-            <Skeleton className="mt-0.5 h-2.5 w-20" />
-          </>
+          <div className="mt-1 space-y-2">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-24" />
+          </div>
         ) : (
-          <>
-            <div className="text-xl font-bold leading-tight">{value}</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-3xl font-bold tracking-tight">{value}</div>
             {subtitle && (
-              <p className={`text-[10px] font-medium leading-tight ${subtitleColor ?? "text-muted-foreground"}`}>{subtitle}</p>
+              <p className={`text-xs font-medium ${subtitleColor ?? "text-muted-foreground"}`}>{subtitle}</p>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -226,19 +226,19 @@ function ResourceBar({ label, value, total, formatFn, forceColor }: ResourceBarP
   const barClass = forceColor ? forceBarColorMap[forceColor] : getBarColorClass(pct)
   const textClass = forceColor ? forceTextColorMap[forceColor] : getTextColorClass(pct)
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className={`font-medium ${textClass}`}>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground font-medium">{label}</span>
+        <span className={`font-semibold ${textClass}`}>
           {pct.toFixed(0)}%
         </span>
       </div>
       <Progress
         value={pct}
         max={100}
-        className={`h-1.5 ${barClass}`}
+        className={`h-2.5 rounded-full ${barClass}`}
       />
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground mt-0.5">
         {formatFn(value)} / {formatFn(total)}
       </p>
     </div>
@@ -281,16 +281,16 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-center gap-2 px-4 pt-3 pb-2">
-        <CardTitle className="text-sm">{t("overview.resource_usage")}</CardTitle>
+    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
+      <CardHeader className="flex flex-row items-center gap-2 p-5 pb-4">
+        <CardTitle className="text-sm font-semibold">{t("overview.resource_usage")}</CardTitle>
       </CardHeader>
-      <CardContent className="grid flex-1 gap-4 px-4 pb-3 sm:grid-cols-2">
+      <CardContent className="grid flex-1 gap-8 p-5 pt-0 sm:grid-cols-2 overflow-y-auto">
         {/* CPU */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <Cpu className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium">CPU</span>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="size-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">CPU</span>
           </div>
           <ResourceBar
             label={t("overview.requests")}
@@ -308,10 +308,10 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
         </div>
 
         {/* Memory */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <MemoryStick className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium">{t("overview.memory")}</span>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <MemoryStick className="size-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("overview.memory")}</span>
           </div>
           <ResourceBar
             label={t("overview.requests")}
@@ -350,11 +350,11 @@ function getEventIcon(type: string) {
 function getEventBadgeClass(type: string): string {
   switch (type) {
     case "Warning":
-      return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+      return "bg-amber-500"
     case "Error":
-      return "bg-red-500/10 text-red-600 dark:text-red-400"
+      return "bg-rose-500"
     default:
-      return "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+      return "bg-blue-500"
   }
 }
 
@@ -408,35 +408,32 @@ function RecentEvents({ events, isLoading }: RecentEventsProps) {
   }
 
   return (
-    <Card className="flex min-h-0 flex-col gap-0 overflow-hidden py-0">
-      <CardHeader className="shrink-0 px-3 pt-2 pb-1">
-        <CardTitle className="text-sm">{t("overview.recent_events")}</CardTitle>
+    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
+      <CardHeader className="shrink-0 p-5 pb-3">
+        <CardTitle className="text-sm font-semibold">{t("overview.recent_events")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pt-0 pb-2">
+      <CardContent className="flex flex-col flex-1 min-h-0 overflow-hidden p-0">
         {events.length === 0 ? (
-          <p className="py-3 text-center text-xs text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
             {t("overview.no_events")}
-          </p>
+          </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+          <div className="flex flex-col overflow-y-auto px-5 pb-5 flex-1 min-h-0 divide-y divide-border/50">
             {events.map((ev, i) => (
               <div
                 key={`${ev.timestamp}-${ev.objectName}-${i}`}
-                className="flex items-center gap-1.5 rounded border px-2 py-1"
+                className="flex items-start gap-3 py-3"
               >
-                <div className="shrink-0">{getEventIcon(ev.type)}</div>
-                <span
-                  className={`shrink-0 rounded px-1 py-px text-[8px] font-semibold uppercase leading-none ${getEventBadgeClass(
-                    ev.type,
-                  )}`}
-                >
-                  {ev.type}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">{ev.reason}</span>{" "}
-                  {ev.message}
-                </span>
-                <span className="shrink-0 text-[10px] text-muted-foreground/70">
+                <div className={`mt-1.5 size-2 shrink-0 rounded-full ${getEventBadgeClass(ev.type)}`} />
+                <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {ev.reason}
+                  </span>
+                  <span className="text-xs text-muted-foreground line-clamp-2">
+                    {ev.message}
+                  </span>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground/70 whitespace-nowrap">
                   {formatRelativeTime(ev.timestamp)}
                 </span>
               </div>
@@ -482,67 +479,67 @@ function StorageOverview({ data, isLoading }: StorageOverviewProps) {
     : 0
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-center gap-2 px-4 pt-3 pb-2">
-        <CardTitle className="text-sm">{t("overview.storage_overview")}</CardTitle>
+    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
+      <CardHeader className="flex flex-row items-center gap-2 p-5 pb-4">
+        <CardTitle className="text-sm font-semibold">{t("overview.storage_overview")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 px-4 pb-3">
+      <CardContent className="flex flex-1 flex-col gap-6 p-5 pt-0 overflow-y-auto">
         {/* PV stats */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <HardDrive className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium">{t("overview.pv")}</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{pvTotal} total</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <HardDrive className="size-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("overview.pv")}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{pvTotal} total</span>
           </div>
-          <div className="flex gap-3 text-[11px]">
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-green-500" />
-              {t("overview.bound")}: {data.boundPVs}
+          <div className="flex gap-4 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-emerald-500" />
+              {t("overview.bound")}: <span className="font-medium">{data.boundPVs}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-blue-500" />
-              {t("overview.available")}: {data.availablePVs}
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-blue-500" />
+              {t("overview.available")}: <span className="font-medium">{data.availablePVs}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-yellow-500" />
-              {t("overview.released")}: {data.releasedPVs}
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-amber-500" />
+              {t("overview.released")}: <span className="font-medium">{data.releasedPVs}</span>
             </span>
           </div>
         </div>
 
         {/* PVC stats */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <HardDrive className="size-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium">{t("overview.pvc")}</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{pvcTotal} total</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <HardDrive className="size-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("overview.pvc")}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{pvcTotal} total</span>
           </div>
-          <div className="flex gap-3 text-[11px]">
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-green-500" />
-              {t("overview.bound")}: {data.boundPVCs}
+          <div className="flex gap-4 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-emerald-500" />
+              {t("overview.bound")}: <span className="font-medium">{data.boundPVCs}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-yellow-500" />
-              {t("overview.pending")}: {data.pendingPVCs}
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-amber-500" />
+              {t("overview.pending")}: <span className="font-medium">{data.pendingPVCs}</span>
             </span>
           </div>
         </div>
 
         {/* Storage capacity bar */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{t("overview.storage_allocation")}</span>
-            <span className={`font-medium ${getTextColorClass(storagePct)}`}>
+        <div className="flex flex-col gap-1.5 pt-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground font-medium">{t("overview.storage_allocation")}</span>
+            <span className={`font-semibold ${getTextColorClass(storagePct)}`}>
               {storagePct.toFixed(0)}%
             </span>
           </div>
           <Progress
             value={storagePct}
             max={100}
-            className={`h-1.5 ${getBarColorClass(storagePct)}`}
+            className={`h-2.5 rounded-full ${getBarColorClass(storagePct)}`}
           />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {t("overview.allocated")}: {formatMemory(data.usedStorageBytes)} / {t("overview.total_capacity")}: {formatMemory(data.totalStorageBytes)}
           </p>
         </div>
@@ -612,14 +609,14 @@ function PodStatusBar({ dist, total, isLoading }: PodStatusBarProps) {
     })
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="px-3 pt-2.5 pb-1.5">
-        <CardTitle className="text-sm">{t("overview.pod_status")}</CardTitle>
+    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
+      <CardHeader className="p-5 pb-4 shrink-0">
+        <CardTitle className="text-sm font-semibold">{t("overview.pod_status")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 items-center justify-center px-3 pb-2.5">
-        <div className="flex items-center gap-4">
+      <CardContent className="flex flex-1 items-center justify-center p-5 pt-0">
+        <div className="flex items-center gap-10">
           {/* Donut chart */}
-          <div className="relative aspect-square w-[110px] shrink-0">
+          <div className="relative aspect-square w-[130px] shrink-0">
             <svg viewBox={`0 0 ${vb} ${vb}`} className="size-full">
               <circle
                 cx={cx}
@@ -627,7 +624,7 @@ function PodStatusBar({ dist, total, isLoading }: PodStatusBarProps) {
                 r={radius}
                 fill="none"
                 stroke="currentColor"
-                className="text-muted"
+                className="text-muted/30"
                 strokeWidth={strokeWidth}
               />
               {arcs.map((arc) => (
@@ -641,31 +638,100 @@ function PodStatusBar({ dist, total, isLoading }: PodStatusBarProps) {
                   strokeWidth={strokeWidth}
                   strokeDasharray={`${arc.dashLength} ${circumference - arc.dashLength}`}
                   strokeDashoffset={arc.dashOffset}
-                  strokeLinecap="butt"
+                  strokeLinecap="round"
                   transform={`rotate(-90 ${cx} ${cx})`}
+                  className="transition-all duration-1000 ease-out"
                 />
               ))}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg font-bold leading-none">{total}</span>
-              <span className="text-[9px] text-muted-foreground">Pods</span>
+              <span className="text-3xl font-bold tracking-tight">{total}</span>
+              <span className="text-xs font-medium text-muted-foreground mt-1">Pods</span>
             </div>
           </div>
 
           {/* Legend */}
-          <div className="flex flex-col gap-1.5 min-w-0">
+          <div className="flex flex-col gap-3 min-w-[140px]">
             {segments.map((seg) => {
               const pct = total > 0 ? ((seg.count / total) * 100).toFixed(1) : "0.0"
               return (
-                <div key={seg.label} className="flex items-center gap-1.5 text-[11px]">
-                  <span className={`size-2 shrink-0 rounded-full ${seg.bgClass}`} />
-                  <span className="truncate text-muted-foreground">{seg.label}</span>
-                  <span className="ml-auto shrink-0 font-medium tabular-nums">{seg.count}</span>
-                  <span className="w-9 shrink-0 text-right text-[10px] text-muted-foreground tabular-nums">{pct}%</span>
+                <div key={seg.label} className="flex items-center gap-2.5 text-sm">
+                  <span className={`size-3 shrink-0 rounded-full ${seg.bgClass}`} />
+                  <span className="truncate text-muted-foreground font-medium">{seg.label}</span>
+                  <span className="ml-auto shrink-0 font-semibold tabular-nums">{seg.count}</span>
+                  <span className="w-10 shrink-0 text-right text-xs text-muted-foreground tabular-nums">{pct}%</span>
                 </div>
               )
             })}
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Workload & Network Summary
+// ---------------------------------------------------------------------------
+
+interface WorkloadSummaryProps {
+  data: OverviewData
+  isLoading: boolean
+}
+
+function WorkloadSummary({ data, isLoading }: WorkloadSummaryProps) {
+  const { t } = useTranslation()
+
+  if (isLoading) {
+    return (
+      <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
+        <CardHeader className="p-5 pb-4 shrink-0">
+          <Skeleton className="h-5 w-32" />
+        </CardHeader>
+        <CardContent className="flex-1 p-5 pt-0">
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="size-10 rounded-xl shrink-0" />
+                <div className="space-y-1.5 min-w-0">
+                  <Skeleton className="h-5 w-8" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const items = [
+    { label: t("overview.statefulsets"), value: data?.statefulSets, icon: Database, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+    { label: t("overview.daemonsets"), value: data?.daemonSets, icon: GitBranch, color: "text-cyan-500", bg: "bg-cyan-500/10" },
+    { label: t("overview.services"), value: data?.services, icon: Network, color: "text-orange-500", bg: "bg-orange-500/10" },
+    { label: t("overview.ingresses"), value: data?.ingresses, icon: Globe, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: t("overview.jobs"), value: data?.jobs, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: t("overview.cronjobs"), value: data?.cronJobs, icon: CalendarClock, color: "text-rose-500", bg: "bg-rose-500/10" },
+  ]
+
+  return (
+    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
+      <CardHeader className="p-5 pb-4 shrink-0">
+        <CardTitle className="text-sm font-semibold">{t("overview.workloads_network", "Workloads & Network")}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 p-5 pt-0 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 mt-1">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl shrink-0 ${item.bg} ${item.color}`}>
+                 <item.icon className="size-4" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xl font-bold leading-none">{item.value ?? 0}</span>
+                <span className="text-xs text-muted-foreground mt-1.5 truncate" title={item.label}>{item.label}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -678,20 +744,27 @@ function PodStatusBar({ dist, total, isLoading }: PodStatusBarProps) {
 
 function OverviewSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={i} className="py-0">
-            <CardHeader className="flex flex-row items-center justify-between px-3 pt-2.5 pb-0.5">
-              <Skeleton className="h-2.5 w-14" />
-              <Skeleton className="size-4 rounded" />
+    <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden pb-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="rounded-2xl shadow-sm border-border/40">
+            <CardHeader className="flex flex-row items-center justify-between p-5 pb-2">
+              <Skeleton className="h-3 w-14" />
+              <Skeleton className="size-8 rounded-xl" />
             </CardHeader>
-            <CardContent className="px-3 pb-2.5">
-              <Skeleton className="h-5 w-12" />
-              <Skeleton className="mt-0.5 h-2.5 w-20" />
+            <CardContent className="p-5 pt-0">
+              <Skeleton className="h-8 w-12" />
+              <Skeleton className="mt-2 h-3 w-20" />
             </CardContent>
           </Card>
         ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-2 gap-4 flex-1 min-h-0">
+        <Skeleton className="lg:col-span-4 min-h-0 h-full rounded-2xl" />
+        <Skeleton className="lg:col-span-4 min-h-0 h-full rounded-2xl" />
+        <Skeleton className="lg:col-span-4 lg:row-span-2 min-h-0 h-full rounded-2xl" />
+        <Skeleton className="lg:col-span-4 min-h-0 h-full rounded-2xl" />
+        <Skeleton className="lg:col-span-4 min-h-0 h-full rounded-2xl" />
       </div>
     </div>
   )
@@ -782,10 +855,10 @@ export function OverviewPage() {
           canRemove={canAccessAdmin(user?.role ?? "")}
         />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden pb-4">
           {isError && (
-            <div className="flex shrink-0 items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-              <AlertCircle className="size-4 shrink-0" />
+            <div className="flex shrink-0 items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-5 text-sm text-destructive font-medium">
+              <AlertCircle className="size-5 shrink-0" />
               <span>
                 {error instanceof Error
                   ? error.message
@@ -794,8 +867,8 @@ export function OverviewPage() {
             </div>
           )}
 
-          {/* Row 1: Core resource stat cards - 5 columns */}
-          <div className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Top KPI row - 4 key metrics */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title={t("overview.nodes")}
               icon={Monitor}
@@ -811,7 +884,7 @@ export function OverviewPage() {
               }
               subtitleColor={data ? getSubtitleColor(data.readyNodes, data.nodes) : undefined}
               isLoading={isLoading}
-              iconClass="bg-blue-500/10"
+              iconClass="bg-blue-500/10 text-blue-600 dark:text-blue-400"
             />
             <StatCard
               title={t("overview.pods")}
@@ -828,7 +901,7 @@ export function OverviewPage() {
               }
               subtitleColor={data ? getSubtitleColor(data.runningPods, data.pods) : undefined}
               isLoading={isLoading}
-              iconClass="bg-green-500/10"
+              iconClass="bg-green-500/10 text-green-600 dark:text-green-400"
             />
             <StatCard
               title={t("overview.deployments")}
@@ -845,20 +918,7 @@ export function OverviewPage() {
               }
               subtitleColor={data ? getSubtitleColor(data.readyDeployments, data.deployments) : undefined}
               isLoading={isLoading}
-              iconClass="bg-purple-500/10"
-            />
-            <StatCard
-              title={t("overview.services")}
-              icon={Network}
-              value={data?.services}
-              subtitle={
-                data && data.services > 0
-                  ? t("overview.all_active")
-                  : undefined
-              }
-              subtitleColor={data ? "text-green-500" : undefined}
-              isLoading={isLoading}
-              iconClass="bg-orange-500/10"
+              iconClass="bg-purple-500/10 text-purple-600 dark:text-purple-400"
             />
             <StatCard
               title={t("overview.namespaces")}
@@ -875,114 +935,52 @@ export function OverviewPage() {
               }
               subtitleColor={data ? getSubtitleColor(data.activeNamespaces, data.namespaces) : undefined}
               isLoading={isLoading}
-              iconClass="bg-teal-500/10"
+              iconClass="bg-teal-500/10 text-teal-600 dark:text-teal-400"
             />
           </div>
 
-          {/* Row 2: Workload stat cards - 5 columns */}
-          <div className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard
-              title={t("overview.statefulsets")}
-              icon={Database}
-              value={data?.statefulSets}
-              subtitle={
-                data
-                  ? data.statefulSets === 0
-                    ? undefined
-                    : data.readyStatefulSets >= data.statefulSets
-                      ? t("overview.all_ready")
-                      : t("overview.ready_count", { ready: data.readyStatefulSets, total: data.statefulSets })
-                  : undefined
-              }
-              subtitleColor={data ? getSubtitleColor(data.readyStatefulSets, data.statefulSets) : undefined}
-              isLoading={isLoading}
-              iconClass="bg-indigo-500/10"
-            />
-            <StatCard
-              title={t("overview.daemonsets")}
-              icon={GitBranch}
-              value={data?.daemonSets}
-              subtitle={
-                data
-                  ? data.daemonSets === 0
-                    ? undefined
-                    : data.readyDaemonSets >= data.daemonSets
-                      ? t("overview.all_ready")
-                      : t("overview.ready_count", { ready: data.readyDaemonSets, total: data.daemonSets })
-                  : undefined
-              }
-              subtitleColor={data ? getSubtitleColor(data.readyDaemonSets, data.daemonSets) : undefined}
-              isLoading={isLoading}
-              iconClass="bg-cyan-500/10"
-            />
-            <StatCard
-              title={t("overview.jobs")}
-              icon={Clock}
-              value={data?.jobs}
-              subtitle={
-                data
-                  ? data.jobs === 0
-                    ? undefined
-                    : data.failedJobs === 0 && data.succeededJobs > 0
-                      ? t("overview.all_succeeded")
-                      : t("overview.succeeded_failed", { succeeded: data.succeededJobs, failed: data.failedJobs })
-                  : undefined
-              }
-              subtitleColor={data ? (data.failedJobs > 0 ? "text-red-500" : "text-green-500") : undefined}
-              isLoading={isLoading}
-              iconClass="bg-amber-500/10"
-            />
-            <StatCard
-              title={t("overview.cronjobs")}
-              icon={CalendarClock}
-              value={data?.cronJobs}
-              subtitle={
-                data
-                  ? data.cronJobs === 0
-                    ? undefined
-                    : data.activeCronJobs > 0
-                      ? t("overview.active_cronjobs", { active: data.activeCronJobs })
-                      : t("overview.no_active")
-                  : undefined
-              }
-              subtitleColor={data ? (data.activeCronJobs > 0 ? "text-blue-500" : "text-muted-foreground") : undefined}
-              isLoading={isLoading}
-              iconClass="bg-rose-500/10"
-            />
-            <StatCard
-              title={t("overview.ingresses")}
-              icon={Globe}
-              value={data?.ingresses}
-              subtitle={data && data.ingresses > 0 ? t("overview.all_active") : undefined}
-              subtitleColor={data ? "text-green-500" : undefined}
-              isLoading={isLoading}
-              iconClass="bg-emerald-500/10"
-            />
-          </div>
+          {/* Main Dashboard Grid: Enforce perfectly aligned 2x2 grid for left components, full height for right */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-2 gap-4 flex-1 min-h-0">
+            {/* Row 1, Col 1 */}
+            <div className="lg:col-span-4 min-h-0 h-full">
+              <ResourceUtilization
+                resources={data?.resources ?? { cpu: { allocatable: 0, requests: 0, limits: 0 }, memory: { allocatable: 0, requests: 0, limits: 0 } }}
+                isLoading={isLoading}
+              />
+            </div>
 
-          {/* Row 3: Resource Allocation + Storage Overview */}
-          <div className="grid min-h-0 flex-1 grid-rows-[1fr] gap-2 overflow-hidden lg:grid-cols-2">
-            <ResourceUtilization
-              resources={data?.resources ?? { cpu: { allocatable: 0, requests: 0, limits: 0 }, memory: { allocatable: 0, requests: 0, limits: 0 } }}
-              isLoading={isLoading}
-            />
-            <StorageOverview
-              data={data ?? {} as OverviewData}
-              isLoading={isLoading}
-            />
-          </div>
+            {/* Row 1, Col 2 */}
+            <div className="lg:col-span-4 min-h-0 h-full">
+              <StorageOverview
+                data={data ?? {} as OverviewData}
+                isLoading={isLoading}
+              />
+            </div>
 
-          {/* Row 4: Pod Status + Recent Events */}
-          <div className="grid min-h-0 flex-1 grid-rows-[1fr] gap-2 overflow-hidden lg:grid-cols-2">
-            <PodStatusBar
-              dist={data?.podStatusDistribution ?? { running: 0, pending: 0, succeeded: 0, failed: 0, unknown: 0 }}
-              total={data?.pods ?? 0}
-              isLoading={isLoading}
-            />
-            <RecentEvents
-              events={data?.recentEvents ?? []}
-              isLoading={isLoading}
-            />
+            {/* Right Column: Spans 2 rows */}
+            <div className="lg:col-span-4 lg:row-span-2 min-h-0 h-full">
+              <RecentEvents
+                events={data?.recentEvents ?? []}
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Row 2, Col 1 */}
+            <div className="lg:col-span-4 min-h-0 h-full">
+              <PodStatusBar
+                dist={data?.podStatusDistribution ?? { running: 0, pending: 0, succeeded: 0, failed: 0, unknown: 0 }}
+                total={data?.pods ?? 0}
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Row 2, Col 2 */}
+            <div className="lg:col-span-4 min-h-0 h-full">
+              <WorkloadSummary
+                data={data ?? {} as OverviewData}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         </div>
       )}
