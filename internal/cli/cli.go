@@ -72,6 +72,13 @@ func openDB(configPath string) (*gorm.DB, error) {
 	return db.Session(&gorm.Session{Logger: gormlogger.Discard}), nil
 }
 
+func closeDB(db *gorm.DB) {
+	sqlDB, err := db.DB()
+	if err == nil {
+		_ = sqlDB.Close()
+	}
+}
+
 // readSecret reads a password from stdin without echoing when attached to a
 // terminal, falling back to a plain line read when piped (for scripting).
 func readSecret(prompt string) (string, error) {

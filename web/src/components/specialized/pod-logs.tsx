@@ -177,7 +177,6 @@ export function PodLogs({
       if (!mountedRef.current) return
       setStatus("disconnected")
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, namespace, podName, container, follow, showTimestamps, tailOption, disconnect])
 
   useEffect(() => {
@@ -204,7 +203,6 @@ export function PodLogs({
       }
       return next
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connect, disconnect])
 
   // ---- Download logs --------------------------------------------------------

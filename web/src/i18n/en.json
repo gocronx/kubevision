@@ -46,6 +46,8 @@
     "shrinkChat": "Shrink chat window",
     "enlargeChat": "Enlarge chat window",
     "resizeChat": "Drag to resize the chat window",
+    "fullPageChat": "Full-page chat",
+    "floatingChat": "Floating window",
     "clear": "Clear current conversation",
     "newSession": "New conversation",
     "sessions": "Conversations",
@@ -257,7 +259,7 @@
   },
   "login": {
     "title": "KubeVision",
-    "description": "Kubernetes Dashboard - Sign in to your account",
+    "description": "Sign in",
     "submit": "Sign In",
     "error": "Invalid username or password",
     "provider": "Sign-in provider",

@@ -1,0 +1,7 @@
+persistence:
+  enabled: true
+
+config:
+  database:
+    driver: postgres
+    dsn: postgres://kubevision@example.invalid/kubevision

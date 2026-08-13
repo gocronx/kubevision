@@ -1,0 +1,7 @@
+autoscaling:
+  enabled: true
+
+config:
+  database:
+    driver: sqlite
+    dsn: /data/kubevision.db

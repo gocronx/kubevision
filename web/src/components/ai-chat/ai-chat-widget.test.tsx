@@ -31,7 +31,7 @@ vi.mock("./use-ai-chat", () => ({
 }))
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }))
 
 function renderWidget() {
@@ -40,6 +40,7 @@ function renderWidget() {
 
 describe("AIChatWidget availability", () => {
   beforeEach(() => {
+    localStorage.clear()
     state.config = { enabled: false, hasApiKey: true }
     state.role = "viewer"
   })
@@ -66,5 +67,37 @@ describe("AIChatWidget availability", () => {
     fireEvent.click(screen.getByRole("button", { name: "ai.title" }))
     expect(screen.getByText("ai.missingAPIKey")).toBeInTheDocument()
     expect(screen.queryByText("ai.disabledMessage")).not.toBeInTheDocument()
+  })
+})
+
+describe("AIChatWidget layout", () => {
+  beforeEach(() => {
+    localStorage.clear()
+    state.config = { enabled: true, hasApiKey: true }
+    state.role = "viewer"
+  })
+
+  it("switches between floating and full-page chat", () => {
+    const { container } = renderWidget()
+    fireEvent.click(screen.getByRole("button", { name: "ai.title" }))
+
+    expect(container.querySelector('[data-chat-mode="floating"]')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "ai.fullPageChat" }))
+    expect(container.querySelector('[data-chat-mode="full"]')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "ai.floatingChat" }))
+    expect(container.querySelector('[data-chat-mode="floating"]')).toBeInTheDocument()
+  })
+
+  it("restores the saved layout when reopened after remounting", () => {
+    const firstRender = renderWidget()
+    fireEvent.click(screen.getByRole("button", { name: "ai.title" }))
+    fireEvent.click(screen.getByRole("button", { name: "ai.fullPageChat" }))
+    expect(localStorage.getItem("kubevision-ai-chat-mode")).toBe("full")
+    firstRender.unmount()
+
+    const { container } = renderWidget()
+    fireEvent.click(screen.getByRole("button", { name: "ai.title" }))
+    expect(container.querySelector('[data-chat-mode="full"]')).toBeInTheDocument()
   })
 })

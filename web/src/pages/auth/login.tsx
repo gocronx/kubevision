@@ -7,7 +7,8 @@ import { toast } from "sonner"
 import { useAuth } from "@/stores/auth-store"
 import api from "@/lib/api"
 import { useVerify2FA, useRecoveryCode } from "@/hooks/use-2fa"
-import { loginWithPublicKey, publicKeyAvailable } from "@/lib/public-key-auth"
+import { loginWithPublicKey, publicKeyEnabled } from "@/lib/public-key-auth"
+import { preventSubmitWhileComposing } from "@/lib/form-events"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -47,7 +48,8 @@ export function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-	const [provider, setProvider] = useState<"local" | "directory">("local")
+  const [provider, setProvider] = useState<"local" | "directory">("local")
+  const [showPublicKey, setShowPublicKey] = useState(false)
 
   // 2FA step state
   const [step, setStep] = useState<LoginStep>("credentials")
@@ -61,6 +63,10 @@ export function LoginPage() {
 
   const verify2FA = useVerify2FA()
   const useRecovery = useRecoveryCode()
+
+  useEffect(() => {
+    void publicKeyEnabled().then(setShowPublicKey)
+  }, [])
 
   // Auto-focus the TOTP input when switching to the 2FA step
   useEffect(() => {
@@ -100,7 +106,7 @@ export function LoginPage() {
   async function handlePublicKeyLogin() {
     setLoading(true)
     try {
-		const data = await loginWithPublicKey(username.trim()) as unknown as LoginResponse
+      const data = await loginWithPublicKey(username.trim()) as unknown as LoginResponse
       handleLoginSuccess(data)
     } finally {
       setLoading(false)
@@ -158,10 +164,10 @@ export function LoginPage() {
           <LanguageToggle i18n={i18n} />
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
-            <CardDescription>{t("login.description")}</CardDescription>
+            <CardDescription className="whitespace-nowrap">{t("login.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleCredentialsSubmit} onKeyDownCapture={preventSubmitWhileComposing} className="flex flex-col gap-4">
 				<div className="grid grid-cols-2 rounded-md border p-1" aria-label={t("login.provider")}>
 					<Button type="button" size="sm" variant={provider === "local" ? "secondary" : "ghost"} onClick={() => setProvider("local")}>{t("login.local")}</Button>
 					<Button type="button" size="sm" variant={provider === "directory" ? "secondary" : "ghost"} onClick={() => setProvider("directory")}>{t("login.directory")}</Button>
@@ -205,11 +211,11 @@ export function LoginPage() {
                 {loading && <Loader2 className="animate-spin" />}
                 {t("login.submit")}
               </Button>
-              {publicKeyAvailable() && (
-				<Button type="button" variant="outline" className="w-full" disabled={loading} onClick={handlePublicKeyLogin}>
-				  <KeyRound className="size-4" />
-				  {t("login.publicKey")}
-				</Button>
+              {showPublicKey && (
+                <Button type="button" variant="outline" className="w-full" disabled={loading} onClick={handlePublicKeyLogin}>
+                  <KeyRound className="size-4" />
+                  {t("login.publicKey")}
+                </Button>
               )}
             </form>
             <div className="mt-4 flex justify-center">
@@ -243,7 +249,7 @@ export function LoginPage() {
             <CardDescription>{t("twofa.recoveryDescription", "Enter one of your backup recovery codes")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleRecoverySubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleRecoverySubmit} onKeyDownCapture={preventSubmitWhileComposing} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="recoveryCode">{t("twofa.recoveryCode", "Recovery Code")}</Label>
                 <Input
@@ -294,7 +300,7 @@ export function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleTotpSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleTotpSubmit} onKeyDownCapture={preventSubmitWhileComposing} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="totpCode">{t("twofa.code", "Verification Code")}</Label>
               <Input

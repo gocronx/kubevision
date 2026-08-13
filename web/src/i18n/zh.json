@@ -46,6 +46,8 @@
     "shrinkChat": "缩小对话窗口",
     "enlargeChat": "放大对话窗口",
     "resizeChat": "拖动调整对话窗口大小",
+    "fullPageChat": "全页聊天",
+    "floatingChat": "浮动窗口",
     "clear": "清空当前对话",
     "newSession": "新建对话",
     "sessions": "对话列表",

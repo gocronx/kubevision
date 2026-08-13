@@ -103,8 +103,14 @@ e2e-test:
 ## helm-validate: Lint and render all production baseline fixtures
 helm-validate:
 	helm lint deploy/helm/kubevision
-	@for values in deploy/helm/kubevision/tests/fixtures/helm-values-*.yaml; do \
+	@for values in deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		deploy/helm/kubevision/tests/fixtures/helm-values-existing-secret.yaml \
+		deploy/helm/kubevision/tests/fixtures/helm-values-external-database.yaml \
+		deploy/helm/kubevision/tests/fixtures/helm-values-persistent-sqlite.yaml; do \
 		helm template kubevision deploy/helm/kubevision --values "$$values" >/dev/null || exit 1; \
+	done
+	@for values in deploy/helm/kubevision/tests/fixtures/helm-values-invalid-*.yaml; do \
+		! helm template kubevision deploy/helm/kubevision --values "$$values" >/dev/null 2>&1 || exit 1; \
 	done
 	@! helm template kubevision deploy/helm/kubevision \
 		--values deploy/helm/kubevision/tests/fixtures/helm-values-existing-secret.yaml \
@@ -112,6 +118,11 @@ helm-validate:
 	@helm template kubevision deploy/helm/kubevision \
 		--values deploy/helm/kubevision/tests/fixtures/helm-values-existing-secret.yaml \
 		--show-only templates/deployment.yaml | grep -q 'name: "kubevision-runtime-secrets"'
+	@helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		--show-only templates/deployment.yaml | grep -q 'path: /readyz'
+	@! helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-external-database.yaml | grep -q 'kind: PersistentVolumeClaim'
 
 ## release-chart: Package a versioned chart (VERSION=x.y.z OUTPUT_DIR=dist)
 release-chart:

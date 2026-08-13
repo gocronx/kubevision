@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -56,6 +57,28 @@ func TestRegisterRoutes_HealthCheck(t *testing.T) {
 	var resp map[string]string
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "ok", resp["status"])
+}
+
+func TestRegisterRoutes_ReadinessCheck(t *testing.T) {
+	tests := []struct {
+		name       string
+		deps       *RouterDeps
+		statusCode int
+	}{
+		{name: "missing check", deps: &RouterDeps{}, statusCode: http.StatusServiceUnavailable},
+		{name: "database ready", deps: &RouterDeps{DatabasePing: func(context.Context) error { return nil }}, statusCode: http.StatusOK},
+		{name: "database unavailable", deps: &RouterDeps{DatabasePing: func(context.Context) error { return assert.AnError }}, statusCode: http.StatusServiceUnavailable},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := gin.New()
+			RegisterRoutes(r, test.deps)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+			assert.Equal(t, test.statusCode, w.Code)
+		})
+	}
 }
 
 func TestRegisterRoutes_UnknownRoute_Returns404(t *testing.T) {

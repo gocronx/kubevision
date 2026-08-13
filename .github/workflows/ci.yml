@@ -60,6 +60,22 @@ jobs:
   go-test:
     name: Backend race tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: kubevision_test
+          POSTGRES_USER: kubevision
+          POSTGRES_PASSWORD: kubevision_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kubevision -d kubevision_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      KUBEVISION_TEST_POSTGRES_DSN: postgres://kubevision:kubevision_test@127.0.0.1:5432/kubevision_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

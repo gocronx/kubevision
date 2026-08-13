@@ -17,10 +17,11 @@ func Reset2FA(args []string) error {
 	if err != nil {
 		return err
 	}
-	repo, err := userRepo(configPath)
+	repo, cleanup, err := userRepo(configPath)
 	if err != nil {
 		return err
 	}
+	defer cleanup()
 	if err := clear2FA(context.Background(), repo, username); err != nil {
 		return err
 	}
@@ -44,10 +45,11 @@ func SetRole(args []string) error {
 	if !validRoles[*role] {
 		return fmt.Errorf("invalid role %q (allowed: super-admin, admin, editor, viewer)", *role)
 	}
-	repo, err := userRepo(*configPath)
+	repo, cleanup, err := userRepo(*configPath)
 	if err != nil {
 		return err
 	}
+	defer cleanup()
 	if err := setUserRole(context.Background(), repo, *username, *role); err != nil {
 		return err
 	}
@@ -61,10 +63,11 @@ func ActivateUser(args []string) error {
 	if err != nil {
 		return err
 	}
-	repo, err := userRepo(configPath)
+	repo, cleanup, err := userRepo(configPath)
 	if err != nil {
 		return err
 	}
+	defer cleanup()
 	if err := setUserActive(context.Background(), repo, username, true); err != nil {
 		return err
 	}
@@ -78,10 +81,11 @@ func DeactivateUser(args []string) error {
 	if err != nil {
 		return err
 	}
-	repo, err := userRepo(configPath)
+	repo, cleanup, err := userRepo(configPath)
 	if err != nil {
 		return err
 	}
+	defer cleanup()
 	if err := setUserActive(context.Background(), repo, username, false); err != nil {
 		return err
 	}
@@ -111,10 +115,11 @@ func DeleteUser(args []string) error {
 			return fmt.Errorf("confirmation did not match; aborted")
 		}
 	}
-	repo, err := userRepo(*configPath)
+	repo, cleanup, err := userRepo(*configPath)
 	if err != nil {
 		return err
 	}
+	defer cleanup()
 	if err := deleteUserByName(context.Background(), repo, *username); err != nil {
 		return err
 	}
@@ -195,12 +200,12 @@ func parseUserCmd(name string, args []string) (configPath, username string, err 
 }
 
 // userRepo opens the database and returns a UserRepo.
-func userRepo(configPath string) (repository.UserRepo, error) {
+func userRepo(configPath string) (repository.UserRepo, func(), error) {
 	db, err := openDB(configPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return repository.NewUserRepo(db), nil
+	return repository.NewUserRepo(db), func() { closeDB(db) }, nil
 }
 
 // mustGetUser fetches a user by name, returning a clear error when absent.

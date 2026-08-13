@@ -1,8 +1,14 @@
-{{- if and .Values.persistence.enabled (eq .Values.config.database.driver "sqlite") (ne (int .Values.replicaCount) 1) -}}
-{{- fail "persistent SQLite requires replicaCount=1" -}}
+{{- if and (eq .Values.config.database.driver "sqlite") (ne (int .Values.replicaCount) 1) -}}
+{{- fail "SQLite requires replicaCount=1; use PostgreSQL before scaling KubeVision" -}}
 {{- end -}}
-{{- if and .Values.persistence.enabled (eq .Values.config.database.driver "sqlite") .Values.autoscaling.enabled -}}
-{{- fail "autoscaling cannot be enabled with persistent SQLite" -}}
+{{- if and (eq .Values.config.database.driver "sqlite") .Values.autoscaling.enabled -}}
+{{- fail "autoscaling cannot be enabled with SQLite; use PostgreSQL before enabling HPA" -}}
+{{- end -}}
+{{- if and (eq .Values.config.database.driver "postgres") .Values.persistence.enabled -}}
+{{- fail "persistence must be disabled when using PostgreSQL; back up the external database separately" -}}
+{{- end -}}
+{{- if and (eq .Values.config.database.driver "postgres") (or (ne (int .Values.replicaCount) 1) .Values.autoscaling.enabled) (not .Values.existingSecret) -}}
+{{- fail "PostgreSQL multi-replica deployments require existingSecret with shared KUBEVISION_DB_DSN, KUBEVISION_JWT_SECRET, and KUBEVISION_ENCRYPT_KEY" -}}
 {{- end -}}
 apiVersion: apps/v1
 kind: Deployment

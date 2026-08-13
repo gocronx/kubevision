@@ -140,7 +140,7 @@ func portInUseMessage(port int) string {
 }
 
 // serveFrontend mounts the embedded React build as a static file server.
-// API routes (/api/, /healthz) take priority via Gin's router; any path not
+// API routes and health endpoints take priority via Gin's router; any path not
 // matching a known route falls back to index.html for SPA client-side routing.
 func serveFrontend(engine *gin.Engine, logger *zap.Logger) {
 	distFS, err := fs.Sub(web.DistFS, "dist")
@@ -161,7 +161,7 @@ func serveFrontend(engine *gin.Engine, logger *zap.Logger) {
 		path := c.Request.URL.Path
 
 		// Skip API and health paths (should not reach here, but guard anyway).
-		if strings.HasPrefix(path, "/api/") || path == "/healthz" {
+		if strings.HasPrefix(path, "/api/") || path == "/healthz" || path == "/readyz" {
 			c.Next()
 			return
 		}

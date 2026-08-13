@@ -155,6 +155,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to init database", zap.Error(err))
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Fatal("failed to access database connection", zap.Error(err))
+	}
 	logger.Info("database connected", zap.String("driver", cfg.Database.Driver))
 
 	// ----- Dependency Injection -----
@@ -353,6 +357,7 @@ func main() {
 		RBACMiddleware:         rbacMiddleware,
 		AuditMiddleware:        auditMiddleware,
 		Logger:                 logger,
+		DatabasePing:           sqlDB.PingContext,
 	}
 
 	// ----- HTTP Server -----
@@ -400,6 +405,9 @@ func main() {
 
 	if err := srv.Shutdown(); err != nil {
 		logger.Error("shutdown error", zap.Error(err))
+	}
+	if err := sqlDB.Close(); err != nil {
+		logger.Error("database close error", zap.Error(err))
 	}
 
 	logger.Info("KubeVision exited")

@@ -92,6 +92,38 @@ func TestLoop_ReadToolThenAnswer(t *testing.T) {
 	}
 }
 
+func TestLoop_RetriesEmptyFinalResponse(t *testing.T) {
+	turns := []Message{
+		{Role: "assistant", ToolCalls: []ToolCall{{ID: "c1", Function: FunctionCall{Name: "list_resources", Arguments: `{"kind":"pods"}`}}}},
+		{Role: "assistant"},
+		{Role: "assistant", Content: "Inspection complete."},
+	}
+	r, events := collectRun("admin", turns)
+	r.loop(context.Background(), []Message{{Role: "user", Content: "inspect pods"}})
+
+	got := eventNames(*events)
+	want := []string{EventToolCall, EventToolResult, EventMessage, EventDone}
+	if len(got) != len(want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("event[%d] = %s, want %s (all: %v)", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestLoop_ReportsRepeatedEmptyFinalResponse(t *testing.T) {
+	turns := []Message{{Role: "assistant"}, {Role: "assistant"}}
+	r, events := collectRun("admin", turns)
+	r.loop(context.Background(), []Message{{Role: "user", Content: "inspect pods"}})
+
+	got := eventNames(*events)
+	if len(got) != 1 || got[0] != EventError {
+		t.Fatalf("events = %v, want [%s]", got, EventError)
+	}
+}
+
 func TestLoop_MutationPausesForApproval(t *testing.T) {
 	turns := []Message{
 		{Role: "assistant", ToolCalls: []ToolCall{{ID: "c1", Function: FunctionCall{Name: "delete_resource", Arguments: `{"kind":"pods","name":"web","namespace":"default"}`}}}},

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
   Box, Server, Network, Monitor, AlertCircle, Plus, Layers,
-  Cpu, MemoryStick, Info, AlertTriangle, XCircle,
+  Cpu, MemoryStick,
   Database, GitBranch, Clock, CalendarClock, Globe, HardDrive,
   RefreshCw,
 } from "lucide-react"
@@ -330,21 +330,6 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
       </CardContent>
     </Card>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Recent events component
-// ---------------------------------------------------------------------------
-
-function getEventIcon(type: string) {
-  switch (type) {
-    case "Warning":
-      return <AlertTriangle className="size-3.5 text-yellow-500" />
-    case "Error":
-      return <XCircle className="size-3.5 text-red-500" />
-    default:
-      return <Info className="size-3.5 text-blue-500" />
-  }
 }
 
 function getEventBadgeClass(type: string): string {
