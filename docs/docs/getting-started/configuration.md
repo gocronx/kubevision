@@ -16,6 +16,11 @@ server:
 database:
   driver: sqlite           # sqlite | postgres
   dsn: kubevision.db       # file path or connection string
+  max_open_conns: 0        # driver default: SQLite 1, PostgreSQL 25
+  max_idle_conns: 0        # driver default: SQLite 1, PostgreSQL 5
+  conn_max_lifetime: 0s    # PostgreSQL default: 30m
+  conn_max_idle_time: 0s   # PostgreSQL default: 5m
+  ping_timeout: 5s
 
 auth:
   jwt_secret: ""           # auto-generated if empty
@@ -36,6 +41,11 @@ All settings can be overridden via environment variables:
 | `KUBEVISION_SERVER_PORT` | HTTP port | `8080` |
 | `KUBEVISION_DB_DRIVER` | Database driver (`sqlite` or `postgres`) | `sqlite` |
 | `KUBEVISION_DB_DSN` | Database connection string | `kubevision.db` |
+| `KUBEVISION_DB_MAX_OPEN_CONNS` | Maximum open database connections | driver default |
+| `KUBEVISION_DB_MAX_IDLE_CONNS` | Maximum idle database connections | driver default |
+| `KUBEVISION_DB_CONN_MAX_LIFETIME` | Maximum connection lifetime | PostgreSQL: `30m` |
+| `KUBEVISION_DB_CONN_MAX_IDLE_TIME` | Maximum idle connection time | PostgreSQL: `5m` |
+| `KUBEVISION_DB_PING_TIMEOUT` | Startup database ping timeout | `5s` |
 | `KUBEVISION_JWT_SECRET` | JWT signing secret | auto-generated |
 | `KUBEVISION_ACCESS_TOKEN_TTL` | Access token lifetime | `15m` |
 | `KUBEVISION_REFRESH_TOKEN_TTL` | Refresh token lifetime | `168h` |
@@ -55,12 +65,20 @@ database:
   dsn: kubevision.db
 ```
 
+SQLite is limited to one KubeVision process. Kubernetes deployments using
+SQLite must use one replica with autoscaling disabled. Use PostgreSQL before
+scaling horizontally.
+
 ### PostgreSQL (Production)
 
 ```yaml
 database:
   driver: postgres
   dsn: "host=localhost port=5432 user=kubevision password=secret dbname=kubevision sslmode=disable"
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+  conn_max_idle_time: 5m
 ```
 
 Or via environment variable:
@@ -69,6 +87,13 @@ Or via environment variable:
 export KUBEVISION_DB_DRIVER=postgres
 export KUBEVISION_DB_DSN="host=localhost port=5432 user=kubevision password=secret dbname=kubevision sslmode=disable"
 ```
+
+KubeVision records schema versions and serializes PostgreSQL migrations during
+startup, preventing multiple replicas from changing the schema concurrently.
+Back up the database before upgrading. `/healthz` reports process liveness;
+`/readyz` checks database connectivity and should be used for readiness probes.
+Multi-replica Helm deployments must use `existingSecret` to provide one shared
+`KUBEVISION_DB_DSN`, `KUBEVISION_JWT_SECRET`, and `KUBEVISION_ENCRYPT_KEY`.
 
 ## Kubernetes Connection
 

@@ -1,0 +1,9 @@
+replicaCount: 2
+
+persistence:
+  enabled: false
+
+config:
+  database:
+    driver: sqlite
+    dsn: /tmp/kubevision.db

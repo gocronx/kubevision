@@ -33,8 +33,13 @@ type ServerConfig struct {
 
 // DatabaseConfig holds database connection settings.
 type DatabaseConfig struct {
-	Driver string `yaml:"driver"`
-	DSN    string `yaml:"dsn"`
+	Driver          string        `yaml:"driver"`
+	DSN             string        `yaml:"dsn"`
+	MaxOpenConns    int           `yaml:"max_open_conns"`
+	MaxIdleConns    int           `yaml:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `yaml:"conn_max_idle_time"`
+	PingTimeout     time.Duration `yaml:"ping_timeout"`
 }
 
 // AuthConfig holds authentication settings.
@@ -133,8 +138,9 @@ func Default() *Config {
 			Port: 8080,
 		},
 		Database: DatabaseConfig{
-			Driver: "sqlite",
-			DSN:    "kubevision.db",
+			Driver:      "sqlite",
+			DSN:         "kubevision.db",
+			PingTimeout: 5 * time.Second,
 		},
 		Auth: AuthConfig{
 			JWTSecret:       "",
@@ -303,6 +309,31 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("KUBEVISION_DB_DSN"); v != "" {
 		cfg.Database.DSN = v
+	}
+	if v := os.Getenv("KUBEVISION_DB_MAX_OPEN_CONNS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.Database.MaxOpenConns = n
+		}
+	}
+	if v := os.Getenv("KUBEVISION_DB_MAX_IDLE_CONNS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.Database.MaxIdleConns = n
+		}
+	}
+	if v := os.Getenv("KUBEVISION_DB_CONN_MAX_LIFETIME"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Database.ConnMaxLifetime = d
+		}
+	}
+	if v := os.Getenv("KUBEVISION_DB_CONN_MAX_IDLE_TIME"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Database.ConnMaxIdleTime = d
+		}
+	}
+	if v := os.Getenv("KUBEVISION_DB_PING_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Database.PingTimeout = d
+		}
 	}
 	if v := os.Getenv("KUBEVISION_JWT_SECRET"); v != "" {
 		cfg.Auth.JWTSecret = v

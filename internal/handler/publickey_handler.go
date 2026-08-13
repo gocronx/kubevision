@@ -32,6 +32,10 @@ type renameCredentialRequest struct {
 	Label string `json:"label"`
 }
 
+func (h *PublicKeyHandler) Config(c *gin.Context) {
+	response.Success(c, gin.H{"enabled": h.service.Enabled()})
+}
+
 func (h *PublicKeyHandler) BeginRegistration(c *gin.Context) {
 	var req registrationBeginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

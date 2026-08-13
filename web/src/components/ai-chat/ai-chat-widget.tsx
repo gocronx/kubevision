@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react"
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Bot, MoveDiagonal2, Settings, X, ZoomIn, ZoomOut } from "lucide-react"
+import { Bot, Maximize2, Minimize2, MoveDiagonal2, Settings, X, ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useCluster } from "@/hooks/use-cluster"
@@ -11,6 +11,7 @@ import { useAIConfig } from "./use-ai-config"
 import { ChatMessages } from "./ai-chat-messages"
 import { ChatComposer } from "./ai-chat-composer"
 import { ChatSessions } from "./ai-chat-sessions"
+import { loadAIChatMode, saveAIChatMode, type AIChatMode } from "./ai-chat-mode"
 import {
   CHAT_DEFAULT_DIMENSIONS,
   CHAT_MAX_DIMENSIONS,
@@ -25,6 +26,7 @@ import type { PageContext } from "./ai-chat-types"
 export function AIChatWidget() {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<AIChatMode>(loadAIChatMode)
   const [dimensions, setDimensions] = useState<ChatDimensions>(CHAT_DEFAULT_DIMENSIONS)
   const [isDragging, setIsDragging] = useState(false)
   const dragStartRef = useRef<{ pointerId: number; x: number; y: number; dimensions: ChatDimensions } | null>(null)
@@ -56,6 +58,11 @@ export function AIChatWidget() {
 
   const resizeByStep = (direction: -1 | 1) => {
     setDimensions((current) => resizeChat(current, direction, viewportDimensions()))
+  }
+
+  const changeMode = (nextMode: AIChatMode) => {
+    setMode(nextMode)
+    saveAIChatMode(nextMode)
   }
 
   const startDragResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -122,56 +129,84 @@ export function AIChatWidget() {
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 flex max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl sm:bottom-6 sm:right-6 ${isDragging ? "select-none" : "transition-[width,height] duration-200"}`}
-      style={{ width: dimensions.width, height: dimensions.height }}
+      data-chat-mode={mode}
+      className={mode === "full"
+        ? "fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-background"
+        : `fixed bottom-4 right-4 z-50 flex max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-background shadow-2xl sm:bottom-6 sm:right-6 ${isDragging ? "select-none" : "transition-[width,height] duration-200"}`}
+      style={mode === "floating" ? { width: dimensions.width, height: dimensions.height } : undefined}
     >
-      <button
-        type="button"
-        aria-label={t("ai.resizeChat")}
-        className="absolute left-0 top-0 z-10 flex size-11 touch-none cursor-nwse-resize items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        onPointerDown={startDragResize}
-        onPointerMove={dragResize}
-        onPointerUp={stopDragResize}
-        onPointerCancel={stopDragResize}
-        onKeyDown={resizeWithKeyboard}
-      >
-        <MoveDiagonal2 className="size-4" />
-      </button>
+      {mode === "floating" && (
+        <button
+          type="button"
+          aria-label={t("ai.resizeChat")}
+          className="absolute left-0 top-0 z-10 flex size-11 touch-none cursor-nwse-resize items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          onPointerDown={startDragResize}
+          onPointerMove={dragResize}
+          onPointerUp={stopDragResize}
+          onPointerCancel={stopDragResize}
+          onKeyDown={resizeWithKeyboard}
+        >
+          <MoveDiagonal2 className="size-4" />
+        </button>
+      )}
       {/* Header */}
-      <div className="flex items-center gap-2 border-b py-2.5 pl-11 pr-3">
-        <Bot className="size-4 shrink-0 text-primary" />
+      <div className={mode === "full"
+        ? "flex h-14 shrink-0 items-center gap-2 border-b px-4 sm:px-6"
+        : "flex items-center gap-2 border-b py-2.5 pl-11 pr-3"}
+      >
+        <Bot className={mode === "full" ? "size-5 shrink-0 text-primary" : "size-4 shrink-0 text-primary"} />
         <span className="min-w-0 truncate font-semibold">{t("ai.title")}</span>
         <TooltipProvider>
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            {mode === "floating" && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-9"
+                      disabled={dimensions.width <= CHAT_MIN_DIMENSIONS.width && dimensions.height <= CHAT_MIN_DIMENSIONS.height}
+                      onClick={() => resizeByStep(-1)}
+                      aria-label={t("ai.shrinkChat")}
+                    >
+                      <ZoomOut className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{t("ai.shrinkChat")}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-9"
+                      disabled={dimensions.width >= CHAT_MAX_DIMENSIONS.width && dimensions.height >= CHAT_MAX_DIMENSIONS.height}
+                      onClick={() => resizeByStep(1)}
+                      aria-label={t("ai.enlargeChat")}
+                    >
+                      <ZoomIn className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{t("ai.enlargeChat")}</TooltipContent>
+                </Tooltip>
+              </>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="icon"
                   variant="ghost"
                   className="size-9"
-                  disabled={dimensions.width <= CHAT_MIN_DIMENSIONS.width && dimensions.height <= CHAT_MIN_DIMENSIONS.height}
-                  onClick={() => resizeByStep(-1)}
-                  aria-label={t("ai.shrinkChat")}
+                  onClick={() => changeMode(mode === "floating" ? "full" : "floating")}
+                  aria-label={mode === "floating" ? t("ai.fullPageChat") : t("ai.floatingChat")}
                 >
-                  <ZoomOut className="size-4" />
+                  {mode === "floating" ? <Maximize2 className="size-4" /> : <Minimize2 className="size-4" />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">{t("ai.shrinkChat")}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-9"
-                  disabled={dimensions.width >= CHAT_MAX_DIMENSIONS.width && dimensions.height >= CHAT_MAX_DIMENSIONS.height}
-                  onClick={() => resizeByStep(1)}
-                  aria-label={t("ai.enlargeChat")}
-                >
-                  <ZoomIn className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t("ai.enlargeChat")}</TooltipContent>
+              <TooltipContent side="bottom">
+                {mode === "floating" ? t("ai.fullPageChat") : t("ai.floatingChat")}
+              </TooltipContent>
             </Tooltip>
             <Button
               size="icon"
@@ -210,7 +245,10 @@ export function AIChatWidget() {
           </Button>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className={mode === "full"
+          ? "mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col overflow-hidden"
+          : "flex min-h-0 flex-1 flex-col overflow-hidden"}
+        >
           <ChatSessions
             sessions={sessions}
             activeSessionId={activeSession.id}

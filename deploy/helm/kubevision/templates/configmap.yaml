@@ -13,6 +13,11 @@ data:
       {{- if not .Values.existingSecret }}
       dsn: {{ .Values.config.database.dsn }}
       {{- end }}
+      max_open_conns: {{ .Values.config.database.maxOpenConns }}
+      max_idle_conns: {{ .Values.config.database.maxIdleConns }}
+      conn_max_lifetime: {{ .Values.config.database.connMaxLifetime }}
+      conn_max_idle_time: {{ .Values.config.database.connMaxIdleTime }}
+      ping_timeout: {{ .Values.config.database.pingTimeout }}
     auth:
       access_token_ttl: {{ .Values.config.auth.accessTokenTTL }}
       refresh_token_ttl: {{ .Values.config.auth.refreshTokenTTL }}

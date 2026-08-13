@@ -80,8 +80,8 @@ describe("ChatMessages", () => {
     render(
       <ChatMessages
         messages={[
-          { id: "user", role: "user", content: "inspect nginx" },
-          { id: "assistant", role: "assistant", content: "**Nginx** is healthy." },
+          { id: "user", role: "user", content: "inspect nginx\n" },
+          { id: "assistant", role: "assistant", content: "**Nginx** is healthy.\n\n" },
         ]}
         isLoading={false}
         onApprove={vi.fn()}
@@ -98,5 +98,19 @@ describe("ChatMessages", () => {
       expect(writeText).toHaveBeenNthCalledWith(2, "**Nginx** is healthy.")
     })
     expect(screen.getAllByRole("button", { name: "ai.copiedMessage" })).toHaveLength(2)
+  })
+
+  it("does not reserve a separate action row below text messages", () => {
+    render(
+      <ChatMessages
+        messages={[{ id: "user", role: "user", content: "inspect nginx\n" }]}
+        isLoading={false}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText("inspect nginx")).toHaveTextContent("inspect nginx")
+    expect(screen.getByRole("button", { name: "ai.copyMessage" }).parentElement).toHaveClass("items-end")
   })
 })

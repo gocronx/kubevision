@@ -1,7 +1,10 @@
 package repository
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/gocronx/kubevision/internal/auth"
 	"github.com/gocronx/kubevision/internal/config"
@@ -31,6 +34,26 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("get database connection: %w", err)
+	}
+	initialized := false
+	defer func() {
+		if !initialized {
+			_ = sqlDB.Close()
+		}
+	}()
+	configureConnectionPool(sqlDB, cfg.Database)
+	pingTimeout := cfg.Database.PingTimeout
+	if pingTimeout <= 0 {
+		pingTimeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), pingTimeout)
+	defer cancel()
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
 
 	// 启用 WAL 模式（SQLite）
 	if cfg.Database.Driver == "sqlite" {
@@ -38,26 +61,8 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 		db.Exec("PRAGMA foreign_keys=ON")
 	}
 
-	// 自动迁移
-	if err := db.AutoMigrate(
-		&model.User{},
-		&model.PublicKeyCredential{},
-		&model.PublicKeyCeremony{},
-		&model.Cluster{},
-		&model.Role{},
-		&model.UserClusterRole{},
-		&model.AuditLog{},
-		&model.APIKey{},
-		&model.Template{},
-		&model.Setting{},
-		&model.Webhook{},
-		&model.Favorite{},
-		&model.TerminalSession{},
-		&model.PluginConfig{},
-		&model.DirectoryConfig{},
-		&model.DirectoryRoleMapping{},
-	); err != nil {
-		return nil, fmt.Errorf("auto migrate: %w", err)
+	if err := runMigrations(db, cfg.Database.Driver); err != nil {
+		return nil, fmt.Errorf("run database migrations: %w", err)
 	}
 
 	// Older versions soft-deleted cluster registrations while keeping a global
@@ -72,7 +77,109 @@ func NewDB(cfg *config.Config, logger *zap.Logger) (*gorm.DB, error) {
 	// 初始化系统角色
 	initSystemRoles(db, logger)
 
+	initialized = true
 	return db, nil
+}
+
+type schemaMigration struct {
+	Version   int64     `gorm:"primaryKey"`
+	AppliedAt time.Time `gorm:"not null"`
+}
+
+func (schemaMigration) TableName() string { return "schema_migrations" }
+
+type databaseMigration struct {
+	version int64
+	up      func(*gorm.DB) error
+}
+
+var databaseMigrations = []databaseMigration{
+	{
+		version: 1,
+		up: func(db *gorm.DB) error {
+			return db.AutoMigrate(
+				&model.User{},
+				&model.PublicKeyCredential{},
+				&model.PublicKeyCeremony{},
+				&model.Cluster{},
+				&model.Role{},
+				&model.UserClusterRole{},
+				&model.AuditLog{},
+				&model.APIKey{},
+				&model.Template{},
+				&model.Setting{},
+				&model.Webhook{},
+				&model.Favorite{},
+				&model.TerminalSession{},
+				&model.PluginConfig{},
+				&model.DirectoryConfig{},
+				&model.DirectoryRoleMapping{},
+			)
+		},
+	},
+}
+
+func runMigrations(db *gorm.DB, driver string) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		if driver == "postgres" || driver == "postgresql" {
+			// Serialize schema changes when multiple replicas start together.
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", int64(0x4b564953494f4e)).Error; err != nil {
+				return fmt.Errorf("acquire migration lock: %w", err)
+			}
+		}
+		if err := tx.AutoMigrate(&schemaMigration{}); err != nil {
+			return fmt.Errorf("create migration history: %w", err)
+		}
+		for _, migration := range databaseMigrations {
+			var count int64
+			if err := tx.Model(&schemaMigration{}).Where("version = ?", migration.version).Count(&count).Error; err != nil {
+				return err
+			}
+			if count != 0 {
+				continue
+			}
+			if err := migration.up(tx); err != nil {
+				return fmt.Errorf("apply migration %d: %w", migration.version, err)
+			}
+			if err := tx.Create(&schemaMigration{Version: migration.version, AppliedAt: time.Now().UTC()}).Error; err != nil {
+				return fmt.Errorf("record migration %d: %w", migration.version, err)
+			}
+		}
+		return nil
+	})
+}
+
+func configureConnectionPool(db *sql.DB, cfg config.DatabaseConfig) {
+	maxOpen, maxIdle := cfg.MaxOpenConns, cfg.MaxIdleConns
+	if maxOpen <= 0 {
+		if cfg.Driver == "postgres" || cfg.Driver == "postgresql" {
+			maxOpen = 25
+		} else {
+			maxOpen = 1
+		}
+	}
+	if maxIdle <= 0 {
+		if cfg.Driver == "postgres" || cfg.Driver == "postgresql" {
+			maxIdle = 5
+		} else {
+			maxIdle = 1
+		}
+	}
+	if maxIdle > maxOpen {
+		maxIdle = maxOpen
+	}
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	if cfg.ConnMaxLifetime > 0 {
+		db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	} else if cfg.Driver == "postgres" || cfg.Driver == "postgresql" {
+		db.SetConnMaxLifetime(30 * time.Minute)
+	}
+	if cfg.ConnMaxIdleTime > 0 {
+		db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	} else if cfg.Driver == "postgres" || cfg.Driver == "postgresql" {
+		db.SetConnMaxIdleTime(5 * time.Minute)
+	}
 }
 
 func purgeDeletedClusters(db *gorm.DB) error {

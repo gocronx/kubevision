@@ -48,6 +48,7 @@ func ResetPassword(args []string) error {
 	if err != nil {
 		return err
 	}
+	defer closeDB(db)
 	repo := repository.NewUserRepo(db)
 	if err := resetUserPassword(context.Background(), repo, *username, newPassword); err != nil {
 		return err
@@ -84,6 +85,7 @@ func CreateUser(args []string) error {
 	if err != nil {
 		return err
 	}
+	defer closeDB(db)
 	repo := repository.NewUserRepo(db)
 	if err := createUser(context.Background(), repo, *username, newPassword, *role, *email); err != nil {
 		return err
@@ -104,6 +106,7 @@ func ListUsers(args []string) error {
 	if err != nil {
 		return err
 	}
+	defer closeDB(db)
 	repo := repository.NewUserRepo(db)
 	users, err := repo.List(context.Background())
 	if err != nil {

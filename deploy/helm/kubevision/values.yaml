@@ -61,7 +61,7 @@ probes:
     failureThreshold: 30
   readiness:
     enabled: true
-    path: /healthz
+    path: /readyz
     initialDelaySeconds: 5
     periodSeconds: 10
     timeoutSeconds: 2
@@ -91,6 +91,12 @@ config:
   database:
     driver: sqlite
     dsn: /data/kubevision.db
+    # Zero values use driver-specific defaults: SQLite 1/1, PostgreSQL 25/5.
+    maxOpenConns: 0
+    maxIdleConns: 0
+    connMaxLifetime: 0s
+    connMaxIdleTime: 0s
+    pingTimeout: 5s
   auth:
     jwtSecret: ""  # Auto-generated if empty
     accessTokenTTL: 30m

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
@@ -15,6 +16,8 @@ import (
 // maxIterations bounds how many tool-calling rounds a single chat turn may run
 // before the agent gives up, guarding against runaway loops.
 const maxIterations = 12
+
+const maxEmptyResponses = 2
 
 // Service is the long-lived AI assistant. It is injected once at startup and
 // spawns a short-lived run per chat request.
@@ -218,6 +221,7 @@ func (s *Service) newRun(cfg Config, clusterName string, clusterID uint, actor A
 // pauses for a mutation approval, or hits the iteration ceiling.
 func (r *run) loop(ctx context.Context, messages []Message) {
 	tools := toolDefinitions()
+	emptyResponses := 0
 
 	for range maxIterations {
 		assistant, err := r.client.Stream(ctx, messages, tools, func(delta string) {
@@ -228,6 +232,20 @@ func (r *run) loop(ctx context.Context, messages []Message) {
 			return
 		}
 		messages = append(messages, assistant)
+
+		if len(assistant.ToolCalls) == 0 && strings.TrimSpace(assistant.Content) == "" {
+			emptyResponses++
+			if emptyResponses >= maxEmptyResponses {
+				r.emit(errorEvent("the AI provider ended without a final response; please retry"))
+				return
+			}
+			messages = append(messages, Message{
+				Role:    "system",
+				Content: "Your previous response was empty. Continue from the tool results and provide a concise final answer. If the requested change is ready, call the required mutation tool for approval.",
+			})
+			continue
+		}
+		emptyResponses = 0
 
 		if len(assistant.ToolCalls) == 0 {
 			r.emit(doneEvent())

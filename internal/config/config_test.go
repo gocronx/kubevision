@@ -212,15 +212,26 @@ func TestEnvironmentVariableOverrides(t *testing.T) {
 		{
 			name: "DatabaseDriverAndDSN",
 			envVars: map[string]string{
-				"KUBEVISION_DB_DRIVER": "mysql",
-				"KUBEVISION_DB_DSN":    "user:pass@tcp(localhost)/db",
+				"KUBEVISION_DB_DRIVER":             "postgres",
+				"KUBEVISION_DB_DSN":                "postgres://localhost/kubevision",
+				"KUBEVISION_DB_MAX_OPEN_CONNS":     "40",
+				"KUBEVISION_DB_MAX_IDLE_CONNS":     "8",
+				"KUBEVISION_DB_CONN_MAX_LIFETIME":  "45m",
+				"KUBEVISION_DB_CONN_MAX_IDLE_TIME": "10m",
+				"KUBEVISION_DB_PING_TIMEOUT":       "3s",
 			},
 			check: func(t *testing.T, cfg *Config) {
-				if cfg.Database.Driver != "mysql" {
-					t.Errorf("Database.Driver = %q, want %q", cfg.Database.Driver, "mysql")
+				if cfg.Database.Driver != "postgres" {
+					t.Errorf("Database.Driver = %q, want %q", cfg.Database.Driver, "postgres")
 				}
-				if cfg.Database.DSN != "user:pass@tcp(localhost)/db" {
-					t.Errorf("Database.DSN = %q, want %q", cfg.Database.DSN, "user:pass@tcp(localhost)/db")
+				if cfg.Database.DSN != "postgres://localhost/kubevision" {
+					t.Errorf("Database.DSN = %q", cfg.Database.DSN)
+				}
+				if cfg.Database.MaxOpenConns != 40 || cfg.Database.MaxIdleConns != 8 {
+					t.Errorf("Database pool = %d/%d", cfg.Database.MaxOpenConns, cfg.Database.MaxIdleConns)
+				}
+				if cfg.Database.ConnMaxLifetime != 45*time.Minute || cfg.Database.ConnMaxIdleTime != 10*time.Minute || cfg.Database.PingTimeout != 3*time.Second {
+					t.Errorf("Database durations were not overridden: %+v", cfg.Database)
 				}
 			},
 		},
