@@ -7,7 +7,7 @@ GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
 
-.PHONY: dev dev-frontend build build-frontend build-all test lint clean tidy fmt fmt-check vet \
+.PHONY: dev dev-frontend build build-frontend build-all test lint clean tidy tidy-check mod-verify verify fmt fmt-check vet \
 	frontend-install frontend-lint frontend-typecheck frontend-test frontend-build \
 	e2e-install e2e-list e2e-test helm-validate release-chart docs docs-dev docs-deploy
 
@@ -35,6 +35,18 @@ build:
 ## test: Run all tests with race detector
 test:
 	$(GO) test -race -count=1 ./...
+
+## tidy-check: Fail when go.mod or go.sum are not tidy
+tidy-check:
+	$(GO) mod tidy
+	git diff --exit-code -- go.mod go.sum
+
+## mod-verify: Verify module dependencies have expected content
+mod-verify:
+	$(GO) mod verify
+
+## verify: Run local backend quality checks
+verify: fmt-check tidy-check mod-verify vet test
 
 ## lint: Run golangci-lint (requires: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
 lint:

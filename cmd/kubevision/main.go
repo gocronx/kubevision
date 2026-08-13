@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -31,12 +33,63 @@ import (
 )
 
 var (
-	version = "dev"
-	commit  = "unknown"
+	version              = "dev"
+	commit               = "unknown"
+	pseudoVersionPattern = regexp.MustCompile(`^v?\d+\.\d+\.\d+-\d{14}-[0-9a-f]{12}(?:\+dirty)?$`)
 )
 
 func versionOutput() string {
-	return fmt.Sprintf("kubevision %s (%s)", version, commit)
+	info, ok := debug.ReadBuildInfo()
+	resolvedVersion, resolvedCommit := buildMetadata(info, ok)
+	return fmt.Sprintf("kubevision %s (%s)", resolvedVersion, resolvedCommit)
+}
+
+func buildMetadata(info *debug.BuildInfo, ok bool) (string, string) {
+	resolvedVersion := version
+	resolvedCommit := commit
+
+	if ok {
+		if isDefaultVersion(resolvedVersion) && isReleaseBuildVersion(info.Main.Version) {
+			resolvedVersion = strings.TrimPrefix(info.Main.Version, "v")
+		}
+		if isDefaultCommit(resolvedCommit) {
+			if revision, found := buildSetting(info, "vcs.revision"); found {
+				resolvedCommit = revision
+			}
+			if modified, found := buildSetting(info, "vcs.modified"); found && modified == "true" && !isDefaultCommit(resolvedCommit) {
+				resolvedCommit += "-dirty"
+			}
+		}
+	}
+
+	if resolvedVersion == "" {
+		resolvedVersion = "dev"
+	}
+	if resolvedCommit == "" {
+		resolvedCommit = "unknown"
+	}
+	return resolvedVersion, resolvedCommit
+}
+
+func buildSetting(info *debug.BuildInfo, key string) (string, bool) {
+	for _, setting := range info.Settings {
+		if setting.Key == key {
+			return setting.Value, true
+		}
+	}
+	return "", false
+}
+
+func isDefaultVersion(value string) bool {
+	return value == "" || value == "dev"
+}
+
+func isDefaultCommit(value string) bool {
+	return value == "" || value == "unknown"
+}
+
+func isReleaseBuildVersion(value string) bool {
+	return value != "" && value != "(devel)" && !pseudoVersionPattern.MatchString(value)
 }
 
 func main() {

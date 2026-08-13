@@ -50,7 +50,7 @@ clean-room/
 *-scout.html
 
 # Build artifacts
-dist/
+/dist/
 coverage/
 *.log
 

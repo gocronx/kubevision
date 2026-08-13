@@ -23,6 +23,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  go-modules:
+    name: Backend module hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: make tidy-check
+      - run: make mod-verify
+
   go-format:
     name: Backend formatting
     runs-on: ubuntu-latest
