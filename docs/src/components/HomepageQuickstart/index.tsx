@@ -29,7 +29,7 @@ helm repo update
 # Install KubeVision
 helm install kubevision gocronx/kubevision
 
-# Access the dashboard
+# Temporarily access the dashboard from this machine
 kubectl port-forward svc/kubevision 8080:8080
 open http://localhost:8080`}
               </CodeBlock>

@@ -84,8 +84,8 @@ KubeVision 采用人机协同模式。AI 可以协助调查和执行，但不会
 # 1. 安装 KubeVision
 helm install kubevision deploy/helm/kubevision
 
-# 2. 使用端口转发访问仪表盘
-kubectl port-forward svc/kubevision 8080:80
+# 2. 从本机临时访问仪表盘
+kubectl port-forward svc/kubevision 8080:8080
 
 # 3. 访问 Web 界面
 # http://localhost:8080
@@ -93,7 +93,11 @@ kubectl port-forward svc/kubevision 8080:80
 
 > 默认登录账号：`admin` / `admin123`
 >
-> 其他部署方式（Docker、二进制、本地开发）请参阅[安装指南](https://kubevision-docs.pages.dev/docs/getting-started/installation)。
+> `kubectl port-forward` 仅适用于本地体验和故障排查。生产环境应通过启用 HTTPS
+> 的 Ingress/Gateway 或 `LoadBalancer` Service 暴露 KubeVision。详情请参阅
+> [安装指南](https://kubevision-docs.pages.dev/zh-Hans/docs/getting-started/installation#访问-kubevision)。
+>
+> 其他部署方式（Docker、二进制、本地开发）请参阅[安装指南](https://kubevision-docs.pages.dev/zh-Hans/docs/getting-started/installation)。
 
 ## 🔷 CLI 与 AI 助手
 

@@ -86,15 +86,19 @@ The fastest way to deploy KubeVision in your cluster is via Helm:
 # 1. Install KubeVision
 helm install kubevision deploy/helm/kubevision
 
-# 2. Port-forward to access the dashboard
-kubectl port-forward svc/kubevision 8080:80
+# 2. Temporarily access the dashboard from your local machine
+kubectl port-forward svc/kubevision 8080:8080
 
-# 3. Access Web Interface
+# 3. Open the web interface
 # http://localhost:8080
 ```
 
 > Default login credentials: `admin` / `admin123`
-> 
+>
+> `kubectl port-forward` is intended for local evaluation and troubleshooting.
+> For production, expose KubeVision through an HTTPS Ingress/Gateway or a
+> `LoadBalancer` Service. See the [Installation Guide](https://kubevision-docs.pages.dev/docs/getting-started/installation#accessing-kubevision).
+>
 > For other deployment methods (Docker, Binary, Development), please refer to the [Installation Guide](https://kubevision-docs.pages.dev/docs/getting-started/installation).
 
 ## 🔷 CLI & AI Assistant

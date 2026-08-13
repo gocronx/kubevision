@@ -49,6 +49,67 @@ auth:
 helm install kubevision gocronx/kubevision -f values.yaml
 ```
 
+## Accessing KubeVision
+
+### Local or Temporary Access
+
+Use port forwarding for local evaluation or troubleshooting:
+
+```bash
+kubectl port-forward --namespace kubevision svc/kubevision 8080:8080
+```
+
+Then open `http://localhost:8080`. The forwarding process must remain running;
+this is not a production access method.
+
+### Production Access with Ingress
+
+For production, use an Ingress or Gateway with a stable DNS name and TLS. The
+cluster must already have an Ingress controller and the referenced TLS Secret:
+
+```yaml
+# production-values.yaml
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: kubevision.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: kubevision-tls
+      hosts:
+        - kubevision.example.com
+```
+
+```bash
+helm upgrade --install kubevision gocronx/kubevision \
+  --namespace kubevision \
+  --create-namespace \
+  -f production-values.yaml
+```
+
+Open `https://kubevision.example.com` after DNS points to the Ingress endpoint.
+For passkeys/security keys, the public hostname must also match the configured
+RP ID and origin.
+
+### Production Access with LoadBalancer
+
+If the cluster provides external load balancers, expose the Service directly:
+
+```bash
+helm upgrade --install kubevision gocronx/kubevision \
+  --namespace kubevision \
+  --create-namespace \
+  --set service.type=LoadBalancer
+
+kubectl get svc --namespace kubevision kubevision
+```
+
+Terminate TLS at the load balancer or an upstream proxy. Do not expose the
+dashboard over plain HTTP on an untrusted network.
+
 ## Docker
 
 ```bash
@@ -79,14 +140,17 @@ pnpm dev    # starts on :5173, proxies /api → :8080
 
 ## Verify Installation
 
-Open `http://localhost:8080` in your browser.
+Open the URL selected above: `http://localhost:8080` for port forwarding, or
+the configured HTTPS hostname for production.
 
 Default credentials:
 - **Username:** `admin`
 - **Password:** `admin123`
 
 :::warning
-Change the default password immediately after first login.
+Change the default password immediately after first login. Production
+deployments should also use PostgreSQL, persistent backups, explicit secrets,
+and enforced 2FA for administrator accounts.
 :::
 
 ## Next Steps

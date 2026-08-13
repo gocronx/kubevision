@@ -9,7 +9,9 @@ This guide walks you through your first 5 minutes with KubeVision.
 
 ## 1. Login
 
-Navigate to `http://localhost:8080` and login with:
+Open the URL chosen during installation. For local port forwarding this is
+`http://localhost:8080`; production deployments should use their configured
+HTTPS hostname. Log in with:
 - Username: `admin`
 - Password: `admin123`
 
