@@ -5,6 +5,36 @@ title: Data Flow
 
 # Data Flow
 
+## AI Operations Path
+
+```text
+Page context + user prompt
+          │
+          ▼
+   AI Chat Handler ──→ OpenAI-compatible provider
+          ▲                       │
+          │                  tool request
+          │                       ▼
+   streamed result ← Authorizer → Kubernetes/Logs/Prometheus
+                          │
+                 mutation requested?
+                          │
+                 pause for user approval
+                          │
+              re-authorize → execute → audit
+```
+
+1. The browser sends the selected cluster, namespace, page, resource, and chat history.
+2. The provider can request only the tools registered by KubeVision.
+3. The server maps each tool and arguments to the current user's RBAC permission.
+4. Read tools execute immediately after authorization and return bounded output.
+5. A mutation creates a short-lived, user-owned pending action instead of executing.
+6. Confirmation consumes that pending action, re-checks permission, executes once,
+   and records the outcome in the audit log.
+
+The agent loop and tool output are bounded. Arbitrary shell execution and
+arbitrary outbound HTTP access are not model tools.
+
 ## Read Path
 
 ```text

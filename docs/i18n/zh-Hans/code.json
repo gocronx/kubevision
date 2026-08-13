@@ -1,9 +1,9 @@
 {
   "hero.tagline": {
-    "message": "清晰洞察集群，即刻掌控一切"
+    "message": "AI 原生 Kubernetes 运维，同时保留人工控制"
   },
   "hero.description": {
-    "message": "现代化 Kubernetes 管理面板，具备实时同步、多集群管理、2FA 安全认证、Dry-Run 变更预览和终端录制功能。Go + React 构建，专为团队协作设计。"
+    "message": "通过自然语言调查实时集群状态、理解故障并执行受 RBAC 控制的操作。每次修改都需要确认，并可完整审计。"
   },
   "hero.getStarted": {
     "message": "快速开始"
@@ -12,7 +12,13 @@
     "message": "核心功能"
   },
   "features.subtitle": {
-    "message": "大规模管理 Kubernetes 集群所需的一切"
+    "message": "从自然语言调查到受控执行的完整 Kubernetes 工作流"
+  },
+  "features.ai.title": {
+    "message": "AI 运维工作区"
+  },
+  "features.ai.desc": {
+    "message": "结合实时页面上下文调查资源和日志，并在明确批准后执行受 RBAC 控制的操作。"
   },
   "features.realtime.title": {
     "message": "实时同步"
@@ -75,19 +81,25 @@
     "message": "新增资源类型只需后端注册表 1 行 Go + 前端 1 段配置。CRD 运行时自动发现。插件系统支持 Prometheus、Grafana、ArgoCD。"
   },
   "unique.badge": {
-    "message": "KubeVision 独有"
+    "message": "人机协同"
   },
   "unique.title": {
-    "message": "独特功能"
+    "message": "运维安全边界"
   },
   "unique.subtitle": {
-    "message": "其他 Kubernetes 面板均未提供的功能"
+    "message": "使用 AI 的同时保留权限边界和操作责任"
+  },
+  "unique.ai.title": {
+    "message": "受控 AI 操作"
+  },
+  "unique.ai.desc": {
+    "message": "AI 工具继承用户 RBAC，修改操作等待确认，执行时重新授权，并生成审计记录。"
   },
   "unique.2fa.title": {
     "message": "双因素认证 (TOTP)"
   },
   "unique.2fa.desc": {
-    "message": "二维码设置 + 恢复码，管理员可强制全员启用。所有竞品均不支持。"
+    "message": "二维码设置 + 恢复码，管理员可强制用户启用。"
   },
   "unique.dryrun.title": {
     "message": "Dry-Run 变更预览"

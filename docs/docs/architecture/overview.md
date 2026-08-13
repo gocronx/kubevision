@@ -7,6 +7,10 @@ title: Architecture Overview
 
 KubeVision follows a clean layered architecture with real-time data flow.
 
+The AI assistant is an orchestration layer over the same repositories,
+authorization model, and audit system used by the dashboard. It does not have a
+separate privileged Kubernetes client.
+
 ## System Diagram
 
 ```text
@@ -46,6 +50,7 @@ KubeVision follows a clean layered architecture with real-time data flow.
 | 4 | **Real-time Feedback** | Informer cache + WebSocket, sub-second updates |
 | 5 | **Interface Driven** | All dependencies injected via interfaces |
 | 6 | **Secure by Default** | Secrets masked, audit on, least privilege |
+| 7 | **Guarded AI** | Bounded tools, inherited RBAC, explicit approval, auditable mutations |
 
 ## Layers
 

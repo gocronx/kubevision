@@ -11,7 +11,7 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title={siteConfig.title}
-      description="A modern, real-time Kubernetes multi-cluster dashboard with 2FA, audit logging, and dry-run diff"
+      description="An AI-native Kubernetes dashboard for context-aware troubleshooting and RBAC-controlled cluster operations"
     >
       <HomepageHero />
       <main>

@@ -11,6 +11,14 @@ interface Feature {
 
 const features: Feature[] = [
   {
+    icon: "AI",
+    titleId: "features.ai.title",
+    titleDefault: "AI Operations Workspace",
+    descId: "features.ai.desc",
+    descDefault:
+      "Investigate resources and logs with live page context, then execute RBAC-controlled actions with explicit approval.",
+  },
+  {
     icon: "⚡",
     titleId: "features.realtime.title",
     titleDefault: "Real-time Sync",
@@ -50,14 +58,6 @@ const features: Feature[] = [
     descDefault:
       "Visual ownership graph showing relationships between Deployments, ReplicaSets, Pods, Services, and more.",
   },
-  {
-    icon: "🔍",
-    titleId: "features.search.title",
-    titleDefault: "Global Search",
-    descId: "features.search.desc",
-    descDefault:
-      "Cmd+K fuzzy search across all clusters, namespaces, and resource types. Find anything in milliseconds.",
-  },
 ];
 
 export default function HomepageFeatures(): JSX.Element {
@@ -70,7 +70,7 @@ export default function HomepageFeatures(): JSX.Element {
           </h2>
           <p>
             <Translate id="features.subtitle">
-              Everything you need to manage Kubernetes clusters at scale
+              From natural-language investigation to guarded Kubernetes actions
             </Translate>
           </p>
         </div>

@@ -19,6 +19,7 @@ import (
 	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 	"github.com/gocronx/kubevision/internal/model"
 	"github.com/gocronx/kubevision/internal/plugin/prometheus"
+	"github.com/gocronx/kubevision/internal/repository"
 )
 
 // AIChat starts the terminal AI assistant. With a prompt argument it answers
@@ -30,24 +31,28 @@ import (
 //	kubevision ai            # interactive
 func AIChat(args []string) error {
 	fs := flag.NewFlagSet("ai", flag.ContinueOnError)
+	configPath := fs.String("config", "", "path to KubeVision config YAML file")
 	kubeconfig := fs.String("kubeconfig", "", "path to kubeconfig (default: $KUBECONFIG or ~/.kube/config)")
-	apiKey := fs.String("api-key", "", "LLM API key (default: $API_KEY)")
-	baseURL := fs.String("base-url", "", "LLM base URL (default: $API_BASE_URL)")
-	modelID := fs.String("model", "", "model id (default: $MODEL_ID)")
+	apiKey := fs.String("api-key", "", "override the AI API key (or use $API_KEY)")
+	baseURL := fs.String("base-url", "", "override the AI base URL (or use $API_BASE_URL)")
+	modelID := fs.String("model", "", "override the AI model (or use $MODEL_ID)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	key := firstNonEmpty(*apiKey, os.Getenv("API_KEY"))
-	if key == "" {
-		return fmt.Errorf("no API key: pass --api-key or set API_KEY")
+	db, err := openDB(*configPath)
+	if err != nil {
+		return err
 	}
-	cfg := ai.Config{
-		Enabled:   true,
-		APIKey:    key,
-		BaseURL:   firstNonEmpty(*baseURL, os.Getenv("API_BASE_URL")),
-		Model:     firstNonEmpty(*modelID, os.Getenv("MODEL_ID")),
-		MaxTokens: 4096,
+	settings := repository.NewSettingRepo(db)
+	cfg, err := ai.NewConfigStore(settings).Load(context.Background())
+	closeDB(db)
+	if err != nil {
+		return fmt.Errorf("load AI settings: %w", err)
+	}
+	cfg = applyAIOverrides(cfg, *apiKey, *baseURL, *modelID)
+	if !cfg.Ready() {
+		return fmt.Errorf("AI assistant is not configured; enable it and save an API key in Settings > AI Assistant")
 	}
 
 	kubeData, err := os.ReadFile(resolveKubeconfig(*kubeconfig))
@@ -104,6 +109,20 @@ func AIChat(args []string) error {
 		}
 		r.ask(context.Background(), line)
 	}
+}
+
+func applyAIOverrides(cfg ai.Config, apiKey, baseURL, modelID string) ai.Config {
+	if key := firstNonEmpty(apiKey, os.Getenv("API_KEY")); key != "" {
+		cfg.APIKey = key
+		cfg.Enabled = true
+	}
+	if value := firstNonEmpty(baseURL, os.Getenv("API_BASE_URL")); value != "" {
+		cfg.BaseURL = value
+	}
+	if value := firstNonEmpty(modelID, os.Getenv("MODEL_ID")); value != "" {
+		cfg.Model = value
+	}
+	return cfg
 }
 
 // aiRunner drives a multi-turn conversation, printing streamed output and
@@ -256,10 +275,10 @@ func indent(s string) string {
 	return strings.Join(lines, "\n")
 }
 
-// ---- static repository adapters (DB-less CLI) ----
+// ---- static repository adapters ----
 
-// staticSettingRepo serves a fixed AI config so ai.ConfigStore works without a
-// database.
+// staticSettingRepo serves the resolved AI config after the database has been
+// closed. This keeps the long-running REPL from holding an idle DB connection.
 type staticSettingRepo struct{ cfg ai.Config }
 
 func (s *staticSettingRepo) Get(context.Context, string) (*model.Setting, error) {

@@ -1,6 +1,10 @@
 package cli
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/gocronx/kubevision/internal/ai"
+)
 
 func TestFirstNonEmpty(t *testing.T) {
 	if got := firstNonEmpty("", "", "x", "y"); got != "x" {
@@ -8,6 +12,32 @@ func TestFirstNonEmpty(t *testing.T) {
 	}
 	if got := firstNonEmpty("", ""); got != "" {
 		t.Fatalf("got %q, want empty", got)
+	}
+}
+
+func TestApplyAIOverrides(t *testing.T) {
+	t.Setenv("API_KEY", "env-key")
+	t.Setenv("API_BASE_URL", "https://env.example/v1")
+	t.Setenv("MODEL_ID", "env-model")
+
+	cfg := applyAIOverrides(ai.Config{Enabled: false}, "flag-key", "", "flag-model")
+	if !cfg.Enabled || cfg.APIKey != "flag-key" {
+		t.Fatalf("API key override was not applied: %+v", cfg)
+	}
+	if cfg.BaseURL != "https://env.example/v1" || cfg.Model != "flag-model" {
+		t.Fatalf("provider overrides were not applied: %+v", cfg)
+	}
+}
+
+func TestApplyAIOverridesKeepsSavedSettings(t *testing.T) {
+	t.Setenv("API_KEY", "")
+	t.Setenv("API_BASE_URL", "")
+	t.Setenv("MODEL_ID", "")
+
+	want := ai.Config{Enabled: true, APIKey: "saved-key", BaseURL: "https://saved.example/v1", Model: "saved-model"}
+	got := applyAIOverrides(want, "", "", "")
+	if got != want {
+		t.Fatalf("saved settings changed: got %+v, want %+v", got, want)
 	}
 }
 

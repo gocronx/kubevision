@@ -27,6 +27,7 @@ const sidebars: SidebarsConfig = {
       type: "category",
       label: "User Guide",
       items: [
+        "user-guide/ai-assistant",
         "user-guide/cluster-management",
         "user-guide/resource-crud",
         "user-guide/pod-terminal",
@@ -36,7 +37,6 @@ const sidebars: SidebarsConfig = {
         "user-guide/dry-run",
         "user-guide/favorites",
         "user-guide/kubectl-hints",
-        "user-guide/ai-assistant",
         "user-guide/package-releases",
         "user-guide/custom-resources",
         "user-guide/batch-actions",

@@ -11,12 +11,20 @@ interface Capability {
 
 const capabilities: Capability[] = [
   {
+    icon: "AI",
+    titleId: "unique.ai.title",
+    titleDefault: "Guarded AI Actions",
+    descId: "unique.ai.desc",
+    descDefault:
+      "AI tools inherit user RBAC. Mutations pause for confirmation, are re-authorized at execution time, and produce audit records.",
+  },
+  {
     icon: "🔐",
     titleId: "unique.2fa.title",
     titleDefault: "2FA (TOTP)",
     descId: "unique.2fa.desc",
     descDefault:
-      "Two-factor authentication with QR setup, recovery codes, and admin-enforced enrollment. No other K8s dashboard offers this.",
+      "Two-factor authentication with QR setup, recovery codes, and admin-enforced enrollment.",
   },
   {
     icon: "🔬",
@@ -58,14 +66,14 @@ export default function HomepageUniqueCapabilities(): JSX.Element {
       <div className="container">
         <div className={styles.sectionHeader}>
           <span className={styles.badge}>
-            <Translate id="unique.badge">Only in KubeVision</Translate>
+            <Translate id="unique.badge">Human-in-the-loop</Translate>
           </span>
           <h2>
-            <Translate id="unique.title">Unique Capabilities</Translate>
+            <Translate id="unique.title">Operational Guardrails</Translate>
           </h2>
           <p>
             <Translate id="unique.subtitle">
-              Features no other Kubernetes dashboard provides
+              AI assistance without giving up permission boundaries or accountability
             </Translate>
           </p>
         </div>

@@ -14,14 +14,14 @@ export default function HomepageHero(): JSX.Element {
           </h1>
           <p className={styles.heroSubtitle}>
             <Translate id="hero.tagline">
-              See your clusters clearly, act on them instantly
+              AI-native Kubernetes operations with human control
             </Translate>
           </p>
           <p className={styles.heroDescription}>
             <Translate id="hero.description">
-              A modern Kubernetes dashboard with real-time sync, multi-cluster
-              management, 2FA security, dry-run diff, and terminal recording.
-              Built with Go + React for teams who need visibility and control.
+              Investigate live cluster state, understand failures, and execute
+              RBAC-controlled actions through natural language. Every mutation
+              requires confirmation and remains auditable.
             </Translate>
           </p>
           <div className={styles.heroButtons}>

@@ -19,6 +19,10 @@
     "message": "快速开始",
     "description": "The label of footer link with label=Getting Started"
   },
+  "link.item.label.AI Operations": {
+    "message": "AI 运维",
+    "description": "The label of footer link with label=AI Operations"
+  },
   "link.item.label.Architecture": {
     "message": "架构",
     "description": "The label of footer link with label=Architecture"

@@ -4,7 +4,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   title: "KubeVision",
-  tagline: "See your clusters clearly, act on them instantly",
+  tagline: "AI-native Kubernetes operations with human control",
   favicon: "img/favicon.ico",
 
   url: "https://kubevision-docs.pages.dev",
@@ -96,6 +96,7 @@ const config: Config = {
           items: [
             { label: "Introduction", to: "/docs/intro" },
             { label: "Getting Started", to: "/docs/getting-started/installation" },
+            { label: "AI Operations", to: "/docs/user-guide/ai-assistant" },
             { label: "Architecture", to: "/docs/architecture/overview" },
           ],
         },
