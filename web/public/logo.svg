@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- Eye shape - outer almond (main element) -->
+  <path d="M68 256 Q168 128 256 128 Q344 128 444 256 Q344 384 256 384 Q168 384 68 256Z"
+        fill="white" opacity="0.15"/>
+  <path d="M68 256 Q168 128 256 128 Q344 128 444 256 Q344 384 256 384 Q168 384 68 256Z"
+        fill="none" stroke="white" stroke-width="7"/>
+
+  <!-- Upper eyelid accent line -->
+  <path d="M100 256 Q180 152 256 152 Q332 152 412 256"
+        fill="none" stroke="white" stroke-width="3" opacity="0.3"/>
+
+  <!-- Iris outer circle -->
+  <circle cx="256" cy="256" r="82" fill="white" opacity="0.2"/>
+  <circle cx="256" cy="256" r="82" fill="none" stroke="white" stroke-width="5"/>
+
+  <!-- Iris inner: simplified helm spokes (5 spokes, not 7 like K8s) -->
+  <g stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.85">
+    <line x1="256" y1="256" x2="256" y2="186"/>
+    <line x1="256" y1="256" x2="322" y2="212"/>
+    <line x1="256" y1="256" x2="297" y2="322"/>
+    <line x1="256" y1="256" x2="215" y2="322"/>
+    <line x1="256" y1="256" x2="190" y2="212"/>
+  </g>
+
+  <!-- 5 outer dots (pentagon arrangement) -->
+  <g fill="white" opacity="0.85">
+    <circle cx="256" cy="182" r="10"/>
+    <circle cx="326" cy="208" r="10"/>
+    <circle cx="300" cy="326" r="10"/>
+    <circle cx="212" cy="326" r="10"/>
+    <circle cx="186" cy="208" r="10"/>
+  </g>
+
+  <!-- Pentagon ring connecting dots -->
+  <polygon points="256,182 326,208 300,326 212,326 186,208"
+           fill="none" stroke="white" stroke-width="3" opacity="0.35" stroke-linejoin="round"/>
+
+  <!-- Pupil -->
+  <circle cx="256" cy="256" r="22" fill="white"/>
+  <circle cx="256" cy="256" r="14" fill="#1E3A8A"/>
+  <circle cx="256" cy="256" r="7" fill="#0F172A"/>
+
+  <!-- Eye highlight reflections -->
+  <circle cx="246" cy="245" r="5" fill="white" opacity="0.85"/>
+  <circle cx="264" cy="262" r="2.5" fill="white" opacity="0.5"/>
+</svg>

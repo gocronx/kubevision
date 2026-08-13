@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -135,6 +136,15 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
+
+	if err := server.CheckPortAvailable(cfg.Server.Port); err != nil {
+		if errors.Is(err, server.ErrPortInUse) {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		logger.Fatal("failed to check server port", zap.Error(err))
+	}
+
 	logger.Info("configuration loaded",
 		zap.Int("port", cfg.Server.Port),
 		zap.String("db_driver", cfg.Database.Driver),
@@ -358,12 +368,18 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	exitCode := 0
 	select {
 	case sig := <-quit:
 		logger.Info("received shutdown signal", zap.String("signal", sig.String()))
 	case err := <-errCh:
 		if err != nil {
-			logger.Error("server error", zap.Error(err))
+			exitCode = 1
+			if errors.Is(err, server.ErrPortInUse) {
+				logger.Warn("server did not start", zap.Error(err))
+			} else {
+				logger.Error("server error", zap.Error(err))
+			}
 		}
 	}
 
@@ -387,4 +403,7 @@ func main() {
 	}
 
 	logger.Info("KubeVision exited")
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }

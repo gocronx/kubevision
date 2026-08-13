@@ -28,6 +28,38 @@ type Server struct {
 	logger *zap.Logger
 }
 
+var ErrPortInUse = errors.New("port already in use")
+
+type PortInUseError struct {
+	Port    int
+	Message string
+}
+
+func (e *PortInUseError) Error() string {
+	return e.Message
+}
+
+func (e *PortInUseError) Unwrap() error {
+	return ErrPortInUse
+}
+
+// CheckPortAvailable verifies that the configured HTTP port can be bound before
+// expensive startup work begins.
+func CheckPortAvailable(port int) error {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		var opErr *net.OpError
+		if errors.As(err, &opErr) && strings.Contains(opErr.Error(), "address already in use") {
+			return &PortInUseError{Port: port, Message: portInUseMessage(port)}
+		}
+		return fmt.Errorf("check port %d: %w", port, err)
+	}
+	if err := ln.Close(); err != nil {
+		return fmt.Errorf("release port %d: %w", port, err)
+	}
+	return nil
+}
+
 // New creates a new Server with the given config, logger, and route dependencies.
 func New(cfg *config.Config, logger *zap.Logger, deps *RouterDeps) *Server {
 	// Respect GIN_MODE env var; default to release mode for security.
@@ -79,33 +111,32 @@ func (s *Server) Start() error {
 	if err := s.http.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		var opErr *net.OpError
 		if errors.As(err, &opErr) && strings.Contains(opErr.Error(), "address already in use") {
-			s.logger.Error(fmt.Sprintf("Port %d is already in use. %s",
-				s.cfg.Server.Port, portOccupant(s.cfg.Server.Port)))
-			return fmt.Errorf("port %d already in use", s.cfg.Server.Port)
+			return &PortInUseError{Port: s.cfg.Server.Port, Message: portInUseMessage(s.cfg.Server.Port)}
 		}
 		return fmt.Errorf("http listen: %w", err)
 	}
 	return nil
 }
 
-// portOccupant tries to identify the process occupying the given port.
-func portOccupant(port int) string {
+// portInUseMessage returns a short, actionable message for local startup
+// failures without forcing users toward a specific kill command.
+func portInUseMessage(port int) string {
 	if runtime.GOOS == "windows" {
-		return fmt.Sprintf("Run: netstat -ano | findstr :%d", port)
+		return fmt.Sprintf("port %d is already in use; stop the process using it or choose another port", port)
 	}
 	out, err := exec.Command("lsof", "-i", fmt.Sprintf(":%d", port), "-sTCP:LISTEN", "-P", "-n").Output()
 	if err != nil || len(out) == 0 {
-		return fmt.Sprintf("Run: lsof -i :%d to find the process, then kill it or use a different port.", port)
+		return fmt.Sprintf("port %d is already in use; stop the process using it or start with another port, for example: DEV_PORT=%d make dev", port, port+1)
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if len(lines) < 2 {
-		return ""
+		return fmt.Sprintf("port %d is already in use; stop the process using it or start with another port, for example: DEV_PORT=%d make dev", port, port+1)
 	}
 	fields := strings.Fields(lines[1])
 	if len(fields) >= 2 {
-		return fmt.Sprintf("Process \"%s\" (PID %s) is using port %d. Kill it with: kill %s", fields[0], fields[1], port, fields[1])
+		return fmt.Sprintf("port %d is already in use by %s (PID %s); stop that process or start with another port, for example: DEV_PORT=%d make dev", port, fields[0], fields[1], port+1)
 	}
-	return ""
+	return fmt.Sprintf("port %d is already in use; stop the process using it or start with another port, for example: DEV_PORT=%d make dev", port, port+1)
 }
 
 // serveFrontend mounts the embedded React build as a static file server.

@@ -13,8 +13,8 @@ LDFLAGS := -s -w
 
 ## dev: Run with air hot-reload (requires: go install github.com/air-verse/air@latest)
 dev:
-	KUBEVISION_SERVER_PORT=$(DEV_PORT) GIN_MODE=debug air -c .air.toml || \
-	KUBEVISION_SERVER_PORT=$(DEV_PORT) GIN_MODE=debug $(GO) run $(MAIN_PKG)
+	KUBEVISION_SERVER_PORT=$(DEV_PORT) air -c .air.toml || \
+	KUBEVISION_SERVER_PORT=$(DEV_PORT) $(GO) run $(MAIN_PKG)
 
 ## dev-frontend: Run the frontend with a proxy to the development backend
 dev-frontend:
