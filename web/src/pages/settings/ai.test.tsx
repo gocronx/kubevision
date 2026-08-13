@@ -68,4 +68,19 @@ describe("AISettingsPage model picker", () => {
       expect(screen.queryByRole("listbox", { name: "ai.availableModels" })).not.toBeInTheDocument()
     })
   })
+
+  it("requires a new API key when the provider URL changes", async () => {
+    renderPage()
+
+    const baseURL = await screen.findByLabelText("ai.baseURL")
+    fireEvent.change(baseURL, { target: { value: "https://other.example/v1" } })
+
+    expect(screen.getByText("ai.providerKeyRequired")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "ai.discoverModels" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "common.save" })).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText("ai.apiKey"), { target: { value: "new-key" } })
+    expect(screen.getByRole("button", { name: "ai.discoverModels" })).toBeEnabled()
+    expect(screen.getByRole("button", { name: "common.save" })).toBeEnabled()
+  })
 })

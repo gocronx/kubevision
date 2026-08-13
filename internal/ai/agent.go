@@ -167,6 +167,7 @@ func (s *Service) ContinueAction(ctx context.Context, sessionID string, actor Ac
 	} else {
 		result = res
 	}
+	result = limitToolResult(result)
 	s.recordMutationAudit(sess, actor, args, statusCode, outcome, time.Since(started))
 	emit(toolResultEvent(tc.Function.Name, tc.ID, result, isErr))
 
@@ -287,12 +288,13 @@ func (r *run) loop(ctx context.Context, messages []Message) {
 			if isErr {
 				res = "Tool error: " + execErr.Error()
 			}
+			res = limitToolResult(res)
 			r.emit(toolResultEvent(tc.Function.Name, tc.ID, res, isErr))
 			messages = append(messages, toolResultMessage(tc.ID, res))
 		}
 
 		if pending != nil {
-			sid := r.sessions.save(&pendingSession{
+			sid, ok := r.sessions.save(&pendingSession{
 				messages:    messages,
 				toolCall:    *pending,
 				clusterID:   r.clusterID,
@@ -301,6 +303,10 @@ func (r *run) loop(ctx context.Context, messages []Message) {
 				username:    r.username,
 				clientIP:    r.clientIP,
 			})
+			if !ok {
+				r.emit(errorEvent("too many pending AI actions; approve or dismiss an existing action before creating another"))
+				return
+			}
 			r.emit(actionRequiredEvent(pending.Function.Name, pending.ID, pendingArgs, sid))
 			return // wait for approval; the resume continues the loop
 		}

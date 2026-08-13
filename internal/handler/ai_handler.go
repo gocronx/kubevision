@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -83,6 +84,11 @@ func (h *AIHandler) ListModels(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "failed to load AI configuration")
 		return
 	}
+	baseURLChanged := req.BaseURL != "" && normalizedBaseURL(req.BaseURL) != normalizedBaseURL(existing.BaseURL)
+	if baseURLChanged && req.APIKey == "" {
+		response.Error(c, bizerr.CodeParamMissing, "API key is required when changing the AI provider URL")
+		return
+	}
 	if req.BaseURL != "" {
 		existing.BaseURL = req.BaseURL
 	}
@@ -122,6 +128,15 @@ func (h *AIHandler) UpdateConfig(c *gin.Context) {
 		return
 	}
 
+	if normalizedBaseURL(req.BaseURL) != normalizedBaseURL(existing.BaseURL) && req.APIKey == "" {
+		response.Error(c, bizerr.CodeParamMissing, "API key is required when changing the AI provider URL")
+		return
+	}
+	if req.MaxTokens < 1 || req.MaxTokens > 32768 {
+		response.Error(c, bizerr.CodeParamInvalid, "maxTokens must be between 1 and 32768")
+		return
+	}
+
 	apiKey := req.APIKey
 	if apiKey == "" {
 		apiKey = existing.APIKey // keep the stored key
@@ -148,6 +163,10 @@ func (h *AIHandler) UpdateConfig(c *gin.Context) {
 	})
 }
 
+func normalizedBaseURL(value string) string {
+	return strings.TrimRight(strings.TrimSpace(value), "/")
+}
+
 type pageContext struct {
 	Page         string `json:"page"`
 	Namespace    string `json:"namespace"`
@@ -166,8 +185,15 @@ type chatMessage struct {
 	Content string `json:"content"`
 }
 
+const (
+	maxAIChatBodyBytes = 256 * 1024
+	maxAIChatMessages  = 100
+	maxAIMessageBytes  = 32 * 1024
+)
+
 // Chat handles POST /api/v1/ai/chat and streams the agent's response as SSE.
 func (h *AIHandler) Chat(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxAIChatBodyBytes)
 	var req chatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid request body")
@@ -181,13 +207,28 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamMissing, "messages are required")
 		return
 	}
+	if len(req.Messages) > maxAIChatMessages {
+		response.Error(c, bizerr.CodeParamInvalid, "too many messages")
+		return
+	}
 
 	history := make([]ai.Message, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		if m.Role != "user" && m.Role != "assistant" {
 			continue
 		}
+		if len(m.Content) > maxAIMessageBytes {
+			response.Error(c, bizerr.CodeParamInvalid, "message is too large")
+			return
+		}
+		if strings.TrimSpace(m.Content) == "" {
+			continue
+		}
 		history = append(history, ai.Message{Role: m.Role, Content: m.Content})
+	}
+	if len(history) == 0 || history[len(history)-1].Role != "user" {
+		response.Error(c, bizerr.CodeParamInvalid, "the last message must be from the user")
+		return
 	}
 
 	params := ai.ChatParams{

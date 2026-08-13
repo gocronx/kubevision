@@ -10,6 +10,11 @@ import (
 // sessionTTL bounds how long a pending mutation may wait for user approval.
 const sessionTTL = 15 * time.Minute
 
+const (
+	maxPendingSessions        = 100
+	maxPendingSessionsPerUser = 5
+)
+
 // pendingSession captures the conversation state frozen at the moment a
 // mutation tool requested user approval, so the agent loop can resume exactly
 // where it paused once the user confirms.
@@ -47,11 +52,23 @@ func newSessionStore() *sessionStore {
 }
 
 // save stores a session and returns its generated ID.
-func (s *sessionStore) save(sess *pendingSession) string {
+func (s *sessionStore) save(sess *pendingSession) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.evictExpiredLocked()
+	if len(s.sessions) >= maxPendingSessions {
+		return "", false
+	}
+	userSessions := 0
+	for _, existing := range s.sessions {
+		if existing.userID == sess.userID {
+			userSessions++
+		}
+	}
+	if userSessions >= maxPendingSessionsPerUser {
+		return "", false
+	}
 	id := uuid.NewString()
 	sess.id = id
 	if sess.correlationID == "" {
@@ -59,7 +76,7 @@ func (s *sessionStore) save(sess *pendingSession) string {
 	}
 	sess.expiresAt = time.Now().Add(sessionTTL)
 	s.sessions[id] = sess
-	return id
+	return id, true
 }
 
 // take removes and returns the session for id, or (nil, false) if it is absent

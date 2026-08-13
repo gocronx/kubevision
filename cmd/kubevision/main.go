@@ -251,7 +251,7 @@ func main() {
 	// AI assistant: an OpenAI-compatible agent with per-tool RBAC. Config is
 	// persisted in the Setting table and managed from the UI.
 	aiService := ai.NewService(
-		ai.NewConfigStore(settingRepo),
+		ai.NewConfigStore(settingRepo, cfg.EncryptKey),
 		k8sRepo,
 		clusterManager,
 		clusterRepo,

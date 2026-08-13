@@ -3,6 +3,8 @@ package ai
 import (
 	"strings"
 	"testing"
+
+	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 )
 
 func TestArgHelpers(t *testing.T) {
@@ -44,6 +46,47 @@ func TestParseManifest(t *testing.T) {
 	}
 	if _, err := parseManifest(""); err == nil {
 		t.Fatal("empty manifest should error")
+	}
+}
+
+func TestRedactSecretData(t *testing.T) {
+	raw := map[string]any{
+		"metadata":   map[string]any{"name": "db"},
+		"data":       map[string]any{"password": "c2VjcmV0"},
+		"stringData": map[string]any{"token": "secret"},
+	}
+	got := redactSecretData(raw)
+	if got["data"] != "[REDACTED]" {
+		t.Fatalf("secret payload was not redacted: %#v", got)
+	}
+	if _, exists := got["stringData"]; exists {
+		t.Fatalf("stringData must be removed: %#v", got)
+	}
+	if _, ok := raw["data"].(map[string]any); !ok {
+		t.Fatal("redaction mutated the repository object")
+	}
+}
+
+func TestValidateManifestKind(t *testing.T) {
+	e := &executor{registry: resource.NewRegistry()}
+	if err := e.validateManifestKind("deployments", map[string]any{"kind": "Deployment"}); err != nil {
+		t.Fatalf("matching kind rejected: %v", err)
+	}
+	if err := e.validateManifestKind("deployments", map[string]any{"kind": "ClusterRoleBinding"}); err == nil {
+		t.Fatal("mismatched manifest kind should be rejected")
+	}
+}
+
+func TestValidateManifestTarget(t *testing.T) {
+	obj := map[string]any{"metadata": map[string]any{"name": "web", "namespace": "prod"}}
+	if err := validateManifestTarget("web", "prod", obj); err != nil {
+		t.Fatalf("matching target rejected: %v", err)
+	}
+	if err := validateManifestTarget("api", "prod", obj); err == nil {
+		t.Fatal("mismatched name should be rejected")
+	}
+	if err := validateManifestTarget("web", "default", obj); err == nil {
+		t.Fatal("mismatched namespace should be rejected")
 	}
 }
 

@@ -87,6 +87,7 @@
     "enable": "Enable AI assistant",
     "baseURL": "API Base URL",
     "baseURLHint": "OpenAI-compatible endpoint, e.g. https://api.openai.com/v1 or your provider's URL.",
+    "providerKeyRequired": "Enter the API key again when changing the provider URL.",
     "model": "Model",
     "modelHint": "Fetch available models using the API URL and key, or enter a model ID manually.",
     "discoverModels": "Get models",

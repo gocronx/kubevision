@@ -87,6 +87,7 @@
     "enable": "启用 AI 助手",
     "baseURL": "API 地址",
     "baseURLHint": "OpenAI 兼容的接口地址，例如 https://api.openai.com/v1 或你的服务商地址。",
+    "providerKeyRequired": "更改服务商地址时，请重新输入 API 密钥。",
     "model": "模型",
     "modelHint": "使用 API 地址和密钥获取可用模型，也可以手动输入模型 ID。",
     "discoverModels": "获取模型",

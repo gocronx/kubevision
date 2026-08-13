@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 )
@@ -17,7 +18,13 @@ func (e *executor) createResource(ctx context.Context, args map[string]any) (str
 	if err != nil {
 		return "", err
 	}
+	if err := e.validateManifestKind(kind, obj); err != nil {
+		return "", err
+	}
 	namespace := argString(args, "namespace")
+	if err := validateManifestTarget("", namespace, obj); err != nil {
+		return "", err
+	}
 	if namespace == "" {
 		namespace = manifestNamespace(obj)
 	}
@@ -39,7 +46,13 @@ func (e *executor) updateResource(ctx context.Context, args map[string]any) (str
 	if err != nil {
 		return "", err
 	}
+	if err := e.validateManifestKind(kind, obj); err != nil {
+		return "", err
+	}
 	namespace := argString(args, "namespace")
+	if err := validateManifestTarget(name, namespace, obj); err != nil {
+		return "", err
+	}
 	if namespace == "" {
 		namespace = manifestNamespace(obj)
 	}
@@ -48,6 +61,34 @@ func (e *executor) updateResource(ctx context.Context, args map[string]any) (str
 		return "", err
 	}
 	return fmt.Sprintf("Updated %s %s/%s.", res.Kind, res.Namespace, res.Name), nil
+}
+
+func validateManifestTarget(name, namespace string, obj map[string]any) error {
+	meta, _ := obj["metadata"].(map[string]any)
+	manifestName, _ := meta["name"].(string)
+	manifestNamespace, _ := meta["namespace"].(string)
+	if manifestName == "" {
+		return fmt.Errorf("manifest metadata.name is required")
+	}
+	if name != "" && manifestName != name {
+		return fmt.Errorf("manifest name %q does not match requested name %q", manifestName, name)
+	}
+	if namespace != "" && manifestNamespace != "" && manifestNamespace != namespace {
+		return fmt.Errorf("manifest namespace %q does not match requested namespace %q", manifestNamespace, namespace)
+	}
+	return nil
+}
+
+func (e *executor) validateManifestKind(resourceName string, obj map[string]any) error {
+	meta, ok := e.registry.Get(strings.ToLower(resourceName))
+	if !ok {
+		return fmt.Errorf("unknown resource kind: %s", resourceName)
+	}
+	manifestKind, _ := obj["kind"].(string)
+	if manifestKind == "" || !strings.EqualFold(manifestKind, meta.GVK.Kind) {
+		return fmt.Errorf("manifest kind %q does not match requested resource %q", manifestKind, resourceName)
+	}
+	return nil
 }
 
 func (e *executor) patchResource(ctx context.Context, args map[string]any) (string, error) {

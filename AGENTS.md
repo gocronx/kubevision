@@ -34,13 +34,24 @@ This repository is a Go backend with a React/Vite frontend, Docker image, and He
 - Avoid `any`. If an API shape is uncertain, model the narrow shape the component actually reads.
 - Keep components focused: data fetching in hooks or page-level components, rendering in leaf components.
 
+## Documentation Sync
+
+- For every new or changed user-facing feature, explicitly assess whether the documentation must change.
+- When documentation is affected, update both `README.md` and `README_CN.md` where the feature belongs in the project overview, quick start, examples, configuration, or security guidance.
+- Keep the English docs under `docs/docs/` and the Chinese docs under `docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/` aligned. Do not update only one language.
+- Update documentation navigation, homepage content, screenshots, configuration examples, and API references when the feature changes those surfaces.
+- Documentation must describe implemented behavior and its security or operational limits. Do not claim planned behavior as available.
+
 ## Verification Before Commit
 
 Run the narrowest relevant checks, then expand based on risk:
 
+- Commit messages must be a single concise English line and follow Conventional Commits, for example `feat: add AI action safeguards`.
+
 - Backend only: `go test ./cmd/kubevision` or the touched package, then `go test -race ./...` for concurrency or shared-service changes.
 - Frontend only: `make frontend-lint`, `make frontend-typecheck`, and targeted `pnpm --dir web test`.
 - Deployment/Helm: `make helm-validate`.
+- Documentation or user-facing feature changes: confirm the English and Chinese README/docs are synchronized, then run `make docs`.
 - Release or CI changes: inspect rendered workflow paths and run `make verify` locally when feasible.
 
 For leak-prone changes, include at least one test or manual verification note that proves cleanup happens on cancellation, unmount, close, or shutdown.

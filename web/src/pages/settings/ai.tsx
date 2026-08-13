@@ -49,6 +49,8 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
   const [maxTokens, setMaxTokens] = useState(config.maxTokens)
   const [modelSearch, setModelSearch] = useState("")
   const [modelPickerOpen, setModelPickerOpen] = useState(false)
+  const providerChanged = baseURL.trim().replace(/\/+$/, "") !== config.baseURL.trim().replace(/\/+$/, "")
+  const providerKeyRequired = providerChanged && !apiKey.trim()
 
   const models = Array.from(new Set((discoverModels.data ?? []).map((item) => item.id)))
     .filter(Boolean)
@@ -131,6 +133,9 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
               onChange={(e) => setApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">{t("ai.apiKeyHint")}</p>
+            {providerKeyRequired && (
+              <p className="text-xs text-destructive">{t("ai.providerKeyRequired")}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -146,7 +151,7 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
               <Button
                 type="button"
                 variant="outline"
-                disabled={!isAdmin || !baseURL.trim() || (!apiKey.trim() && !config.hasApiKey) || discoverModels.isPending}
+                disabled={!isAdmin || !baseURL.trim() || providerKeyRequired || (!apiKey.trim() && !config.hasApiKey) || discoverModels.isPending}
                 onClick={discover}
               >
                 {discoverModels.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
@@ -202,7 +207,7 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
           </div>
 
           {isAdmin ? (
-            <Button onClick={save} disabled={update.isPending}>
+            <Button onClick={save} disabled={providerKeyRequired || update.isPending}>
               {update.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (

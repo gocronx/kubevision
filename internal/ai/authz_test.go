@@ -53,8 +53,11 @@ func TestRequiredPermission(t *testing.T) {
 	if !ok || p.resource != "pods" || p.action != "delete" {
 		t.Fatalf("got %+v ok=%v", p, ok)
 	}
-	if p, ok := requiredPermission("get_pod_logs", nil); !ok || p.resource != "pods" || p.action != "logs" {
+	if p, ok := requiredPermission("get_pod_logs", nil); !ok || p.resource != "pods" || p.action != "list" {
 		t.Fatalf("logs perm = %+v ok=%v", p, ok)
+	}
+	if p, ok := requiredPermission("get_cluster_overview", nil); !ok || p.resource != "overview" || p.action != "list" {
+		t.Fatalf("overview perm = %+v ok=%v", p, ok)
 	}
 	if _, ok := requiredPermission("unknown_tool", nil); ok {
 		t.Fatalf("unknown tool should need no permission")
@@ -88,5 +91,44 @@ func TestAuthorize(t *testing.T) {
 	// Missing kind on a kind-scoped tool is rejected.
 	if msg := a.authorize(ctx, "viewer", "get_resource", map[string]any{}); msg == "" {
 		t.Fatalf("missing kind should be rejected")
+	}
+}
+
+func TestAuthorizeSupportsGenericResourcePermissions(t *testing.T) {
+	a := newAuthorizer(&stubRoleRepo{roles: map[string]*model.Role{
+		"editor": roleWith("resources:get", "resources:list", "resources:create", "resources:update", "resources:delete"),
+	}})
+	ctx := context.Background()
+	for _, tc := range []struct {
+		tool, action string
+	}{
+		{"get_resource", "get"}, {"list_resources", "list"}, {"create_resource", "create"},
+		{"update_resource", "update"}, {"patch_resource", "update"}, {"delete_resource", "delete"},
+	} {
+		args := map[string]any{"kind": "deployments", "name": "web", "yaml": "kind: Deployment", "patch": `{}`}
+		if msg := a.authorize(ctx, "editor", tc.tool, args); msg != "" {
+			t.Errorf("%s denied despite resources:%s: %s", tc.tool, tc.action, msg)
+		}
+	}
+}
+
+func TestAuthorizeBlocksHighRiskMutationsForNonAdmins(t *testing.T) {
+	a := newAuthorizer(&stubRoleRepo{roles: map[string]*model.Role{"editor": roleWith("resources:*")}})
+	ctx := context.Background()
+	cases := []map[string]any{
+		{"kind": "clusterrolebindings", "name": "escalate"},
+		{"kind": "deployments", "yaml": "kind: Deployment\nspec:\n  template:\n    spec:\n      hostNetwork: true"},
+		{"kind": "pods", "yaml": "kind: Pod\nspec:\n  containers:\n  - name: shell\n    securityContext:\n      privileged: true"},
+	}
+	for _, args := range cases {
+		if msg := a.authorize(ctx, "editor", "create_resource", args); msg == "" {
+			t.Errorf("high-risk mutation was allowed: %#v", args)
+		}
+	}
+	if msg := a.authorize(ctx, "admin", "create_resource", cases[0]); msg != "" {
+		t.Fatalf("admin mutation should pass: %s", msg)
+	}
+	if msg := a.authorize(ctx, "editor", "query_prometheus", map[string]any{"query": "up"}); msg == "" {
+		t.Fatal("non-admin Prometheus query should be denied")
 	}
 }

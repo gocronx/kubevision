@@ -14,7 +14,10 @@ import (
 
 // maxLogBytes caps how much log output is fed back to the model to protect the
 // token budget.
-const maxLogBytes = 16 * 1024
+const (
+	maxLogBytes        = 16 * 1024
+	maxToolResultBytes = 64 * 1024
+)
 
 func (e *executor) getResource(ctx context.Context, args map[string]any) (string, error) {
 	kind := argString(args, "kind")
@@ -26,11 +29,39 @@ func (e *executor) getResource(ctx context.Context, args map[string]any) (string
 	if err != nil {
 		return "", err
 	}
+	if strings.EqualFold(kind, "secrets") {
+		res.Raw = redactSecretData(res.Raw)
+	}
 	out, err := yaml.Marshal(res.Raw)
 	if err != nil {
 		return "", err
 	}
 	return string(out), nil
+}
+
+func redactSecretData(raw map[string]any) map[string]any {
+	redacted := map[string]any{
+		"apiVersion": raw["apiVersion"],
+		"kind":       raw["kind"],
+		"type":       raw["type"],
+		"data":       "[REDACTED]",
+	}
+	if meta, ok := raw["metadata"].(map[string]any); ok {
+		redacted["metadata"] = map[string]any{
+			"name":              meta["name"],
+			"namespace":         meta["namespace"],
+			"labels":            meta["labels"],
+			"creationTimestamp": meta["creationTimestamp"],
+		}
+	}
+	return redacted
+}
+
+func limitToolResult(result string) string {
+	if len(result) <= maxToolResultBytes {
+		return result
+	}
+	return result[:maxToolResultBytes] + "\n...(truncated)..."
 }
 
 func (e *executor) listResources(ctx context.Context, args map[string]any) (string, error) {

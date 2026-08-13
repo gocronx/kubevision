@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/gocronx/kubevision/internal/ai"
+	"github.com/gocronx/kubevision/internal/config"
 	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
 	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 	"github.com/gocronx/kubevision/internal/model"
@@ -40,12 +41,16 @@ func AIChat(args []string) error {
 		return err
 	}
 
+	appConfig, err := config.Load(*configPath)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
 	db, err := openDB(*configPath)
 	if err != nil {
 		return err
 	}
 	settings := repository.NewSettingRepo(db)
-	cfg, err := ai.NewConfigStore(settings).Load(context.Background())
+	cfg, err := ai.NewConfigStore(settings, appConfig.EncryptKey).Load(context.Background())
 	closeDB(db)
 	if err != nil {
 		return fmt.Errorf("load AI settings: %w", err)
