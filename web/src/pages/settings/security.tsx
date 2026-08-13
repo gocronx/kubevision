@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { listPublicKeys, publicKeyAvailable, registerPublicKey, renamePublicKey, revokePublicKey, type PublicKeyCredentialInfo } from "@/lib/public-key-auth"
+import { getPublicKeyConfig, listPublicKeys, publicKeyAvailable, registerPublicKey, renamePublicKey, revokePublicKey, type PublicKeyCredentialInfo } from "@/lib/public-key-auth"
 
 type SetupStep = "idle" | "qrcode" | "verify" | "recovery"
 
@@ -41,11 +41,19 @@ function PublicKeyCredentialsCard() {
   const [password, setPassword] = useState("")
   const [totpCode, setTotpCode] = useState("")
   const [busy, setBusy] = useState(false)
+  const [enabled, setEnabled] = useState(false)
 
   async function refresh() {
     try { setCredentials(await listPublicKeys()) } catch { setCredentials([]) }
   }
-  useEffect(() => { void refresh() }, [])
+  useEffect(() => {
+    void getPublicKeyConfig()
+      .then((config) => {
+        setEnabled(config.enabled)
+        if (config.enabled) void refresh()
+      })
+      .catch(() => setEnabled(false))
+  }, [])
 
   async function register() {
     setBusy(true)
@@ -70,6 +78,8 @@ function PublicKeyCredentialsCard() {
     toast.success(t("publicKey.revokedToast"))
     await refresh()
   }
+
+  if (!enabled) return null
 
   return (
     <Card>

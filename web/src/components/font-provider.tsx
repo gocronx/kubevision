@@ -22,7 +22,7 @@ function getStoredFont(): AppFont {
   if (typeof window === "undefined") return "system"
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored && FONTS.includes(stored as AppFont)) return stored as AppFont
-  return "jetbrains-mono"
+  return "system"
 }
 
 export function FontProvider({ children }: { children: ReactNode }) {

@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { preventSubmitWhileComposing } from "@/lib/form-events"
 import type { ChatSession } from "./ai-chat-types"
 
 const MAX_SESSION_TITLE_LENGTH = 60
@@ -150,7 +151,7 @@ export function ChatSessions({ sessions, activeSessionId, onCreate, onSelect, on
 
       <Dialog open={Boolean(renameTarget)} onOpenChange={(open) => !open && setRenameTarget(null)}>
         <DialogContent className="sm:max-w-sm">
-          <form onSubmit={submitRename} className="grid gap-4">
+          <form onSubmit={submitRename} onKeyDownCapture={preventSubmitWhileComposing} className="grid gap-4">
             <DialogHeader>
               <DialogTitle>{t("ai.renameSessionTitle")}</DialogTitle>
               <DialogDescription>{t("ai.renameSessionDescription")}</DialogDescription>

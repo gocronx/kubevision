@@ -65,6 +65,7 @@ func TestExtractResource(t *testing.T) {
 		{"/api/v1/favorites", "favorites"},
 		{"/api/v1/clusters/:id/namespaces/:namespace/pods/:name/exec", "exec"},
 		{"/healthz", ""},
+		{"/readyz", ""},
 		{"", ""},
 	}
 

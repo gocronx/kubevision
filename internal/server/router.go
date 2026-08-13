@@ -1,6 +1,10 @@
 package server
 
 import (
+	"context"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
@@ -43,6 +47,7 @@ type RouterDeps struct {
 	RBACMiddleware         gin.HandlerFunc
 	AuditMiddleware        gin.HandlerFunc
 	Logger                 *zap.Logger
+	DatabasePing           func(context.Context) error
 }
 
 // RegisterRoutes sets up all API route groups on the given engine.
@@ -57,6 +62,19 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 	// Health check - always available.
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
+	})
+	r.GET("/readyz", func(c *gin.Context) {
+		if deps == nil || deps.DatabasePing == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+		if err := deps.DatabasePing(ctx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	// API v1 group.
@@ -76,6 +94,7 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				authGroup.POST("/2fa/recovery", deps.AuthHandler.Recovery2FA)
 			}
 			if deps != nil && deps.PublicKeyHandler != nil {
+				authGroup.GET("/public-key/config", deps.PublicKeyHandler.Config)
 				authGroup.POST("/public-key/login/begin", deps.PublicKeyHandler.BeginLogin)
 				authGroup.POST("/public-key/login/finish", deps.PublicKeyHandler.FinishLogin)
 			}

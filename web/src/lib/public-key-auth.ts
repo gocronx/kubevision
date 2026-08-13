@@ -46,6 +46,20 @@ export function publicKeyAvailable(): boolean {
   return typeof window !== "undefined" && window.isSecureContext && "PublicKeyCredential" in window
 }
 
+export interface PublicKeyConfig { enabled: boolean }
+export async function getPublicKeyConfig() {
+  return api.get("/auth/public-key/config") as Promise<PublicKeyConfig>
+}
+
+export async function publicKeyEnabled(): Promise<boolean> {
+  if (!publicKeyAvailable()) return false
+  try {
+    return (await getPublicKeyConfig()).enabled
+  } catch {
+    return false
+  }
+}
+
 export async function registerPublicKey(label: string, password: string, totpCode: string) {
   const ceremony = await api.post("/auth/public-key/register/begin", { label, password, totpCode }) as Ceremony<PublicKeyCredentialCreationOptionsJSON>
   const credential = await navigator.credentials.create({ publicKey: creationOptions(ceremony.options) }) as PublicKeyCredential | null

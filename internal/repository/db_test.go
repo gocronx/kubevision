@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/gocronx/kubevision/internal/auth"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -29,11 +31,17 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	logger, _ := zap.NewDevelopment()
 	db, err := NewDB(cfg, logger)
 	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, sqlDB.Close()) })
 	return db
 }
 
 func TestNewDB_CreatesDatabaseAndRunsMigrations(t *testing.T) {
 	db := setupTestDB(t)
+	var migrationCount int64
+	require.NoError(t, db.Model(&schemaMigration{}).Count(&migrationCount).Error)
+	assert.Equal(t, int64(len(databaseMigrations)), migrationCount)
 
 	// Verify that the users table exists by querying it.
 	var count int64
@@ -162,4 +170,67 @@ func TestNewDB_CalledTwiceDoesNotDuplicateSeedData(t *testing.T) {
 	// Verify exact counts.
 	assert.Equal(t, int64(1), userCount2, "should have exactly 1 admin user")
 	assert.Equal(t, int64(5), roleCount2, "should have exactly 5 system roles")
+	var migrationCount int64
+	require.NoError(t, db2.Model(&schemaMigration{}).Count(&migrationCount).Error)
+	assert.Equal(t, int64(len(databaseMigrations)), migrationCount)
+}
+
+func TestNewDB_ConfiguresSQLiteForSingleWriter(t *testing.T) {
+	db := setupTestDB(t)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	assert.Equal(t, 1, sqlDB.Stats().MaxOpenConnections)
+}
+
+func TestNewDB_AdoptsLegacySQLiteSchemaWithoutLosingData(t *testing.T) {
+	dsn := t.TempDir() + "/legacy.db"
+	legacy, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, legacy.AutoMigrate(&model.User{}))
+	require.NoError(t, legacy.Create(&model.User{
+		Username: "existing", PasswordHash: "hash", Role: "viewer", IsActive: true,
+	}).Error)
+	legacySQL, err := legacy.DB()
+	require.NoError(t, err)
+	require.NoError(t, legacySQL.Close())
+
+	db, err := NewDB(&config.Config{Database: config.DatabaseConfig{Driver: "sqlite", DSN: dsn}}, zap.NewNop())
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, sqlDB.Close()) })
+
+	var existing model.User
+	require.NoError(t, db.Where("username = ?", "existing").First(&existing).Error)
+	var migrationCount int64
+	require.NoError(t, db.Model(&schemaMigration{}).Count(&migrationCount).Error)
+	assert.Equal(t, int64(len(databaseMigrations)), migrationCount)
+}
+
+func TestNewDB_PostgresIntegration(t *testing.T) {
+	dsn := os.Getenv("KUBEVISION_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("KUBEVISION_TEST_POSTGRES_DSN is not configured")
+	}
+	cfg := &config.Config{Database: config.DatabaseConfig{
+		Driver: "postgres", DSN: dsn, MaxOpenConns: 7, MaxIdleConns: 3,
+	}}
+
+	db, err := NewDB(cfg, zap.NewNop())
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, sqlDB.Close()) })
+	assert.Equal(t, 7, sqlDB.Stats().MaxOpenConnections)
+
+	var migrationCount int64
+	require.NoError(t, db.Model(&schemaMigration{}).Count(&migrationCount).Error)
+	assert.Equal(t, int64(len(databaseMigrations)), migrationCount)
+
+	// A second startup must observe the migration history and remain idempotent.
+	db2, err := NewDB(cfg, zap.NewNop())
+	require.NoError(t, err)
+	sqlDB2, err := db2.DB()
+	require.NoError(t, err)
+	require.NoError(t, sqlDB2.Close())
 }

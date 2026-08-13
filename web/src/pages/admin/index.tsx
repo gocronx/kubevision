@@ -356,7 +356,6 @@ function APIKeysTab() {
                   placeholder={t("apikeys.namePlaceholder")}
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                 />
               </div>
               <div className="flex gap-2 justify-end">

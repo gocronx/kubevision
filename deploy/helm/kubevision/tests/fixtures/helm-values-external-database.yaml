@@ -1,5 +1,12 @@
+replicaCount: 2
+
+deploymentStrategy:
+  type: RollingUpdate
+
 persistence:
   enabled: false
+
+existingSecret: kubevision-runtime-secrets
 
 config:
   database:

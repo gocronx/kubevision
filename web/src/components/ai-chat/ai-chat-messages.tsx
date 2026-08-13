@@ -184,6 +184,7 @@ function ToolActivity({ message }: { message: ChatMessage }) {
 function TextMessage({ message }: { message: ChatMessage }) {
   const { t } = useTranslation()
   const isUser = message.role === "user"
+  const content = message.content.trimEnd()
   const [copied, setCopied] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -193,7 +194,7 @@ function TextMessage({ message }: { message: ChatMessage }) {
 
   const copyMessage = async () => {
     try {
-      await navigator.clipboard.writeText(message.content)
+      await navigator.clipboard.writeText(content)
       setCopied(true)
       toast.success(t("ai.copiedMessage"))
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
@@ -204,10 +205,13 @@ function TextMessage({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("group/message flex items-end gap-1", isUser ? "justify-end" : "justify-start")}>
+      {isUser && content && (
+        <CopyMessageButton copied={copied} onCopy={copyMessage} />
+      )}
       <div
         className={cn(
-          "group/message max-w-[85%] rounded-lg px-3 py-2",
+          "max-w-[85%] rounded-lg px-3 py-2",
           isUser
             ? "bg-primary text-primary-foreground"
             : message.isError
@@ -216,34 +220,40 @@ function TextMessage({ message }: { message: ChatMessage }) {
         )}
       >
         {isUser ? (
-          <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+          <p className="whitespace-pre-wrap break-words text-sm">{content}</p>
         ) : (
-          <Suspense fallback={<p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>}>
-            <ChatMarkdown content={message.content} />
+          <Suspense fallback={<p className="whitespace-pre-wrap break-words text-sm">{content}</p>}>
+            <ChatMarkdown content={content} />
           </Suspense>
         )}
-        {message.content && (
-          <div className={cn("mt-1.5 flex", isUser ? "justify-start" : "justify-end")}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "opacity-60 transition-opacity sm:opacity-0 sm:group-hover/message:opacity-70 sm:focus-visible:opacity-100",
-                isUser
-                  ? "text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => void copyMessage()}
-              aria-label={copied ? t("ai.copiedMessage") : t("ai.copyMessage")}
-              title={copied ? t("ai.copiedMessage") : t("ai.copyMessage")}
-            >
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            </Button>
-          </div>
-        )}
       </div>
+      {!isUser && content && (
+        <CopyMessageButton copied={copied} onCopy={copyMessage} />
+      )}
     </div>
+  )
+}
+
+function CopyMessageButton({
+  copied,
+  onCopy,
+}: {
+  copied: boolean
+  onCopy: () => Promise<void>
+}) {
+  const { t } = useTranslation()
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-xs"
+      className="mb-0.5 shrink-0 text-muted-foreground opacity-60 transition-opacity hover:text-foreground sm:opacity-0 sm:group-hover/message:opacity-70 sm:focus-visible:opacity-100"
+      onClick={() => void onCopy()}
+      aria-label={copied ? t("ai.copiedMessage") : t("ai.copyMessage")}
+      title={copied ? t("ai.copiedMessage") : t("ai.copyMessage")}
+    >
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+    </Button>
   )
 }
 
