@@ -119,7 +119,7 @@ If OIDC is a hard requirement today, Headlamp is the recommended alternative —
 
 ### Is there a hosted SaaS version of KubeVision?
 
-No. KubeVision is **self-hosted only**. There is no cloud-hosted version, no phone-home telemetry, and no license keys. The project is fully open source under Apache 2.0.
+No. KubeVision is **self-hosted only**. There is no cloud-hosted version, no phone-home telemetry, and no license keys. The project is fully open source under the MIT License.
 
 ---
 

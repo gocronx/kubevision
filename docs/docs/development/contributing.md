@@ -5,7 +5,7 @@ title: Contributing
 
 # Contributing
 
-KubeVision welcomes contributions of all kinds — bug reports, documentation improvements, feature implementations, and code reviews. All contributions are governed by the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+KubeVision welcomes contributions of all kinds — bug reports, documentation improvements, feature implementations, and code reviews. All contributions are governed by the [MIT License](https://opensource.org/license/mit).
 
 ## Fork → Branch → PR Workflow
 
@@ -117,7 +117,7 @@ First-time contributors must sign the CLA (Contributor License Agreement) via th
 
 ## License
 
-By contributing to KubeVision you agree that your contributions are licensed under the **Apache License, Version 2.0**. See [LICENSE](https://github.com/gocronx/kubevision/blob/main/LICENSE) for the full text.
+By contributing to KubeVision you agree that your contributions are licensed under the **MIT License**. See [LICENSE](https://github.com/gocronx/kubevision/blob/main/LICENSE) for the full text.
 
 ## Related
 

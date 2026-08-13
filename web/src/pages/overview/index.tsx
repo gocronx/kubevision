@@ -138,22 +138,22 @@ function getSubtitleColor(active: number, total: number): string {
 
 function StatCard({ title, icon: Icon, value, subtitle, subtitleColor, isLoading, iconClass }: StatCardProps) {
   return (
-    <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 transition-all duration-200 hover:shadow-md h-full">
-      <CardHeader className="flex flex-row items-center justify-between p-5 pb-2">
+    <Card className="flex h-full flex-col gap-2 rounded-lg border-border/40 py-0 shadow-sm transition-shadow duration-200 hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between px-4 pt-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className={`rounded-xl p-2 ${iconClass ?? "bg-secondary text-secondary-foreground"}`}>
+        <div className={`rounded-md p-1.5 ${iconClass ?? "bg-secondary text-secondary-foreground"}`}>
           <Icon className="size-4 opacity-80" />
         </div>
       </CardHeader>
-      <CardContent className="p-5 pt-0">
+      <CardContent className="px-4 pb-3">
         {isLoading || value === undefined ? (
-          <div className="mt-1 space-y-2">
-            <Skeleton className="h-8 w-16" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-7 w-14" />
             <Skeleton className="h-3 w-24" />
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
-            <div className="text-3xl font-bold tracking-tight">{value}</div>
+          <div className="flex flex-col gap-0.5">
+            <div className="text-2xl font-bold">{value}</div>
             {subtitle && (
               <p className={`text-xs font-medium ${subtitleColor ?? "text-muted-foreground"}`}>{subtitle}</p>
             )}
@@ -732,14 +732,14 @@ function OverviewSkeleton() {
     <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden pb-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="rounded-2xl shadow-sm border-border/40">
-            <CardHeader className="flex flex-row items-center justify-between p-5 pb-2">
+          <Card key={i} className="gap-2 rounded-lg border-border/40 py-0 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pt-3">
               <Skeleton className="h-3 w-14" />
-              <Skeleton className="size-8 rounded-xl" />
+              <Skeleton className="size-7 rounded-md" />
             </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <Skeleton className="h-8 w-12" />
-              <Skeleton className="mt-2 h-3 w-20" />
+            <CardContent className="px-4 pb-3">
+              <Skeleton className="h-7 w-12" />
+              <Skeleton className="mt-1.5 h-3 w-20" />
             </CardContent>
           </Card>
         ))}

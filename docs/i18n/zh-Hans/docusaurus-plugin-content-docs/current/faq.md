@@ -119,7 +119,7 @@ sqlite3 kubevision.db ".backup kubevision_backup_$(date +%Y%m%d).db"
 
 ### KubeVision 有托管的 SaaS 版本吗？
 
-没有。KubeVision 是**纯自托管**的。没有云托管版本，没有数据上报遥测，也没有许可证密钥。该项目完全以 Apache 2.0 协议开源。
+没有。KubeVision 是**纯自托管**的。没有云托管版本，没有数据上报遥测，也没有许可证密钥。该项目完全以 MIT 协议开源。
 
 ---
 

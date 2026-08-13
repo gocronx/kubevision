@@ -5,7 +5,7 @@ title: 贡献指南
 
 # 贡献指南
 
-KubeVision 欢迎各种形式的贡献——问题报告、文档改进、功能实现和代码审查。所有贡献均受 [Apache 2.0 许可证](https://www.apache.org/licenses/LICENSE-2.0)约束。
+KubeVision 欢迎各种形式的贡献——问题报告、文档改进、功能实现和代码审查。所有贡献均受 [MIT 许可证](https://opensource.org/license/mit)约束。
 
 ## Fork → 分支 → PR 工作流
 
@@ -117,7 +117,7 @@ docs(contributing): add commit message guide
 
 ## 许可证
 
-向 KubeVision 贡献代码即表示你同意，你的贡献将依据 **Apache License, Version 2.0** 授权。完整条款请参阅 [LICENSE](https://github.com/gocronx/kubevision/blob/main/LICENSE)。
+向 KubeVision 贡献代码即表示你同意，你的贡献将依据 **MIT License** 授权。完整条款请参阅 [LICENSE](https://github.com/gocronx/kubevision/blob/main/LICENSE)。
 
 ## 相关文档
 
