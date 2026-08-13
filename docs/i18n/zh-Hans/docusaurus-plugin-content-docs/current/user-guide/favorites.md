@@ -55,5 +55,5 @@ title: 收藏夹
 
 ## 相关文档
 
-- [全局搜索](/docs/user-guide/global-search) — 即时在所有集群中查找资源
+- [全局搜索](/docs/user-guide/global-search) — 在当前选中集群中查找资源
 - [集群管理](/docs/user-guide/cluster-management) — 将集群添加到您的仪表板

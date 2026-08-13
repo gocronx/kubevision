@@ -5,109 +5,70 @@ title: Resource API
 
 # Resource API
 
-KubeVision exposes a single generic CRUD pattern for every Kubernetes resource type. The same four endpoints handle Pods, Deployments, ConfigMaps, and any CRD — no per-resource routes are needed.
+KubeVision uses one cluster-scoped CRUD route family for built-in Kubernetes
+resources and discovered custom resources:
 
-## Namespace-Scoped Resources
+| Method | Path | Operation |
+|--------|------|-----------|
+| `GET` | `/clusters/:id/resources/:resource` | List |
+| `GET` | `/clusters/:id/resources/:resource/:name` | Get |
+| `POST` | `/clusters/:id/resources/:resource` | Create |
+| `PUT` | `/clusters/:id/resources/:resource/:name` | Replace/update |
+| `PATCH` | `/clusters/:id/resources/:resource/:name` | Patch |
+| `DELETE` | `/clusters/:id/resources/:resource/:name` | Delete |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res` | List resources |
-| `POST` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res` | Create a resource |
-| `GET` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res/:name` | Get a resource |
-| `PUT` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res/:name` | Update a resource |
-| `DELETE` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res/:name` | Delete a resource |
+All paths on this page are relative to `/api/v1`. For namespaced resources,
+pass the namespace using the request format accepted by the web client (the
+list endpoint uses query parameters and manifests carry `metadata.namespace`).
+Use lowercase plural resource names such as `pods`, `deployments`, or the
+plural name of a CRD.
 
-## Cluster-Scoped Resources
+## Dry Run
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/clusters/:c/resources/:res` | List cluster-scoped resources |
-| `POST` | `/api/v1/clusters/:c/resources/:res` | Create a cluster-scoped resource |
-| `GET` | `/api/v1/clusters/:c/resources/:res/:name` | Get a cluster-scoped resource |
-| `PUT` | `/api/v1/clusters/:c/resources/:res/:name` | Update a cluster-scoped resource |
-| `DELETE` | `/api/v1/clusters/:c/resources/:res/:name` | Delete a cluster-scoped resource |
+| Method | Path | Operation |
+|--------|------|-----------|
+| `POST` | `/clusters/:id/resources/:resource/dry-run` | Preview create |
+| `PUT` | `/clusters/:id/resources/:resource/:name/dry-run` | Preview update |
 
-## Special Actions
+The body is the same manifest used by the corresponding write operation. A dry
+run asks the Kubernetes API server to validate the operation without persisting
+it and returns the resulting preview/diff.
 
-Beyond CRUD, KubeVision exposes resource-specific action endpoints:
+## Workload Actions
 
-```
-POST /api/v1/clusters/:c/namespaces/:ns/resources/deployments/:name/scale
-POST /api/v1/clusters/:c/namespaces/:ns/resources/deployments/:name/restart
-POST /api/v1/clusters/:c/namespaces/:ns/resources/deployments/:name/rollback
+| Method | Path | Supported resources |
+|--------|------|---------------------|
+| `PUT` | `/clusters/:id/namespaces/:namespace/:kind/:name/scale` | Deployment, StatefulSet, ReplicaSet |
+| `POST` | `/clusters/:id/namespaces/:namespace/:kind/:name/restart` | Deployment, StatefulSet, DaemonSet |
+| `GET` | `/clusters/:id/namespaces/:namespace/deployments/:name/history` | Deployment |
+| `POST` | `/clusters/:id/namespaces/:namespace/deployments/:name/rollback` | Deployment |
 
-POST /api/v1/clusters/:c/resources/nodes/:name/cordon
-POST /api/v1/clusters/:c/resources/nodes/:name/uncordon
-POST /api/v1/clusters/:c/resources/nodes/:name/drain
-```
-
-### Dry-Run
-
-Validate any create or update before applying it against the real API Server:
-
-```http
-POST /api/v1/clusters/:c/namespaces/:ns/resources/:res/:name/dry-run
-Content-Type: application/json
-
-{
-  "manifest": { ... }
-}
-```
-
-The response `data` contains a diff of the changes that would be applied, or a `422xx` error if the API Server rejects the manifest.
-
-## Other Endpoints
-
-### Global Search
-
-```http
-GET /api/v1/search?q=nginx&clusters=prod-us,staging&limit=20
-```
-
-Returns a flat list of matching resources across all accessible clusters and namespaces.
-
-### Cluster Overview
-
-```http
-GET /api/v1/clusters/:c/overview
-```
-
-Returns node count, pod count, namespace count, resource quota summaries, and recent events for a cluster.
-
-### Cross-Cluster Compare
-
-```http
-POST /api/v1/compare
-Content-Type: application/json
-
-{
-  "left":  { "cluster": "prod-us",  "namespace": "default", "resource": "deployments", "name": "api" },
-  "right": { "cluster": "staging",  "namespace": "default", "resource": "deployments", "name": "api" }
-}
-```
-
-### Favorites
+## Batch Operations
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/v1/favorites` | List the current user's favorites |
-| `POST` | `/api/v1/favorites` | Add a favorite |
-| `DELETE` | `/api/v1/favorites/:id` | Remove a favorite |
+| `POST` | `/clusters/:id/resources/batch-delete` | Delete selected resources |
+| `POST` | `/clusters/:id/batch-restart` | Restart selected workloads |
 
-### Webhooks
+Each item is authorized independently. A mixed batch can therefore contain
+both successful and failed results.
 
-| Method | Path |
-|--------|------|
-| `GET` | `/api/v1/webhooks` |
-| `POST` | `/api/v1/webhooks` |
-| `PUT` | `/api/v1/webhooks/:id` |
-| `DELETE` | `/api/v1/webhooks/:id` |
+## Discovery and Views
 
-:::tip
-Use `:res` values that match the lowercase plural Kubernetes resource kind: `pods`, `deployments`, `configmaps`, `customresourcedefinitions`, etc.
-:::
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/clusters/:id/search` | Search resources in one cluster |
+| `GET` | `/clusters/:id/overview` | Cluster overview data |
+| `GET` | `/clusters/:id/quota-summary` | Resource quota summary |
+| `GET` | `/clusters/:id/crds` | List discovered CRDs |
+| `POST` | `/clusters/:id/crds/refresh` | Refresh CRD discovery |
+| `GET` | `/clusters/:id/namespaces/:namespace/topology` | Namespace topology |
+
+The search endpoint is cluster-scoped; it is not `/api/v1/search`.
 
 ## Related
 
-- [WebSocket API](/docs/api/websocket) — Subscribe to live updates for any resource type
-- [Error Codes](/docs/api/error-codes) — `404xx` and `422xx` error codes for resource operations
+- [Resource CRUD](/docs/user-guide/resource-crud)
+- [Dry Run](/docs/user-guide/dry-run)
+- [Batch Actions](/docs/user-guide/batch-actions)
+- [Custom Resources](/docs/user-guide/custom-resources)

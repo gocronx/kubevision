@@ -27,14 +27,6 @@ const capabilities: Capability[] = [
       "Preview every change before applying. API Server validates your YAML and shows a side-by-side diff.",
   },
   {
-    icon: "🔀",
-    titleId: "unique.crossdiff.title",
-    titleDefault: "Cross-Cluster Diff",
-    descId: "unique.crossdiff.desc",
-    descDefault:
-      "Compare the same resource across clusters or environments. Spot configuration drift instantly with Monaco Diff Editor.",
-  },
-  {
     icon: "🎬",
     titleId: "unique.recording.title",
     titleDefault: "Terminal Recording",

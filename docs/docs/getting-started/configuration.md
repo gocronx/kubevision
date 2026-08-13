@@ -24,12 +24,25 @@ database:
 
 auth:
   jwt_secret: ""           # auto-generated if empty
-  access_token_ttl: 15m
-  refresh_token_ttl: 168h  # 7 days
+  access_token_ttl: 30m
+  refresh_token_ttl: 12h
+  public_key:
+    enabled: false
+    rp_id: ""
+    rp_display_name: KubeVision
+    origins: []
+    user_verification: required
+    counter_policy: deny
+    challenge_ttl: 5m
 
 kubernetes:
   kubeconfig: ""           # empty = in-cluster mode
   informer_resync: 30m
+  crd_discovery_interval: 5m
+
+oauth:
+  enabled: false
+  providers: []
 ```
 
 ## Environment Variables
@@ -47,10 +60,16 @@ All settings can be overridden via environment variables:
 | `KUBEVISION_DB_CONN_MAX_IDLE_TIME` | Maximum idle connection time | PostgreSQL: `5m` |
 | `KUBEVISION_DB_PING_TIMEOUT` | Startup database ping timeout | `5s` |
 | `KUBEVISION_JWT_SECRET` | JWT signing secret | auto-generated |
-| `KUBEVISION_ACCESS_TOKEN_TTL` | Access token lifetime | `15m` |
-| `KUBEVISION_REFRESH_TOKEN_TTL` | Refresh token lifetime | `168h` |
+| `KUBEVISION_ACCESS_TOKEN_TTL` | Access token lifetime | `30m` |
+| `KUBEVISION_REFRESH_TOKEN_TTL` | Refresh token lifetime | `12h` |
+| `KUBEVISION_PUBLIC_KEY_ENABLED` | Enable passkey/security-key login | `false` |
+| `KUBEVISION_PUBLIC_KEY_RP_ID` | WebAuthn relying-party domain | empty |
+| `KUBEVISION_PUBLIC_KEY_ORIGINS` | Allowed browser origins (comma-separated) | empty |
 | `KUBECONFIG` | Path to kubeconfig file | in-cluster |
 | `KUBEVISION_INFORMER_RESYNC` | Informer resync period | `30m` |
+| `KUBEVISION_CRD_DISCOVERY_INTERVAL` | CRD discovery refresh interval | `5m` |
+| `KUBEVISION_OAUTH_ENABLED` | Enable configured OAuth/OIDC providers | `false` |
+| `KUBEVISION_ENCRYPT_KEY` | Key used to encrypt persisted credentials | auto-generated |
 | `KUBEVISION_ALLOWED_ORIGINS` | WebSocket origin whitelist (comma-separated) | `*` |
 
 ## Database

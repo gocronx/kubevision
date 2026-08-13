@@ -5,7 +5,8 @@ title: Global Search
 
 # Global Search
 
-Global Search lets you find any Kubernetes resource across all clusters, namespaces, and resource types instantly — without navigating the sidebar.
+Global Search finds Kubernetes resources across namespaces and resource types
+in the currently selected cluster without navigating the sidebar.
 
 ## Opening the Search Dialog
 
@@ -18,26 +19,29 @@ Alternatively, click the **Search** icon in the top navigation bar.
 
 ## How It Works
 
-Results appear as you type. The search runs client-side against a pre-fetched index of all resource names, kinds, namespaces, and clusters — no extra API call per keystroke.
+Results appear after a short input debounce. The frontend calls the selected
+cluster's `/api/v1/clusters/:id/search` endpoint, and the backend searches the
+resource data available to that user. Results are grouped by resource type and
+cached briefly in the browser.
 
 ```
 Type "nginx" → matches:
   Deployment  nginx-deployment      default      prod-cluster
   Pod         nginx-deployment-xyz  default      prod-cluster
   Service     nginx-svc             default      prod-cluster
-  Ingress     nginx-ingress         kube-system  staging-cluster
+  Ingress     nginx-ingress         kube-system  prod-cluster
 ```
 
-## Fuzzy Matching
+## Matching
 
-The search uses fuzzy matching, so you do not need to type the exact name:
+Search is case-insensitive and can match resource identity fields without an
+exact full name:
 
 | Query | Matches |
 |-------|---------|
-| `ngxdep` | `nginx-deployment` |
-| `cfgmap` | `ConfigMap` resources |
+| `nginx` | Resources with `nginx` in their searchable fields |
+| `configmap` | `ConfigMap` resources |
 | `kube sys` | Resources in `kube-system` namespace |
-| `prod nginx` | nginx resources on the `prod-cluster` |
 
 ## Keyboard Navigation
 
@@ -62,7 +66,10 @@ Click or press `Enter` on a result to jump directly to that resource's detail pa
 
 ## Scope
 
-Global Search covers all resource types that KubeVision has loaded — both cached types (Pods, Deployments, Services, etc.) and on-demand types discovered via CRD auto-discovery. The index refreshes automatically as the Informer cache receives updates.
+Global Search is scoped to the currently selected cluster and the current
+user's RBAC access. It covers the resource types supported by the backend,
+including discovered custom resources where available. Switch clusters before
+searching another cluster.
 
 :::tip
 Global Search is the fastest way to navigate KubeVision. Power users rarely touch the sidebar at all.
@@ -70,5 +77,5 @@ Global Search is the fastest way to navigate KubeVision. Power users rarely touc
 
 ## Related
 
-- [Cluster Management](/docs/user-guide/cluster-management) — Add or remove clusters from the search scope
+- [Cluster Management](/docs/user-guide/cluster-management) — Select the cluster to search
 - [Favorites](/docs/user-guide/favorites) — Pin resources you access most often

@@ -74,4 +74,3 @@ PersistentVolumeClaim ──bound──▶ PersistentVolume
 ## 相关文档
 
 - [资源管理](/docs/user-guide/resource-crud) — 列表查看与编辑资源
-- [跨集群对比](/docs/user-guide/cross-cluster-diff) — 对比不同环境的拓扑结构

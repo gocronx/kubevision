@@ -24,7 +24,8 @@ Dry-Run 预览让您在将变更应用到集群之前进行验证和预览。Kub
 | 左侧（当前） | 集群中现有的资源 YAML |
 | 右侧（拟应用） | 经 API Server 规范化处理后的编辑结果（包含注入的默认值等） |
 
-差异对比仅高亮显示有实际意义的变更——`managedFields` 和服务端分配的元数据会从对比中剔除。
+变更预览仅高亮显示有实际意义的内容；渲染前会移除 `managedFields` 和服务端
+分配的元数据。
 
 ## API 参考
 
@@ -72,5 +73,4 @@ Dry-run 支持 KubeVision 管理的所有 26 种以上资源类型，包括 CRD�
 ## 相关文档
 
 - [资源管理](/docs/user-guide/resource-crud) — 完整的 CRUD 工作流
-- [跨集群对比](/docs/user-guide/cross-cluster-diff) — 对比不同环境中的同一资源
 - [kubectl 提示](/docs/user-guide/kubectl-hints) — 等效的 `kubectl apply --dry-run=server` 命令

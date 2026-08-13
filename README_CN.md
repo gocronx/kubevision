@@ -1,287 +1,108 @@
 <div align="center">
-
-<img src="docs/assets/logo.svg" width="120" alt="KubeVision Logo">
-
-# KubeVision
-
-现代化的实时 Kubernetes 仪表盘
-
-**Kube + Vision — 洞察集群全貌，即时响应变更。**
-
-[![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org) [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-
-[English](./README.md) &nbsp;&nbsp;|&nbsp;&nbsp; **中文**
-
-<br>
-
-<!-- TODO: 替换为实际动图，展示 15-20 秒的操作流程 -->
-<!-- <img src="docs/assets/demo.gif" width="800" alt="KubeVision Demo"> -->
-<img src="assets/overview.png" width="800" alt="KubeVision Dashboard">
-<!-- TODO: 替换为实际截图 -->
-
+  <img src="docs/assets/logo.svg" alt="KubeVision Logo" width="128" height="128">
+  <h1>KubeVision</h1>
+  <p>现代化的实时 Kubernetes 仪表盘。洞察集群全貌，即时响应变更。</p>
+  <p>
+    <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.23-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"></a>
+    <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React"></a>
+    <a href="https://typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>
+  </p>
+  <p><a href="README.md">English</a> · 简体中文</p>
 </div>
 
-<br>
-
-## 为什么选择 KubeVision？
-
-<table>
-<tr>
-<td width="33%" align="center">
-
-**实时架构**
-
-Informer Watch → WebSocket 推送。
-
-亚秒级更新，零轮询。
-
-</td>
-<td width="33%" align="center">
-
-**高度可扩展**
-
-每种资源只需 1 行 Go + 1 段配置。
-
-CRD 运行时自动发现。
-
-</td>
-<td width="33%" align="center">
-
-**生产就绪**
-
-多集群、RBAC、2FA、审计日志。
-
-为团队构建，而非仅供演示。
-
-</td>
-</tr>
-</table>
-
-<br>
-
-## 截图
+<p align="center">
+  <img src="assets/overview.png" alt="KubeVision 仪表盘" width="100%">
+</p>
 
 <table>
-<tr>
-<td width="50%" align="center">
-<strong>Pod 终端</strong><br><br>
-<img src="docs/assets/screenshot-terminal.png" width="100%" alt="Pod 终端">
-</td>
-<td width="50%" align="center">
-<strong>资源拓扑</strong><br><br>
-<img src="docs/assets/screenshot-topology.png" width="100%" alt="资源拓扑">
-</td>
-</tr>
-<tr>
-<td width="50%" align="center">
-<strong>资源 YAML</strong><br><br>
-<img src="docs/assets/screenshot-diff.png" width="100%" alt="资源 YAML">
-</td>
-<td width="50%" align="center">
-<strong>全局搜索</strong><br><br>
-<img src="docs/assets/screenshot-search.png" width="100%" alt="全局搜索">
-</td>
-</tr>
-<tr>
-<td width="50%" align="center">
-<strong>终端审计录频</strong><br><br>
-<img src="docs/assets/screenshot-audit.png" width="100%" alt="终端审计录频">
-</td>
-<td width="50%" align="center">
-<strong>暗色模式</strong><br><br>
-<img src="docs/assets/screenshot-dark.png" width="100%" alt="暗色模式">
-</td>
-</tr>
+  <tr>
+    <td width="50%" align="center"><b>Pod 终端与日志</b></td>
+    <td width="50%" align="center"><b>资源拓扑</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshot-terminal.png" alt="Pod 终端" width="100%"></td>
+    <td><img src="docs/assets/screenshot-topology.png" alt="资源拓扑" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><b>全局搜索</b></td>
+    <td width="50%" align="center"><b>终端审计</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshot-search.png" alt="全局搜索" width="100%"></td>
+    <td><img src="docs/assets/screenshot-audit.png" alt="终端审计" width="100%"></td>
+  </tr>
 </table>
 
-<br>
 
-## 核心特性
+## 📖 文档
 
-| 观测与实时 | 操作 | 平台与安全 |
-|---|---|---|
-| ⚡ **实时同步** — Informer → WebSocket | 🚀 **工作负载操作** — 扩缩容 · 重启 · 回滚 | 🌐 **多集群** — 单面板管理 |
-| 💻 **Pod 终端与日志** — 录制与回放 | 👀 **Dry-Run Diff** — 应用前预览 | 🛡️ **RBAC** — 5 级角色 + 自定义 |
-| 🗺️ **资源拓扑图** — 可视化关系 | 🔀 **跨集群 Diff** — 发现漂移 | 🔑 **2FA (TOTP)** — QR 码 + 恢复码 |
-| 🔍 **全局搜索** — `Cmd+K` 模糊 | 🧩 **资源模板** — 一键部署 | 📝 **审计日志** — 异步 + 保留 |
-| 🤖 **AI 助手** — 对话查看与变更 | ⚡ **批量操作** — 多选删除/重启 | 🔔 **Webhook** — Slack · Discord · 自定义 |
-| ⌨️ **kubectl 提示** — 自动生成 | 📦 **26+ 资源** — 缓存 + 按需 + CRD | 🌍 **国际化** · 🌙 **暗色模式** |
+完整文档请访问：**[kubevision-docs](https://kubevision-docs.pages.dev/)**
 
-<br>
+- 🚀 [快速开始](https://kubevision-docs.pages.dev/docs/getting-started/installation) - 安装、快速上手和配置
+- 🏛️ [架构设计](https://kubevision-docs.pages.dev/docs/architecture/overview) - 系统设计、数据流和组件交互
+- 📘 [使用指南](https://kubevision-docs.pages.dev/docs/user-guide/cluster-management) - 功能介绍和使用说明
+- 🔌 [API 参考](https://kubevision-docs.pages.dev/docs/api/overview) - REST 与 WebSocket API 文档
 
-## 快速开始
+## ✨ 功能特性
 
-### Helm（推荐）
+- **实时同步**：基于 Informer 到 WebSocket 的推送架构，实现亚秒级更新和零轮询
+- **多集群管理**：通过统一仪表盘高效管理所有集群
+- **Pod 终端与日志**：集成终端模拟器，支持完整的会话录制与回放
+- **资源拓扑**：通过可视化所有权关系图实时展示工作负载之间的关联
+- **全局搜索**：使用 `Cmd+K` 在整个集群环境中进行模糊搜索
+- **Deployment 操作**：支持扩缩容、重启、回滚，并可在应用变更前预览差异
+- **AI 助手**：使用自然语言查看和变更集群资源（支持 OpenAI、DeepSeek、通义千问等）
+- **安全与访问控制**：5 种内置 RBAC 角色、TOTP 双因素认证和异步审计日志
+- **高度可扩展**：内置 26 种以上资源，并可在运行时自动发现 CRD
+- **现代化界面**：完整的国际化支持和原生暗色模式
+
+## 🚀 快速开始
+
+通过 Helm 可以最快地在集群中部署 KubeVision：
 
 ```bash
+# 1. 安装 KubeVision
 helm install kubevision deploy/helm/kubevision
+
+# 2. 使用端口转发访问仪表盘
+kubectl port-forward svc/kubevision 8080:80
+
+# 3. 访问 Web 界面
+# http://localhost:8080
 ```
 
-### Docker
-
-```bash
-docker build -f deploy/Dockerfile -t kubevision:latest .
-docker run -p 8080:8080 kubevision:latest
-```
-
-> 打开 http://localhost:8080
+> 默认登录账号：`admin` / `admin123`
 >
-> 默认账号：`admin` / `admin123`
+> 其他部署方式（Docker、二进制、本地开发）请参阅[安装指南](https://kubevision-docs.pages.dev/docs/getting-started/installation)。
 
-### 本地开发
+## 🔷 CLI 与 AI 助手
 
-```bash
-git clone https://github.com/gocronx/kubevision.git
-cd kubevision
-
-# 后端 — :8080
-go mod tidy && make dev
-
-# 前端 — :5173，/api 自动代理到 :8080
-cd web && pnpm install && pnpm dev
-```
-
-<br>
-
-## AI 助手
-
-KubeVision 内置一个兼容 OpenAI 接口的 AI 助手，可查看资源，并在**用户明确确认后**
-通过一组受 RBAC 校验的固定工具变更资源（查询资源、Pod 日志、集群概览、Prometheus
-查询，以及需确认的 create/update/patch/delete）。
-
-- **在面板中：** 进入 **设置 → AI 助手**（仅管理员）配置后，点击右下角浮动按钮即可使用。
-  兼容 OpenAI、OpenRouter、DeepSeek、通义千问等任意 OpenAI 兼容服务。
-- **在终端中：** `kubevision ai`（见下方 CLI）。
-
-## 命令行工具
-
-`kubevision` 二进制同时是管理 CLI：无子命令（或 `serve`）时启动 HTTP 服务，否则对配置
-的数据库执行管理命令。
+`kubevision` 二进制文件同时也是功能完整的管理 CLI。你可以直接管理账号，也可以在终端中与集群对话：
 
 ```bash
-# 账号管理（与服务端共用同一数据库/配置）
+# 账号管理
 kubevision reset-password --username admin
-kubevision reset-2fa --username admin
 kubevision create-user --username dev --role editor --email dev@example.com
-kubevision list-users
-kubevision set-role --username dev --role admin
-kubevision deactivate-user --username dev
-kubevision activate-user --username dev
-kubevision delete-user --username dev          # 需输入用户名确认；--force 跳过
 
-# 终端 AI 助手（在 shell 里和集群对话）
-export API_KEY=... API_BASE_URL=https://api.openai.com/v1 MODEL_ID=gpt-4o-mini
-kubevision ai "default 里的 web pod 为什么在重启？"   # 一次性
-kubevision ai                                          # 交互式
+# 终端 AI 助手（在 shell 中与集群对话）
+export API_KEY=... MODEL_ID=gpt-4o-mini
+kubevision ai "default 命名空间中的 web pod 为什么崩溃？"   # 单次查询
+kubevision ai                                                # 交互式 REPL
 ```
 
-终端下密码隐藏输入，管道输入时从 stdin 读取。改角色与停用会使现有会话失效；最后一个
-活跃的 super-admin 不能被降级、停用或删除。
+## 🤝 参与贡献
 
-## 架构
+欢迎参与贡献！请先提交 Issue，讨论你希望进行的修改。
 
-<div align="center">
-  <img src="docs/architecture.png" alt="KubeVision 架构" width="900">
-  <p align="center"><em>组件总览</em></p>
-</div>
+需要注意，Git Hook 会通过 [commitlint](https://github.com/conventional-changelog/commitlint)
+校验提交信息，因此请使用交互式提交工具，而不是直接运行 `git commit`：
 
-### 数据流
-
-```mermaid
-flowchart TD
-    B(["🖥️ 浏览器"])
-    subgraph SRV["Gin HTTP Server"]
-        direction TB
-        MW["中间件<br/>RequestID · Logger · Auth · RBAC"]
-        H["Handler"]
-        SV["Service"]
-        R["K8sRepo"]
-        HUB["WS Hub"]
-        MW --> H --> SV --> R
-    end
-    B -- "REST" --> MW
-    B -- "WebSocket" --> HUB
-    R -- "读：缓存优先" --> CACHE[("Informer 缓存")]
-    R -- "未命中 / 写" --> API[["Kubernetes API"]]
-    API --> WATCH["Informer Watch"] --> EL["Event Listener"] --> HUB
-    HUB -- "实时推送" --> B
-    SV --> DB[("SQLite / PostgreSQL")]
-    style SRV fill:#FBFBFD,stroke:#E5E5EA
-    classDef k8s fill:#34C759,stroke:#248A3D,color:#fff;
-    classDef store fill:#F2F2F7,stroke:#C7C7CC,color:#1D1D1F;
-    classDef client fill:#5E5CE6,stroke:#3F3DBE,color:#fff;
-    classDef svc fill:#0A84FF,stroke:#0060DF,color:#fff;
-    class B client
-    class CACHE,DB store
-    class API,WATCH,EL k8s
-    class MW,H,SV,R,HUB svc
+```bash
+pnpm install      # 首次设置（在 web 目录中安装 Git Hook）
+pnpm run commit   # 创建符合规范的提交
 ```
 
-> **读链路** — Informer 缓存优先，未命中降级到 API Server。
-> **写 / 事件** — API Server → Informer Watch → Event Listener → WS Hub → 浏览器。
+## 📄 开源协议
 
-<br>
-
-## 核心依赖
-
-1. [Gin](https://github.com/gin-gonic/gin) — HTTP 框架
-2. [client-go](https://github.com/kubernetes/client-go) — Kubernetes API 客户端 & Informer
-3. [GORM](https://gorm.io) — ORM（SQLite + PostgreSQL）
-4. [shadcn/ui](https://ui.shadcn.com) — 基于 [Radix UI](https://radix-ui.com) 的组件库
-5. [TanStack Query](https://tanstack.com/query) — 服务端状态管理 & 缓存
-6. [xterm.js](https://xtermjs.org) — Pod 终端模拟器
-
-<br>
-
-## 配置
-
-```yaml
-server:
-  port: 8080
-
-database:
-  driver: sqlite           # sqlite | postgres
-  dsn: kubevision.db
-
-auth:
-  jwt_secret: ""           # 留空自动生成
-  access_token_ttl: 15m
-  refresh_token_ttl: 168h
-
-kubernetes:
-  kubeconfig: ""           # 留空使用 in-cluster
-  informer_resync: 30m
-```
-
-| 变量 | 说明 |
-|------|------|
-| `KUBEVISION_SERVER_PORT` | HTTP 端口（默认 8080） |
-| `KUBEVISION_DB_DRIVER` | `sqlite` 或 `postgres` |
-| `KUBEVISION_DB_DSN` | 数据库连接字符串 |
-| `KUBEVISION_JWT_SECRET` | JWT 签名密钥 |
-| `KUBECONFIG` | kubeconfig 文件路径 |
-
-<br>
-
-## 文档
-
-**[kubevision-docs](https://kubevision-docs.pages.dev/)** — 完整文档站，包含使用指南、API 参考和架构详解。
-
-| | |
-|---|---|
-| [快速开始](https://kubevision.github.io/docs/getting-started/installation) | 安装、快速上手、配置说明 |
-| [架构设计](https://kubevision.github.io/docs/architecture/overview) | 系统设计、数据流、组件交互 |
-| [使用指南](https://kubevision.github.io/docs/user-guide/cluster-management) | 功能详解与操作指引 |
-| [API 参考](https://kubevision.github.io/docs/api/overview) | REST & WebSocket API 文档 |
-| [方案对比](https://kubevision.github.io/docs/comparison) | KubeVision 与其他方案的对比 |
-
-<br>
-
-## 参与贡献
-
-欢迎贡献代码！请先提 Issue 讨论你想做的改动。
-
-<!-- ## 贡献者 -->
-<!-- <a href="https://github.com/gocronx/kubevision/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=gocronx/kubevision" />
-</a> -->
+本项目采用 MIT License，详情请参阅 [LICENSE](LICENSE) 文件。

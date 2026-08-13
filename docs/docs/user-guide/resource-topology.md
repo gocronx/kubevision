@@ -74,4 +74,3 @@ For large deployments with many replica Pods, the graph groups them and shows a 
 ## Related
 
 - [Resource Management](/docs/user-guide/resource-crud) — List and edit resources
-- [Cross-Cluster Diff](/docs/user-guide/cross-cluster-diff) — Compare topology across environments

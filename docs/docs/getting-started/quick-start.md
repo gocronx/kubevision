@@ -34,7 +34,8 @@ The left sidebar shows all available resource types organized by category:
 
 ## 4. Use Global Search
 
-Press `Cmd+K` (or `Ctrl+K`) to open the global search. Type any resource name to find it across all clusters and namespaces.
+Press `Cmd+K` (or `Ctrl+K`) to open global search. Type a resource name to
+find it across namespaces in the currently selected cluster.
 
 ## 5. Open a Terminal
 

@@ -24,7 +24,7 @@ const features: Feature[] = [
     titleDefault: "Multi-cluster",
     descId: "features.multicluster.desc",
     descDefault:
-      "Manage all your clusters from a single dashboard. Switch contexts instantly, compare resources across environments.",
+      "Manage all your clusters from a single dashboard and switch contexts instantly.",
   },
   {
     icon: "💻",

@@ -5,123 +5,90 @@ title: Authentication
 
 # Authentication
 
-KubeVision uses JWT-based authentication. An access token (15-minute TTL) and a refresh token (7-day TTL) are issued at login. All protected endpoints require the access token in the `Authorization` header.
+KubeVision supports local passwords, TOTP, passkeys/security keys, directory
+accounts, and configured OAuth/OIDC providers. Successful authentication issues
+an access token and refresh token using the TTLs configured by the operator.
 
-## Login
+## Password or Directory Login
 
 ```http
 POST /api/v1/auth/login
 Content-Type: application/json
 
-{
-  "username": "admin",
-  "password": "your-password"
-}
+{"username":"admin","password":"your-password"}
 ```
 
-### Response — Login Success
+Directory users use the same endpoint. When directory login is enabled, the
+backend resolves the identity and group-to-role mapping according to the saved
+directory policy.
 
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "accessToken":  "<jwt>",
-    "refreshToken": "<jwt>",
-    "expiresIn":    900
-  },
-  "meta": { "requestId": "req_01HX" }
-}
-```
+If TOTP is enabled, login returns business code `40102` and a short-lived
+temporary token. Complete it with one of these public endpoints:
 
-### Response — 2FA Required
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/auth/2fa/verify` | Verify a TOTP code |
+| `POST` | `/auth/2fa/recovery` | Consume a recovery code |
 
-When the user has 2FA enabled, the login response contains a session token instead of the final JWTs:
-
-```json
-{
-  "code": 40102,
-  "message": "2FA required",
-  "data": {
-    "requires2fa":    true,
-    "sessionToken":   "<short-lived-token>"
-  },
-  "meta": { "requestId": "req_01HX" }
-}
-```
-
-## Two-Factor Authentication
-
-### Verify a TOTP Code
-
-```http
-POST /api/v1/auth/2fa/verify
-Content-Type: application/json
-
-{
-  "sessionToken": "<short-lived-token>",
-  "code": "123456"
-}
-```
-
-Returns the same `accessToken` / `refreshToken` pair as a normal login on success.
-
-### Set Up 2FA
-
-```http
-POST /api/v1/auth/2fa/setup
-Authorization: Bearer <access_token>
-```
-
-Returns a `otpauthUrl` and `recoveryCodes`. Scan the QR code in any TOTP app (Google Authenticator, Authy, 1Password).
-
-```json
-{
-  "code": 0,
-  "data": {
-    "otpauthUrl":    "otpauth://totp/KubeVision:admin?secret=BASE32SECRET",
-    "recoveryCodes": ["abc12-def34", "ghi56-jkl78"]
-  }
-}
-```
-
-### Enable / Disable 2FA
-
-| Action | Endpoint |
-|--------|----------|
-| Enable | `POST /api/v1/auth/2fa/enable` |
-| Disable | `POST /api/v1/auth/2fa/disable` — requires current TOTP code in body |
-
-:::warning
-Recovery codes are shown **only once** at setup time. Store them securely. Each code can be used in place of a TOTP code and is invalidated after one use.
-:::
-
-## Refresh Tokens
+## Refresh
 
 ```http
 POST /api/v1/auth/refresh
 Content-Type: application/json
 
-{
-  "refreshToken": "<refresh_jwt>"
-}
+{"refreshToken":"<refresh-token>"}
 ```
 
-Returns a new `accessToken`. The refresh token itself is not rotated unless it is within 24 hours of expiry, in which case a new refresh token is also issued.
+Use the returned access token in protected requests:
 
-## Token Expiry
+```http
+Authorization: Bearer <access-token>
+```
 
-| Token | TTL |
-|-------|-----|
-| Access token | 15 minutes |
-| Refresh token | 7 days |
-| 2FA session token | 5 minutes |
+## OAuth and OIDC
 
-## Token Revocation
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/auth/oauth/providers` | List configured providers |
+| `GET` | `/auth/oauth/:provider/authorize` | Begin authorization |
+| `GET` | `/auth/oauth/:provider/callback` | Provider callback |
 
-KubeVision uses a `tokenVersion` field on the user record. Incrementing `tokenVersion` (via **Settings → Users → Revoke Sessions**) invalidates all tokens issued before that point — the JWT validation middleware rejects tokens whose embedded version does not match the current database value.
+The provider name must match an entry in `oauth.providers`. KubeVision supports
+OIDC discovery through `issuer`, or explicit authorization, token, and user-info
+URLs for standard OAuth providers. The callback URL must exactly match the URL
+registered with the provider.
+
+## Passkeys and Security Keys
+
+First check whether public-key authentication is enabled:
+
+```http
+GET /api/v1/auth/public-key/config
+```
+
+Authentication is a two-step WebAuthn exchange:
+
+| Method | Path |
+|--------|------|
+| `POST` | `/auth/public-key/login/begin` |
+| `POST` | `/auth/public-key/login/finish` |
+
+Registration and credential management require an existing authenticated
+session and are listed in the [Endpoint Index](/docs/api/endpoints). Browser
+origin, relying-party ID, and HTTPS requirements are described in
+[Authentication Providers](/docs/admin-guide/authentication-providers).
+
+## Token Security
+
+- Store access tokens only where the KubeVision client expects them; do not put
+  bearer tokens in arbitrary URLs.
+- Changing a user's password or security state can invalidate existing
+  sessions through the user's token version.
+- Store TOTP recovery codes securely. They are intended for one-time recovery.
+- Use TLS for login, OAuth callbacks, WebAuthn, and all authenticated APIs.
 
 ## Related
 
-- [RBAC](/docs/admin-guide/rbac) — What permissions are embedded in the JWT
-- [Error Codes](/docs/api/error-codes) — `401xx` auth error codes explained
+- [Two-Factor Authentication](/docs/admin-guide/two-factor-auth)
+- [Authentication Providers](/docs/admin-guide/authentication-providers)
+- [RBAC](/docs/admin-guide/rbac)

@@ -24,7 +24,8 @@ Dry-Run Preview lets you validate and preview a change before it is applied to t
 | Left (current) | The resource YAML as it exists in the cluster right now |
 | Right (proposed) | Your edited YAML after the API Server normalizes it (defaults injected, etc.) |
 
-The diff highlights only meaningful changes — `managedFields` and server-assigned metadata are stripped from the comparison.
+The preview highlights only meaningful changes; `managedFields` and
+server-assigned metadata are removed before rendering.
 
 ## API Reference
 
@@ -72,5 +73,4 @@ Dry-run is supported for all 26+ resource types KubeVision manages, including CR
 ## Related
 
 - [Resource Management](/docs/user-guide/resource-crud) — Full CRUD workflow
-- [Cross-Cluster Diff](/docs/user-guide/cross-cluster-diff) — Compare the same resource across environments
 - [kubectl Hints](/docs/user-guide/kubectl-hints) — Equivalent `kubectl apply --dry-run=server` command

@@ -47,21 +47,6 @@ For production deployments, also configure: a strong `jwtSecret`, TLS terminatio
 
 ---
 
-### How does KubeVision compare to kubectl?
-
-KubeVision is **complementary to kubectl**, not a replacement. The two tools serve different use cases:
-
-| kubectl | KubeVision |
-|---------|-----------|
-| Terminal / scripting / CI | Browser / team / visual |
-| Full API surface coverage | Curated resource views |
-| No access control layer | 5-level RBAC + 2FA |
-| No audit log | Full audit log |
-
-KubeVision's **kubectl Hints** feature shows the equivalent `kubectl` command for every action taken in the UI, so you can use both tools fluidly.
-
----
-
 ### Does KubeVision modify my cluster resources automatically?
 
 No. KubeVision never modifies cluster state without an explicit user action (clicking Apply, Delete, Scale, etc.). The backend does not run any background jobs that write to the cluster. Read-only operations (listing, watching, log streaming) generate no writes.
@@ -111,9 +96,11 @@ Cluster kubeconfigs are stored encrypted in the database. A database backup is s
 
 ### Can I use SSO or OIDC for login?
 
-OIDC / SSO support via **Dex** is planned for a future release (see [Roadmap](/docs/roadmap)). As of the current version, authentication is handled by KubeVision's own JWT-based login with optional 2FA (TOTP).
-
-If OIDC is a hard requirement today, Headlamp is the recommended alternative — it has mature OIDC support via its plugin system.
+Yes. Administrators can configure standard OAuth or OIDC providers alongside
+local JWT login, TOTP, directory accounts, and passkeys. OIDC discovery uses
+the provider issuer; standard OAuth integrations can specify authorization,
+token, and user-info endpoints explicitly. See
+[Authentication Providers](/docs/admin-guide/authentication-providers).
 
 ---
 

@@ -137,15 +137,15 @@ clean:
 
 ## docs: Build documentation site
 docs:
-	cd docs && pnpm install && pnpm build
+	$(MAKE) -C docs build
 
 ## docs-dev: Start documentation dev server
 docs-dev:
-	cd docs && pnpm install && pnpm start
+	$(MAKE) -C docs dev
 
 ## docs-deploy: Build and deploy docs to Cloudflare Pages
 docs-deploy: docs
-	cd docs && wrangler pages deploy build --project-name kubevision-docs
+	$(MAKE) -C docs deploy-only
 
 ## help: Show this help message
 help:

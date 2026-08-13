@@ -5,7 +5,8 @@ title: 全局搜索
 
 # 全局搜索
 
-全局搜索让您无需浏览侧边栏，即可即时在所有集群、所有 Namespace 和所有资源类型中查找任意 Kubernetes 资源。
+全局搜索让您无需浏览侧边栏，即可在当前选中集群的各个 Namespace 和资源类型中
+查找 Kubernetes 资源。
 
 ## 打开搜索对话框
 
@@ -18,26 +19,27 @@ title: 全局搜索
 
 ## 工作原理
 
-输入时结果即时出现。搜索在客户端对预先获取的索引（包含所有资源名称、类型、Namespace 和集群）执行，每次按键无需额外的 API 请求。
+输入经过短暂防抖后显示结果。前端调用当前集群的
+`/api/v1/clusters/:id/search` 接口，后端在该用户可访问的资源数据中搜索。结果按
+资源类型分组，并在浏览器中短暂缓存。
 
 ```
 输入 "nginx" → 匹配：
   Deployment  nginx-deployment      default      prod-cluster
   Pod         nginx-deployment-xyz  default      prod-cluster
   Service     nginx-svc             default      prod-cluster
-  Ingress     nginx-ingress         kube-system  staging-cluster
+  Ingress     nginx-ingress         kube-system  prod-cluster
 ```
 
-## 模糊匹配
+## 匹配方式
 
-搜索支持模糊匹配，无需输入精确名称：
+搜索不区分大小写，并可在资源身份字段中匹配，不要求输入完整名称：
 
 | 查询 | 匹配结果 |
 |-------|---------|
-| `ngxdep` | `nginx-deployment` |
-| `cfgmap` | `ConfigMap` 类型资源 |
+| `nginx` | 可搜索字段中包含 `nginx` 的资源 |
+| `configmap` | `ConfigMap` 类型资源 |
 | `kube sys` | `kube-system` Namespace 下的资源 |
-| `prod nginx` | `prod-cluster` 上的 nginx 相关资源 |
 
 ## 键盘导航
 
@@ -62,7 +64,8 @@ title: 全局搜索
 
 ## 搜索范围
 
-全局搜索涵盖 KubeVision 已加载的所有资源类型——包括缓存类型（Pods、Deployments、Services 等）以及通过 CRD 自动发现的按需类型。索引随 Informer 缓存的更新自动刷新。
+全局搜索限定在当前选中集群和当前用户的 RBAC 权限范围内。它覆盖后端支持的资源
+类型，并在可用时包含已发现的自定义资源。搜索其他集群前请先切换集群。
 
 :::tip
 全局搜索是在 KubeVision 中导航的最快方式。资深用户几乎不需要使用侧边栏。
@@ -70,5 +73,5 @@ title: 全局搜索
 
 ## 相关文档
 
-- [集群管理](/docs/user-guide/cluster-management) — 添加或移除集群以纳入搜索范围
+- [集群管理](/docs/user-guide/cluster-management) — 选择要搜索的集群
 - [收藏夹](/docs/user-guide/favorites) — 固定最常访问的资源

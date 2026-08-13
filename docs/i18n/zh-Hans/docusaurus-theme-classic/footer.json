@@ -35,10 +35,6 @@
     "message": "GitHub",
     "description": "The label of footer link with label=GitHub"
   },
-  "link.item.label.Comparison": {
-    "message": "对比",
-    "description": "The label of footer link with label=Comparison"
-  },
   "link.item.label.Roadmap": {
     "message": "路线图",
     "description": "The label of footer link with label=Roadmap"

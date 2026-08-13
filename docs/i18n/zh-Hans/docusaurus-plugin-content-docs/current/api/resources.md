@@ -5,109 +5,66 @@ title: 资源 API
 
 # 资源 API
 
-KubeVision 为所有 Kubernetes 资源类型提供了一套统一的通用 CRUD 模式。相同的四个端点可处理 Pod、Deployment、ConfigMap 及任意 CRD——无需为每种资源单独设计路由。
+KubeVision 使用同一组集群级 CRUD 路由管理 Kubernetes 内置资源和已发现的
+自定义资源：
 
-## 命名空间级资源
+| 方法 | 路径 | 操作 |
+|------|------|------|
+| `GET` | `/clusters/:id/resources/:resource` | 列表 |
+| `GET` | `/clusters/:id/resources/:resource/:name` | 详情 |
+| `POST` | `/clusters/:id/resources/:resource` | 创建 |
+| `PUT` | `/clusters/:id/resources/:resource/:name` | 替换/更新 |
+| `PATCH` | `/clusters/:id/resources/:resource/:name` | 补丁更新 |
+| `DELETE` | `/clusters/:id/resources/:resource/:name` | 删除 |
 
-| 方法 | 路径 | 描述 |
-|--------|------|-------------|
-| `GET` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res` | 列出资源 |
-| `POST` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res` | 创建资源 |
-| `GET` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res/:name` | 获取资源 |
-| `PUT` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res/:name` | 更新资源 |
-| `DELETE` | `/api/v1/clusters/:c/namespaces/:ns/resources/:res/:name` | 删除资源 |
+本页路径均相对于 `/api/v1`。命名空间资源通过 Web 客户端采用的请求格式传递
+命名空间（列表接口使用查询参数，资源清单使用 `metadata.namespace`）。资源名
+使用小写复数，例如 `pods`、`deployments` 或 CRD 的复数名。
 
-## 集群级资源
+## Dry Run
 
-| 方法 | 路径 | 描述 |
-|--------|------|-------------|
-| `GET` | `/api/v1/clusters/:c/resources/:res` | 列出集群级资源 |
-| `POST` | `/api/v1/clusters/:c/resources/:res` | 创建集群级资源 |
-| `GET` | `/api/v1/clusters/:c/resources/:res/:name` | 获取集群级资源 |
-| `PUT` | `/api/v1/clusters/:c/resources/:res/:name` | 更新集群级资源 |
-| `DELETE` | `/api/v1/clusters/:c/resources/:res/:name` | 删除集群级资源 |
+| 方法 | 路径 | 操作 |
+|------|------|------|
+| `POST` | `/clusters/:id/resources/:resource/dry-run` | 预览创建 |
+| `PUT` | `/clusters/:id/resources/:resource/:name/dry-run` | 预览更新 |
 
-## 特殊操作
+请求体与对应写入操作相同。后端让 Kubernetes API Server 验证操作但不持久化，
+并返回预览或差异。
 
-除 CRUD 之外，KubeVision 还提供资源专属的操作端点：
+## 工作负载操作
 
-```
-POST /api/v1/clusters/:c/namespaces/:ns/resources/deployments/:name/scale
-POST /api/v1/clusters/:c/namespaces/:ns/resources/deployments/:name/restart
-POST /api/v1/clusters/:c/namespaces/:ns/resources/deployments/:name/rollback
+| 方法 | 路径 | 支持资源 |
+|------|------|----------|
+| `PUT` | `/clusters/:id/namespaces/:namespace/:kind/:name/scale` | Deployment、StatefulSet、ReplicaSet |
+| `POST` | `/clusters/:id/namespaces/:namespace/:kind/:name/restart` | Deployment、StatefulSet、DaemonSet |
+| `GET` | `/clusters/:id/namespaces/:namespace/deployments/:name/history` | Deployment |
+| `POST` | `/clusters/:id/namespaces/:namespace/deployments/:name/rollback` | Deployment |
 
-POST /api/v1/clusters/:c/resources/nodes/:name/cordon
-POST /api/v1/clusters/:c/resources/nodes/:name/uncordon
-POST /api/v1/clusters/:c/resources/nodes/:name/drain
-```
+## 批量操作
 
-### 预演（Dry-Run）
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/clusters/:id/resources/batch-delete` | 删除选中的资源 |
+| `POST` | `/clusters/:id/batch-restart` | 重启选中的工作负载 |
 
-在将变更应用到真实 API Server 之前，先进行验证：
+每个条目单独授权，因此一次批量请求可能同时包含成功和失败结果。
 
-```http
-POST /api/v1/clusters/:c/namespaces/:ns/resources/:res/:name/dry-run
-Content-Type: application/json
+## 发现与视图
 
-{
-  "manifest": { ... }
-}
-```
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/clusters/:id/search` | 在单个集群内搜索资源 |
+| `GET` | `/clusters/:id/overview` | 集群概览数据 |
+| `GET` | `/clusters/:id/quota-summary` | 资源配额汇总 |
+| `GET` | `/clusters/:id/crds` | CRD 列表 |
+| `POST` | `/clusters/:id/crds/refresh` | 刷新 CRD 发现 |
+| `GET` | `/clusters/:id/namespaces/:namespace/topology` | 命名空间拓扑 |
 
-响应的 `data` 字段包含将要应用的变更差异，若 API Server 拒绝该 manifest，则返回 `422xx` 错误。
-
-## 其他端点
-
-### 全局搜索
-
-```http
-GET /api/v1/search?q=nginx&clusters=prod-us,staging&limit=20
-```
-
-返回跨所有可访问集群和命名空间的匹配资源扁平列表。
-
-### 集群概览
-
-```http
-GET /api/v1/clusters/:c/overview
-```
-
-返回集群的节点数、Pod 数、命名空间数、资源配额摘要以及近期事件。
-
-### 跨集群对比
-
-```http
-POST /api/v1/compare
-Content-Type: application/json
-
-{
-  "left":  { "cluster": "prod-us",  "namespace": "default", "resource": "deployments", "name": "api" },
-  "right": { "cluster": "staging",  "namespace": "default", "resource": "deployments", "name": "api" }
-}
-```
-
-### 收藏夹
-
-| 方法 | 路径 | 描述 |
-|--------|------|-------------|
-| `GET` | `/api/v1/favorites` | 列出当前用户的收藏 |
-| `POST` | `/api/v1/favorites` | 添加收藏 |
-| `DELETE` | `/api/v1/favorites/:id` | 删除收藏 |
-
-### Webhook
-
-| 方法 | 路径 |
-|--------|------|
-| `GET` | `/api/v1/webhooks` |
-| `POST` | `/api/v1/webhooks` |
-| `PUT` | `/api/v1/webhooks/:id` |
-| `DELETE` | `/api/v1/webhooks/:id` |
-
-:::tip
-`:res` 的值应与 Kubernetes 资源类型的小写复数形式保持一致，例如：`pods`、`deployments`、`configmaps`、`customresourcedefinitions` 等。
-:::
+搜索接口是集群级接口，不是 `/api/v1/search`。
 
 ## 相关文档
 
-- [WebSocket API](/docs/api/websocket) — 订阅任意资源类型的实时更新
-- [错误码](/docs/api/error-codes) — 资源操作相关的 `404xx` 和 `422xx` 错误码
+- [资源增删改查](/docs/user-guide/resource-crud)
+- [Dry Run](/docs/user-guide/dry-run)
+- [批量操作](/docs/user-guide/batch-actions)
+- [自定义资源](/docs/user-guide/custom-resources)

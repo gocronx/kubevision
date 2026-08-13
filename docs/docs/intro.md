@@ -16,7 +16,7 @@ KubeVision is a modern, real-time Kubernetes multi-cluster management dashboard 
 - **Multi-cluster Management** — Single dashboard for all your clusters
 - **Enterprise Security** — 2FA (TOTP), 5-level RBAC, audit logging, Secrets masking
 - **Developer Friendly** — kubectl hints, global search (Cmd+K), favorites, resource templates
-- **DevOps Tooling** — Dry-run diff, cross-cluster comparison, terminal recording, resource topology
+- **DevOps Tooling** — Dry-run previews, terminal recording, and resource topology
 
 ## Key Differentiators
 
@@ -26,7 +26,6 @@ These features are **unique to KubeVision** — no other Kubernetes dashboard of
 |---------|-------------|
 | **2FA (TOTP)** | Two-factor authentication with QR setup and recovery codes |
 | **Dry-Run Diff** | Preview changes before applying, validated by API Server |
-| **Cross-Cluster Diff** | Compare same resource across environments |
 | **Terminal Recording** | asciinema-format session recording and playback |
 | **kubectl Hints** | Auto-generated CLI commands for every UI action |
 | **Secrets Masking** | Secrets hidden by default in all views |

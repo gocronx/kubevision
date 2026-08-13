@@ -61,6 +61,5 @@ KUBECONFIG=/path/to/kubeconfig ./kubevision
 
 ## 相关文档
 
-- [全局搜索](/docs/user-guide/global-search) — 跨所有集群同时搜索
-- [跨集群对比](/docs/user-guide/cross-cluster-diff) — 对比不同集群之间的资源
+- [全局搜索](/docs/user-guide/global-search) — 搜索当前选中的集群
 - [配置](/docs/getting-started/configuration) — Kubeconfig 路径与 TLS 设置

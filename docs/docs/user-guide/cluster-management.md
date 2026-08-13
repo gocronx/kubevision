@@ -45,7 +45,9 @@ Removing a cluster deletes all cached resource data for that cluster. Audit logs
 
 ## Switching Between Clusters
 
-Use the **cluster selector** in the top navigation bar to switch the active cluster. Every resource list, search result, and topology view scopes to the selected cluster unless you explicitly choose "All Clusters".
+Use the **cluster selector** in the top navigation bar to switch the active
+cluster. Resource lists, search results, and topology views are scoped to the
+selected cluster.
 
 ## Cluster Health Status
 
@@ -61,6 +63,5 @@ Health is checked every 30 seconds via a lightweight `GET /healthz` probe agains
 
 ## Related
 
-- [Global Search](/docs/user-guide/global-search) — Search across all clusters at once
-- [Cross-Cluster Diff](/docs/user-guide/cross-cluster-diff) — Compare resources between clusters
+- [Global Search](/docs/user-guide/global-search) — Search the selected cluster
 - [Configuration](/docs/getting-started/configuration) — Kubeconfig path and TLS settings

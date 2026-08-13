@@ -24,12 +24,25 @@ database:
 
 auth:
   jwt_secret: ""           # auto-generated if empty
-  access_token_ttl: 15m
-  refresh_token_ttl: 168h  # 7 days
+  access_token_ttl: 30m
+  refresh_token_ttl: 12h
+  public_key:
+    enabled: false
+    rp_id: ""
+    rp_display_name: KubeVision
+    origins: []
+    user_verification: required
+    counter_policy: deny
+    challenge_ttl: 5m
 
 kubernetes:
   kubeconfig: ""           # empty = in-cluster mode
   informer_resync: 30m
+  crd_discovery_interval: 5m
+
+oauth:
+  enabled: false
+  providers: []
 ```
 
 ## 环境变量
@@ -47,10 +60,16 @@ kubernetes:
 | `KUBEVISION_DB_CONN_MAX_IDLE_TIME` | 空闲连接最长时间 | PostgreSQL：`5m` |
 | `KUBEVISION_DB_PING_TIMEOUT` | 启动时数据库探测超时 | `5s` |
 | `KUBEVISION_JWT_SECRET` | JWT 签名密钥 | 自动生成 |
-| `KUBEVISION_ACCESS_TOKEN_TTL` | 访问令牌有效期 | `15m` |
-| `KUBEVISION_REFRESH_TOKEN_TTL` | 刷新令牌有效期 | `168h` |
+| `KUBEVISION_ACCESS_TOKEN_TTL` | 访问令牌有效期 | `30m` |
+| `KUBEVISION_REFRESH_TOKEN_TTL` | 刷新令牌有效期 | `12h` |
+| `KUBEVISION_PUBLIC_KEY_ENABLED` | 启用通行密钥/安全密钥登录 | `false` |
+| `KUBEVISION_PUBLIC_KEY_RP_ID` | WebAuthn 依赖方域名 | 空 |
+| `KUBEVISION_PUBLIC_KEY_ORIGINS` | 允许的浏览器来源（逗号分隔）| 空 |
 | `KUBECONFIG` | kubeconfig 文件路径 | 集群内模式 |
 | `KUBEVISION_INFORMER_RESYNC` | Informer 重同步周期 | `30m` |
+| `KUBEVISION_CRD_DISCOVERY_INTERVAL` | CRD 发现刷新周期 | `5m` |
+| `KUBEVISION_OAUTH_ENABLED` | 启用已配置的 OAuth/OIDC 提供商 | `false` |
+| `KUBEVISION_ENCRYPT_KEY` | 持久化凭据加密密钥 | 自动生成 |
 | `KUBEVISION_ALLOWED_ORIGINS` | WebSocket 来源白名单（逗号分隔）| `*` |
 
 ## 数据库

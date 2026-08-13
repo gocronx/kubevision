@@ -24,7 +24,7 @@
     "message": "多集群管理"
   },
   "features.multicluster.desc": {
-    "message": "在单一面板管理所有集群。即时切换上下文，跨环境对比资源。"
+    "message": "在单一面板管理所有集群，并可即时切换上下文。"
   },
   "features.terminal.title": {
     "message": "终端 & 日志"
@@ -95,12 +95,6 @@
   "unique.dryrun.desc": {
     "message": "应用前预览每一处变更。API Server 校验 YAML 并展示并排 Diff。"
   },
-  "unique.crossdiff.title": {
-    "message": "跨集群对比"
-  },
-  "unique.crossdiff.desc": {
-    "message": "在不同集群或环境间对比同一资源，使用 Monaco Diff Editor 即时发现配置漂移。"
-  },
   "unique.recording.title": {
     "message": "终端录制"
   },
@@ -124,18 +118,6 @@
   },
   "quickstart.subtitle": {
     "message": "5 分钟内完成部署"
-  },
-  "comparison.title": {
-    "message": "对比一览"
-  },
-  "comparison.subtitle": {
-    "message": "KubeVision 与主流 Kubernetes 面板对比"
-  },
-  "comparison.feature": {
-    "message": "功能"
-  },
-  "comparison.cta": {
-    "message": "查看完整对比 →"
   },
   "theme.docs.sidebar.collapseButtonTitle": {
     "message": "收起侧边栏"

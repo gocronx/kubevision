@@ -7,7 +7,7 @@ const config: Config = {
   tagline: "See your clusters clearly, act on them instantly",
   favicon: "img/favicon.ico",
 
-  url: "https://kubevision.github.io",
+  url: "https://kubevision-docs.pages.dev",
   baseUrl: "/",
 
   organizationName: "kubevision",
@@ -119,7 +119,6 @@ const config: Config = {
               label: "GitHub",
               href: "https://github.com/gocronx/kubevision",
             },
-            { label: "Comparison", to: "/docs/comparison" },
             { label: "Roadmap", to: "/docs/roadmap" },
           ],
         },

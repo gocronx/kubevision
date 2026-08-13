@@ -47,21 +47,6 @@ KubeVision 需要 **Kubernetes 1.24 或更高版本**。最低版本要求由服
 
 ---
 
-### KubeVision 与 kubectl 有何不同？
-
-KubeVision 是 kubectl 的**补充工具**，而非替代品。两者服务于不同的使用场景：
-
-| kubectl | KubeVision |
-|---------|-----------|
-| 终端 / 脚本 / CI | 浏览器 / 团队 / 可视化 |
-| 完整的 API 接口覆盖 | 精心设计的资源视图 |
-| 无访问控制层 | 五级 RBAC + 双因素认证 |
-| 无审计日志 | 完整的审计日志 |
-
-KubeVision 的 **kubectl 提示**功能会为 UI 中执行的每个操作显示等效的 `kubectl` 命令，让你能够流畅地结合使用两种工具。
-
----
-
 ### KubeVision 会自动修改我的集群资源吗？
 
 不会。在没有明确用户操作（点击应用、删除、扩缩容等）的情况下，KubeVision 绝不会修改集群状态。后端没有任何会向集群写入数据的后台任务。只读操作（列出、监听、日志流）不会产生任何写入。
@@ -111,9 +96,10 @@ sqlite3 kubevision.db ".backup kubevision_backup_$(date +%Y%m%d).db"
 
 ### 我可以使用 SSO 或 OIDC 登录吗？
 
-通过 **Dex** 实现的 OIDC / SSO 支持计划在未来版本中发布（参见[路线图](/docs/roadmap)）。在当前版本中，认证由 KubeVision 自身基于 JWT 的登录系统处理，可选启用双因素认证（TOTP）。
-
-如果 OIDC 是当前的硬性需求，Headlamp 是推荐的替代方案——它通过其插件系统提供了成熟的 OIDC 支持。
+可以。管理员可以在本地 JWT 登录、TOTP、目录账户和通行密钥之外配置标准
+OAuth 或 OIDC 提供商。OIDC 通过提供商的 Issuer 进行发现；标准 OAuth 集成也
+可以显式配置授权、令牌和用户信息端点。详见
+[认证提供商](/docs/admin-guide/authentication-providers)。
 
 ---
 

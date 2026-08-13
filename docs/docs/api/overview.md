@@ -5,87 +5,66 @@ title: API Overview
 
 # API Overview
 
-KubeVision exposes a RESTful HTTP API consumed by the frontend and available for programmatic use.
+KubeVision exposes the HTTP API used by its web application under `/api/v1`.
+When running locally with the default configuration, the base URL is
+`http://localhost:8080/api/v1`.
 
-## Base URL
+## Response Format
 
-All API endpoints are mounted under:
-
-```
-/api/v1
-```
-
-When running locally this resolves to `http://localhost:8080/api/v1`.
-
-## Unified Response Format
-
-Every response — success or error — uses the same JSON envelope:
+Most REST handlers return this envelope:
 
 ```json
 {
-  "code":    0,
+  "code": 0,
   "message": "success",
-  "data":    {},
-  "meta":    {}
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `code` | `int` | Business status code. `0` = success. Non-zero values indicate an error. See [Error Codes](/docs/api/error-codes). |
-| `message` | `string` | Human-readable description of the result. |
-| `data` | `object \| array \| null` | The response payload. `null` for operations that produce no output (e.g., delete). |
-| `meta` | `object` | Request metadata. Present on all responses. |
-
-:::tip
-All HTTP responses return **status 200**. The business outcome is determined entirely by the `code` field. Never branch on the HTTP status code alone.
-:::
-
-## Meta Object
-
-The `meta` field carries context about how the response was produced:
-
-```json
-{
+  "data": {},
   "meta": {
-    "source":    "cache",
-    "stale":     false,
-    "total":     142,
-    "requestId": "req_01HXYZ4B9K0VGMZS"
+    "total": 10,
+    "requestId": "request-id"
   }
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `source` | `"cache" \| "apiserver"` | Whether the data came from the Informer cache or a live API Server call. |
-| `stale` | `bool` | `true` if the cache entry is older than the configured TTL. |
-| `total` | `int` | Total number of items for list endpoints. Used for pagination display. |
-| `requestId` | `string` | Unique identifier for this request. Include this in bug reports. |
+`code` is `0` on success. A non-zero value is a business error; see
+[Error Codes](/docs/api/error-codes). `data` and `meta` are omitted when they
+are not needed. List handlers may include `meta.total`, and resource handlers
+may include cache source and staleness metadata.
 
-## Content Type
+Most enveloped business errors currently use HTTP status `200`, so clients must
+inspect `code`. Health probes and WebSocket upgrade failures use conventional
+HTTP status codes and do not necessarily use the envelope.
 
-All requests must include:
+## Authentication and Authorization
 
-```
-Content-Type: application/json
-```
+Protected requests use an access token:
 
-All responses are returned as `application/json; charset=utf-8`.
-
-## Authentication
-
-Requests must include a valid JWT in the `Authorization` header:
-
-```
-Authorization: Bearer <access_token>
+```http
+Authorization: Bearer <access-token>
 ```
 
-See [Authentication](/docs/api/authentication) for how to obtain tokens.
+Authentication establishes the user identity. RBAC then checks the operation,
+cluster, and namespace. The AI assistant and Kubernetes HTTP access perform
+additional resource-aware authorization in their handlers.
 
-## Related
+## Request Data
 
-- [Authentication](/docs/api/authentication) — Login, 2FA, token refresh
-- [Resource API](/docs/api/resources) — CRUD endpoints for Kubernetes resources
-- [WebSocket API](/docs/api/websocket) — Real-time watch, terminal, and log streaming
-- [Error Codes](/docs/api/error-codes) — Full table of business status codes
+Send JSON bodies with `Content-Type: application/json`. Query parameters are
+used for list filtering, namespace selection, pagination, and search. Path
+parameters shown as `:id` or `:name` must be URL-encoded by the client.
+
+## Health Probes
+
+| Path | Purpose |
+|------|---------|
+| `GET /healthz` | Process liveness |
+| `GET /readyz` | Readiness, including database connectivity |
+
+These probes are outside `/api/v1` and do not require authentication.
+
+## References
+
+- [Authentication](/docs/api/authentication)
+- [Resource API](/docs/api/resources)
+- [Endpoint Index](/docs/api/endpoints)
+- [WebSocket API](/docs/api/websocket)
+- [Error Codes](/docs/api/error-codes)

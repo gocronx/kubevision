@@ -55,5 +55,5 @@ If a favorited resource is deleted from Kubernetes, the sidebar entry shows a **
 
 ## Related
 
-- [Global Search](/docs/user-guide/global-search) — Find resources across all clusters instantly
+- [Global Search](/docs/user-guide/global-search) — Find resources in the selected cluster
 - [Cluster Management](/docs/user-guide/cluster-management) — Add clusters to your dashboard

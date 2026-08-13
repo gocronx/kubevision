@@ -5,7 +5,6 @@ import HomepageFeatures from "../components/HomepageFeatures";
 import HomepageArchitecture from "../components/HomepageArchitecture";
 import HomepageUniqueCapabilities from "../components/HomepageUniqueCapabilities";
 import HomepageQuickstart from "../components/HomepageQuickstart";
-import HomepageComparison from "../components/HomepageComparison";
 
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
@@ -20,7 +19,6 @@ export default function Home(): JSX.Element {
         <HomepageArchitecture />
         <HomepageUniqueCapabilities />
         <HomepageQuickstart />
-        <HomepageComparison />
       </main>
     </Layout>
   );

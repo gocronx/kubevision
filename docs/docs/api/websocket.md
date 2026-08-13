@@ -1,122 +1,59 @@
 ---
-sidebar_position: 4
-title: WebSocket API
+sidebar_position: 5
+title: Streaming APIs
 ---
 
-# WebSocket API
+# Streaming APIs
 
-KubeVision provides three WebSocket endpoints for real-time resource watching, Pod terminal access, and live log streaming. All three require authentication via a query parameter token.
+KubeVision uses WebSockets for resource watches, Pod terminals, and Pod logs,
+and Server-Sent Events (SSE) for AI chat.
 
-## Authentication
+## Resource Watch
 
-Pass the access token as a query parameter on the initial upgrade request:
+Connect to:
 
+```text
+wss://example.com/api/v1/ws/watch
 ```
-ws://localhost:8080/api/v1/ws/watch?token=<access_token>
+
+This route uses the normal authentication middleware. The browser client sends
+the authenticated upgrade request and then manages subscriptions for cluster,
+namespace, and resource scopes. RBAC is applied before the connection is
+accepted.
+
+## Pod Terminal
+
+```text
+wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/exec?token=<access-token>&container=<name>
 ```
+
+The handler authenticates the `token` query parameter because browser
+WebSocket APIs cannot add an `Authorization` header. Terminal data uses binary
+frames; resize/control messages use JSON. Sessions can be recorded when
+terminal recording is enabled.
+
+## Pod Logs
+
+```text
+wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/logs?token=<access-token>&container=<name>&tail=100
+```
+
+The handler streams historical and follow-up container logs after checking
+cluster, namespace, Pod, and container access.
 
 :::warning
-The token is visible in server access logs when passed as a query parameter. In production, use TLS (`wss://`) to protect the token in transit. Origin validation is enforced in production builds — connections from origins not matching the configured `allowedOrigins` list are rejected.
+Use HTTPS/WSS in production. Query-string tokens may be visible to proxies or
+access logs, so infrastructure should redact query strings and avoid retaining
+them unnecessarily.
 :::
 
-## 1. Resource Watch — `/api/v1/ws/watch`
+## AI Chat (SSE)
 
-Subscribe to live create, update, and delete events for any Kubernetes resource type.
+`POST /api/v1/ai/chat` returns an SSE stream. Each tool invocation is checked
+against the current user's permissions. Mutating actions require explicit
+confirmation and continue through `POST /api/v1/ai/continue-action`.
 
-### Subscribe
+## Reconnection
 
-Send a JSON message after connecting:
-
-```json
-{
-  "action":    "subscribe",
-  "cluster":   "prod-us",
-  "namespace": "default",
-  "resource":  "pods"
-}
-```
-
-Set `namespace` to `""` to watch all namespaces. Set `resource` to `"*"` to watch all cached resource types.
-
-### Event Message
-
-The server pushes an event whenever a watched resource changes:
-
-```json
-{
-  "type":     "MODIFIED",
-  "cluster":  "prod-us",
-  "resource": "pods",
-  "object":   { ... }
-}
-```
-
-| `type` value | Meaning |
-|-------------|---------|
-| `ADDED` | A new resource was created |
-| `MODIFIED` | An existing resource was updated |
-| `DELETED` | A resource was deleted |
-
-### Unsubscribe
-
-```json
-{
-  "action":    "unsubscribe",
-  "cluster":   "prod-us",
-  "namespace": "default",
-  "resource":  "pods"
-}
-```
-
-## 2. Pod Terminal — `/api/v1/ws/terminal/:cluster/:ns/:pod`
-
-Opens an interactive shell session inside a running Pod container using `kubectl exec` under the hood.
-
-```
-wss://localhost:8080/api/v1/ws/terminal/prod-us/default/my-pod?token=<access_token>&container=app
-```
-
-The terminal protocol is compatible with [xterm.js](https://xtermjs.org/). Binary frames carry PTY data; JSON frames carry resize events:
-
-```json
-{ "type": "resize", "cols": 220, "rows": 50 }
-```
-
-:::tip
-Terminal sessions are recorded in asciinema format when session recording is enabled. Recordings are accessible from **Settings → Audit → Terminal Sessions**.
-:::
-
-## 3. Log Streaming — `/api/v1/ws/logs/:cluster/:ns/:pod`
-
-Streams container logs in real time.
-
-```
-wss://localhost:8080/api/v1/ws/logs/prod-us/default/my-pod?token=<access_token>&container=app&tail=100
-```
-
-| Query Parameter | Default | Description |
-|-----------------|---------|-------------|
-| `container` | first container | Container name to stream logs from |
-| `tail` | `100` | Number of historical lines to send before streaming new lines |
-| `timestamps` | `false` | Prepend RFC3339 timestamps to each log line |
-
-Each text frame from the server contains one log line.
-
-## Auto-Reconnect
-
-The KubeVision frontend reconnects automatically with exponential backoff (base 1 s, max 30 s). If you build your own client, implement the same pattern:
-
-```typescript
-function connect(attempt = 0) {
-  const ws = new WebSocket(url);
-  ws.onclose = () => {
-    const delay = Math.min(1000 * 2 ** attempt, 30_000);
-    setTimeout(() => connect(attempt + 1), delay);
-  };
-}
-```
-
-## Related
-
-- [Resource API](/docs/api/resources) — REST endpoints for CRUD operations on the same resources
-- [Authentication](/docs/api/authentication) — How to obtain the access token used in the `token` query parameter
+Clients should reconnect transiently failed streams with bounded exponential
+backoff and stop retrying after authentication or authorization failures.

@@ -1,122 +1,50 @@
 ---
-sidebar_position: 4
-title: WebSocket API
+sidebar_position: 5
+title: 流式 API
 ---
 
-# WebSocket API
+# 流式 API
 
-KubeVision 提供三个 WebSocket 端点，分别用于实时资源监听、Pod 终端访问和实时日志流。三个端点均需通过查询参数传递令牌进行认证。
+KubeVision 使用 WebSocket 提供资源监听、Pod 终端和 Pod 日志，并使用 SSE
+提供 AI 对话。
 
-## 认证
+## 资源监听
 
-在初始升级请求中，以查询参数的形式传递访问令牌：
-
+```text
+wss://example.com/api/v1/ws/watch
 ```
-ws://localhost:8080/api/v1/ws/watch?token=<access_token>
+
+该路由使用常规认证中间件。浏览器客户端发起已认证的升级请求，然后管理集群、
+命名空间和资源范围订阅。连接建立前会执行 RBAC 检查。
+
+## Pod 终端
+
+```text
+wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/exec?token=<access-token>&container=<name>
 ```
+
+由于浏览器 WebSocket API 无法添加 `Authorization` 请求头，处理器会认证查询
+参数中的 `token`。终端数据使用二进制帧，调整大小等控制消息使用 JSON。启用
+终端录制后可记录会话。
+
+## Pod 日志
+
+```text
+wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/logs?token=<access-token>&container=<name>&tail=100
+```
+
+处理器检查集群、命名空间、Pod 和容器权限后，发送历史日志并持续跟踪新日志。
 
 :::warning
-通过查询参数传递令牌时，令牌会在服务器访问日志中可见。在生产环境中，请使用 TLS（`wss://`）保护传输中的令牌。生产构建中会强制进行来源验证——来自不在配置的 `allowedOrigins` 列表中的来源的连接将被拒绝。
+生产环境必须使用 HTTPS/WSS。查询参数令牌可能被代理或访问日志记录，基础设施
+应隐藏查询字符串并避免不必要的保留。
 :::
 
-## 1. 资源监听 — `/api/v1/ws/watch`
+## AI 对话（SSE）
 
-订阅任意 Kubernetes 资源类型的实时创建、更新和删除事件。
+`POST /api/v1/ai/chat` 返回 SSE 流。每次工具调用都会检查当前用户权限；修改
+操作需要明确确认，并通过 `POST /api/v1/ai/continue-action` 继续。
 
-### 订阅
+## 重连
 
-连接后发送一条 JSON 消息：
-
-```json
-{
-  "action":    "subscribe",
-  "cluster":   "prod-us",
-  "namespace": "default",
-  "resource":  "pods"
-}
-```
-
-将 `namespace` 设为 `""` 可监听所有命名空间。将 `resource` 设为 `"*"` 可监听所有已缓存的资源类型。
-
-### 事件消息
-
-当被监听的资源发生变化时，服务端会推送一条事件：
-
-```json
-{
-  "type":     "MODIFIED",
-  "cluster":  "prod-us",
-  "resource": "pods",
-  "object":   { ... }
-}
-```
-
-| `type` 值 | 含义 |
-|-------------|---------|
-| `ADDED` | 新资源被创建 |
-| `MODIFIED` | 已有资源被更新 |
-| `DELETED` | 资源被删除 |
-
-### 取消订阅
-
-```json
-{
-  "action":    "unsubscribe",
-  "cluster":   "prod-us",
-  "namespace": "default",
-  "resource":  "pods"
-}
-```
-
-## 2. Pod 终端 — `/api/v1/ws/terminal/:cluster/:ns/:pod`
-
-使用底层的 `kubectl exec` 在运行中的 Pod 容器内开启一个交互式 Shell 会话。
-
-```
-wss://localhost:8080/api/v1/ws/terminal/prod-us/default/my-pod?token=<access_token>&container=app
-```
-
-终端协议与 [xterm.js](https://xtermjs.org/) 兼容。二进制帧传输 PTY 数据，JSON 帧传输调整窗口大小的事件：
-
-```json
-{ "type": "resize", "cols": 220, "rows": 50 }
-```
-
-:::tip
-启用会话录制后，终端会话将以 asciinema 格式录制。录制文件可从 **设置 → 审计 → 终端会话** 中访问。
-:::
-
-## 3. 日志流 — `/api/v1/ws/logs/:cluster/:ns/:pod`
-
-实时流式传输容器日志。
-
-```
-wss://localhost:8080/api/v1/ws/logs/prod-us/default/my-pod?token=<access_token>&container=app&tail=100
-```
-
-| 查询参数 | 默认值 | 描述 |
-|-----------------|---------|-------------|
-| `container` | 第一个容器 | 要流式传输日志的容器名称 |
-| `tail` | `100` | 在流式传输新日志之前，先发送的历史日志行数 |
-| `timestamps` | `false` | 是否在每行日志前添加 RFC3339 时间戳 |
-
-服务端的每个文本帧包含一行日志。
-
-## 自动重连
-
-KubeVision 前端会以指数退避策略自动重连（基础间隔 1 秒，最大间隔 30 秒）。如果你构建自己的客户端，请实现相同的策略：
-
-```typescript
-function connect(attempt = 0) {
-  const ws = new WebSocket(url);
-  ws.onclose = () => {
-    const delay = Math.min(1000 * 2 ** attempt, 30_000);
-    setTimeout(() => connect(attempt + 1), delay);
-  };
-}
-```
-
-## 相关文档
-
-- [资源 API](/docs/api/resources) — 对相同资源执行 CRUD 操作的 REST 端点
-- [认证](/docs/api/authentication) — 如何获取 `token` 查询参数所需的访问令牌
+客户端应使用有上限的指数退避重连临时中断的流；遇到认证或授权失败应停止重试。

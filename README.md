@@ -34,19 +34,15 @@
   </tr>
 </table>
 
-<p align="center">
-  <b>Resource YAML & Dry-Run Diff</b><br>
-  <img src="docs/assets/screenshot-diff.png" alt="Resource YAML" width="100%">
-</p>
 
 ## 📖 Documentation
 
-Full documentation is available at: **[kubevision-docs](https://kubevision.github.io/docs/)**
+Full documentation is available at: **[kubevision-docs](https://kubevision-docs.pages.dev/)**
 
-- 🚀 [Quick Start](https://kubevision.github.io/docs/getting-started/installation) - Installation, quick start, configuration
-- 🏛️ [Architecture](https://kubevision.github.io/docs/architecture/overview) - System design, data flow, component interactions
-- 📘 [User Guide](https://kubevision.github.io/docs/user-guide/cluster-management) - Features walkthrough and usage guides
-- 🔌 [API Reference](https://kubevision.github.io/docs/api/overview) - REST & WebSocket API documentation
+- 🚀 [Quick Start](https://kubevision-docs.pages.dev/docs/getting-started/installation) - Installation, quick start, configuration
+- 🏛️ [Architecture](https://kubevision-docs.pages.dev/docs/architecture/overview) - System design, data flow, component interactions
+- 📘 [User Guide](https://kubevision-docs.pages.dev/docs/user-guide/cluster-management) - Features walkthrough and usage guides
+- 🔌 [API Reference](https://kubevision-docs.pages.dev/docs/api/overview) - REST & WebSocket API documentation
 
 ## ✨ Features
 
@@ -78,7 +74,7 @@ kubectl port-forward svc/kubevision 8080:80
 
 > Default login credentials: `admin` / `admin123`
 > 
-> For other deployment methods (Docker, Binary, Development), please refer to the [Installation Guide](https://kubevision.github.io/docs/getting-started/installation).
+> For other deployment methods (Docker, Binary, Development), please refer to the [Installation Guide](https://kubevision-docs.pages.dev/docs/getting-started/installation).
 
 ## 🔷 CLI & AI Assistant
 
