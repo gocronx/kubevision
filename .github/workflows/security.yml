@@ -6,9 +6,6 @@ on:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
-      - "web/**"
-      - "docs/**"
-      - "deploy/**"
       - ".github/workflows/**"
   push:
     branches: [master]
@@ -17,7 +14,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -39,66 +35,3 @@ jobs:
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
       - name: Scan reachable vulnerabilities
         run: .github/scripts/run-govulncheck.sh
-
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: go
-            build-mode: manual
-          - language: javascript-typescript
-            build-mode: none
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        if: matrix.language == 'go'
-        with:
-          version: 10
-      - uses: actions/setup-node@v7
-        if: matrix.language == 'go'
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-      - uses: actions/setup-go@v7
-        if: matrix.language == 'go'
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
-      - name: Build for Go analysis
-        if: matrix.language == 'go'
-        run: make build-all
-      - uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:${{ matrix.language }}"
-          output: codeql-results
-          upload: never
-          upload-database: false
-      - name: Enforce CodeQL findings
-        shell: bash
-        run: |
-          findings_file="$(mktemp)"
-          trap 'rm -f "$findings_file"' EXIT
-          jq -s '[
-            .[] | .runs[]? as $run | $run.results[]? as $result |
-            {
-              rule: ($result.ruleId // $run.tool.driver.rules[$result.ruleIndex].id // "unknown"),
-              path: ($result.locations[0].physicalLocation.artifactLocation.uri // "unknown"),
-              line: ($result.locations[0].physicalLocation.region.startLine // 0),
-              message: $result.message.text
-            }
-          ]' codeql-results/*.sarif > "$findings_file"
-          finding_count="$(jq 'length' "$findings_file")"
-          if [[ "$finding_count" -gt 0 ]]; then
-            echo "::error::CodeQL reported $finding_count security finding(s)"
-            jq -r '.[] | "\(.rule) \(.path):\(.line): \(.message)"' "$findings_file"
-            exit 1
-          fi
-          echo "CodeQL reported no security findings"

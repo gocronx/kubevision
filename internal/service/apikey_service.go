@@ -110,7 +110,7 @@ func (s *APIKeyService) Validate(ctx context.Context, plainKey string) (*model.A
 func hashAPIKey(key string) string {
 	// API keys contain 256 bits from crypto/rand, so a fast one-way lookup hash
 	// is not vulnerable to the low-entropy password attacks covered by this rule.
-	sum := sha256.Sum256([]byte(key)) // codeql[go/weak-sensitive-data-hashing]
+	sum := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(sum[:])
 }
 
