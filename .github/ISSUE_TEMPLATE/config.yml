@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and support
+    url: https://github.com/gocronx/kubevision/discussions
+    about: Use Discussions for setup help, usage questions, and general feedback.
+  - name: Documentation
+    url: https://kubevision-docs.pages.dev/
+    about: Review the installation and user guides before opening an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/gocronx/kubevision/security/advisories/new
+    about: Report security problems privately, never in a public issue.

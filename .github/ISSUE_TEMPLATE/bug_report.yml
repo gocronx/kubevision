@@ -1,0 +1,90 @@
+name: Bug report
+description: Report a reproducible problem in KubeVision.
+title: "[Bug]: "
+labels: ["bug", "needs triage"]
+body:
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I confirmed the problem on the latest KubeVision release.
+          required: true
+        - label: I removed passwords, tokens, kubeconfigs, and other secrets from this report.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe what happened and which page or operation was involved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: KubeVision version
+      placeholder: "e.g. v0.5.0 or commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment method
+      options:
+        - Helm
+        - Docker
+        - Binary
+        - Local development
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: kubernetes
+    attributes:
+      label: Kubernetes distribution and version
+      placeholder: "e.g. k3s v1.35.1, EKS 1.34"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: "e.g. Chrome 140 on macOS"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact credentials, tokens, kubeconfigs, and resource secrets.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots or other details that help reproduce the problem.

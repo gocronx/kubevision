@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an improvement to KubeVision.
+title: "[Feature]: "
+labels: ["enhancement", "needs triage"]
+body:
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I searched existing issues and discussions before submitting this request.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Use case
+      description: Explain the Kubernetes workflow or operational problem to solve.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the expected behavior, including any security or permission constraints.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context

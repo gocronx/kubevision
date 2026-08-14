@@ -1,0 +1,13 @@
+# High-confidence spam phrases. Matching is case-insensitive.
+# Keep entries specific enough that technical reports are not caught.
+
+buy github stars
+github star boosting service
+guaranteed crypto returns
+contact me on telegram for investment
+whatsapp investment group
+casino bonus code
+seo backlink service
+代刷 github star
+加我电报领取空投
+娱乐城送彩金

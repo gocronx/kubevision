@@ -1,0 +1,100 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  spam-screening:
+    name: Screen obvious issue spam
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout spam rules
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/spam-keywords.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Classify issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const issue = context.payload.issue;
+            const { owner, repo } = context.repo;
+            const issue_number = issue.number;
+            const association = issue.author_association || "NONE";
+
+            if (["OWNER", "MEMBER", "COLLABORATOR"].includes(association)) {
+              core.info(`Skipping trusted author with association ${association}.`);
+              return;
+            }
+
+            const labels = (issue.labels || []).map((label) =>
+              (typeof label === "string" ? label : label.name).toLowerCase()
+            );
+            if (labels.includes("spam")) {
+              core.info("Issue is already classified as spam.");
+              return;
+            }
+
+            const text = `${issue.title || ""}\n\n${issue.body || ""}`;
+            const lower = text.toLowerCase();
+            const links = text.match(/https?:\/\/[^\s)]+/g) || [];
+            const textWithoutLinks = text.replace(/https?:\/\/[^\s)]+/g, "").trim();
+
+            const terms = fs.readFileSync(".github/spam-keywords.txt", "utf8")
+              .split(/\r?\n/)
+              .map((line) => line.trim().toLowerCase())
+              .filter((line) => line && !line.startsWith("#"));
+
+            const keywordMatch = terms.find((term) => lower.includes(term));
+            const linkFlood = links.length >= 8 && textWithoutLinks.length < 500;
+            if (!keywordMatch && !linkFlood) {
+              core.info("No high-confidence spam signal found.");
+              return;
+            }
+
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: "spam" });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: "spam",
+                color: "b60205",
+                description: "Unsolicited or automated content",
+              });
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number,
+              labels: ["spam"],
+            });
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: "This issue was automatically closed because it matched a high-confidence spam rule. If this was a mistake, please contact the maintainers through GitHub Discussions.\n\n此 Issue 命中了高置信度垃圾内容规则并已自动关闭。如有误判，请通过 GitHub Discussions 联系维护者。",
+            });
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number,
+              state: "closed",
+              state_reason: "not_planned",
+            });
+            await github.rest.issues.lock({
+              owner,
+              repo,
+              issue_number,
+              lock_reason: "spam",
+            });
+            core.info(`Closed issue #${issue_number} as spam (${keywordMatch || "link flood"}).`);

@@ -1,12 +1,28 @@
 name: Quality
 
 on:
-  pull_request:
+  push:
+    branches: [master]
     paths:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
       - "web/**"
+      - "docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "deploy/**"
+      - "clean-room/fixtures/**"
+      - "Makefile"
+      - ".github/workflows/**"
+  pull_request:
+    branches: [master]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "web/**"
+      - "docs/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "deploy/**"
@@ -148,6 +164,22 @@ jobs:
       - run: make frontend-install
       - run: make frontend-build
 
+  docs-build:
+    name: Bilingual documentation build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: docs/pnpm-lock.yaml
+      - run: pnpm --dir docs install --frozen-lockfile
+      - run: make docs
+
   helm:
     name: Helm chart validation
     runs-on: ubuntu-latest
@@ -157,6 +189,24 @@ jobs:
         with:
           version: v3.17.3
       - run: make helm-validate
+
+  container-build:
+    name: Container production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: false
+          tags: kubevision:ci
+          build-args: |
+            VERSION=ci
+            REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   browser-smoke:
     name: Browser smoke tests

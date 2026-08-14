@@ -47,3 +47,9 @@ updates:
       docs-dependencies:
         patterns:
           - "*"
+
+  - package-ecosystem: docker
+    directory: /deploy
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
