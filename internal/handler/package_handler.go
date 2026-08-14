@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,8 +15,36 @@ import (
 )
 
 type PackageHandler struct {
-	service *packages.Service
-	resolve func(context.Context, string) (string, error)
+	service  *packages.Service
+	catalog  *packages.Catalog
+	upgrades *packages.UpgradeManager
+	resolve  func(context.Context, string) (string, error)
+}
+
+func (h *PackageHandler) WithUpgradeManager(manager *packages.UpgradeManager) *PackageHandler {
+	h.upgrades = manager
+	return h
+}
+
+func (h *PackageHandler) WithCatalog(catalog *packages.Catalog) *PackageHandler {
+	h.catalog = catalog
+	return h
+}
+
+type packageChangeRequest struct {
+	ReleaseName       string                 `json:"releaseName" binding:"required"`
+	Namespace         string                 `json:"namespace" binding:"required"`
+	Source            packages.ChartSource   `json:"source" binding:"required"`
+	Values            map[string]interface{} `json:"values"`
+	CreateNamespace   bool                   `json:"createNamespace"`
+	Wait              bool                   `json:"wait"`
+	Atomic            bool                   `json:"atomic"`
+	TimeoutSeconds    int                    `json:"timeoutSeconds"`
+	ConfirmationToken string                 `json:"confirmationToken"`
+}
+
+func (r packageChangeRequest) options() packages.ChangeOptions {
+	return packages.ChangeOptions{ReleaseName: r.ReleaseName, Namespace: r.Namespace, Source: r.Source, Values: r.Values, CreateNamespace: r.CreateNamespace, Wait: r.Wait, Atomic: r.Atomic, Timeout: time.Duration(r.TimeoutSeconds) * time.Second, ConfirmationToken: r.ConfirmationToken}
 }
 
 func NewPackageHandler(service *packages.Service, resolve func(context.Context, string) (string, error)) *PackageHandler {
@@ -56,6 +86,229 @@ func (h *PackageHandler) History(c *gin.Context) {
 	}
 	items, err := h.service.History(c.Request.Context(), packageActor(c), cluster, c.Param("namespace"), c.Param("name"))
 	writePackageResult(c, items, err)
+}
+
+func (h *PackageHandler) Preview(c *gin.Context) {
+	cluster, ok := h.cluster(c)
+	if !ok {
+		return
+	}
+	var req packageChangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid package change request")
+		return
+	}
+	item, err := h.service.Preview(c.Request.Context(), packageActor(c), c.Param("operation"), cluster, req.options())
+	writePackageResult(c, item, err)
+}
+
+func (h *PackageHandler) Install(c *gin.Context) {
+	cluster, ok := h.cluster(c)
+	if !ok {
+		return
+	}
+	var req packageChangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid install request")
+		return
+	}
+	writePackageResult(c, nil, h.service.Install(c.Request.Context(), packageActor(c), cluster, req.options()))
+}
+
+func (h *PackageHandler) Upgrade(c *gin.Context) {
+	cluster, ok := h.cluster(c)
+	if !ok {
+		return
+	}
+	var req packageChangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid upgrade request")
+		return
+	}
+	writePackageResult(c, nil, h.service.Upgrade(c.Request.Context(), packageActor(c), cluster, req.options()))
+}
+
+func (h *PackageHandler) ListRepositories(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	items, err := h.catalog.ListRepositories(c.Request.Context(), packageActor(c))
+	writePackageResult(c, items, err)
+}
+func (h *PackageHandler) CreateRepository(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	var req packages.RepositoryInput
+	if c.ShouldBindJSON(&req) != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid repository")
+		return
+	}
+	item, err := h.catalog.SaveRepository(c.Request.Context(), packageActor(c), 0, req)
+	writePackageResult(c, item, err)
+}
+func (h *PackageHandler) UpdateRepository(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
+		return
+	}
+	var req packages.RepositoryInput
+	if c.ShouldBindJSON(&req) != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid repository")
+		return
+	}
+	item, saveErr := h.catalog.SaveRepository(c.Request.Context(), packageActor(c), uint(id), req)
+	writePackageResult(c, item, saveErr)
+}
+func (h *PackageHandler) DeleteRepository(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
+		return
+	}
+	writePackageResult(c, nil, h.catalog.DeleteRepository(c.Request.Context(), packageActor(c), uint(id)))
+}
+func (h *PackageHandler) TestRepository(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
+		return
+	}
+	writePackageResult(c, nil, h.catalog.TestRepository(c.Request.Context(), packageActor(c), uint(id)))
+}
+func (h *PackageHandler) RepositoryCharts(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
+		return
+	}
+	items, listErr := h.catalog.RepositoryCharts(c.Request.Context(), packageActor(c), uint(id), c.Query("q"))
+	writePackageResult(c, items, listErr)
+}
+func (h *PackageHandler) ArtifactSearch(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	limit, _ := queryInt(c, "limit", 20)
+	items, err := h.catalog.SearchArtifactHub(c.Request.Context(), packageActor(c), c.Query("q"), limit)
+	writePackageResult(c, items, err)
+}
+func (h *PackageHandler) InspectChart(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	var source packages.ChartSource
+	if c.ShouldBindJSON(&source) != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid chart source")
+		return
+	}
+	item, err := h.catalog.Inspect(c.Request.Context(), packageActor(c), source)
+	writePackageResult(c, item, err)
+}
+func (h *PackageHandler) UploadChart(c *gin.Context) {
+	if h.catalog == nil {
+		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 51<<20)
+	file, header, err := c.Request.FormFile("chart")
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "chart file is required")
+		return
+	}
+	defer file.Close()
+	if !strings.HasSuffix(strings.ToLower(header.Filename), ".tgz") {
+		response.Error(c, bizerr.CodeParamInvalid, "only .tgz Helm charts are accepted")
+		return
+	}
+	item, uploadErr := h.catalog.Upload(c.Request.Context(), packageActor(c), file, header.Size)
+	writePackageResult(c, item, uploadErr)
+}
+
+func (h *PackageHandler) ListUpgradePolicies(c *gin.Context) {
+	if h.upgrades == nil {
+		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
+		return
+	}
+	items, err := h.upgrades.List(c.Request.Context(), packageActor(c))
+	writePackageResult(c, items, err)
+}
+func (h *PackageHandler) CreateUpgradePolicy(c *gin.Context) {
+	if h.upgrades == nil {
+		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
+		return
+	}
+	var req packages.UpgradePolicyInput
+	if c.ShouldBindJSON(&req) != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid upgrade policy")
+		return
+	}
+	item, err := h.upgrades.Save(c.Request.Context(), packageActor(c), 0, req)
+	writePackageResult(c, item, err)
+}
+func (h *PackageHandler) UpdateUpgradePolicy(c *gin.Context) {
+	if h.upgrades == nil {
+		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("policyId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid policy ID")
+		return
+	}
+	var req packages.UpgradePolicyInput
+	if c.ShouldBindJSON(&req) != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid upgrade policy")
+		return
+	}
+	item, saveErr := h.upgrades.Save(c.Request.Context(), packageActor(c), uint(id), req)
+	writePackageResult(c, item, saveErr)
+}
+func (h *PackageHandler) DeleteUpgradePolicy(c *gin.Context) {
+	if h.upgrades == nil {
+		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("policyId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid policy ID")
+		return
+	}
+	writePackageResult(c, nil, h.upgrades.Delete(c.Request.Context(), packageActor(c), uint(id)))
+}
+func (h *PackageHandler) CheckUpgradePolicy(c *gin.Context) {
+	if h.upgrades == nil {
+		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
+		return
+	}
+	id, err := strconv.ParseUint(c.Param("policyId"), 10, 64)
+	if err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid policy ID")
+		return
+	}
+	item, checkErr := h.upgrades.CheckNow(c.Request.Context(), packageActor(c), uint(id))
+	writePackageResult(c, item, checkErr)
 }
 
 type packageRollbackRequest struct {

@@ -239,3 +239,42 @@ type PluginConfig struct {
 	Enabled    bool           `gorm:"default:false" json:"enabled"`
 	Config     string         `gorm:"type:text" json:"config"` // JSON
 }
+
+// HelmRepository is an administrator-managed Helm chart source. Credentials
+// are encrypted before persistence and never returned by the API.
+type HelmRepository struct {
+	ID                  uint       `gorm:"primarykey" json:"id"`
+	CreatedAt           time.Time  `json:"createdAt"`
+	UpdatedAt           time.Time  `json:"updatedAt"`
+	Name                string     `gorm:"uniqueIndex;size:128;not null" json:"name"`
+	Type                string     `gorm:"size:16;not null" json:"type"` // helm|oci
+	URL                 string     `gorm:"size:1024;not null" json:"url"`
+	Username            string     `gorm:"size:256" json:"username,omitempty"`
+	PasswordEnc         string     `gorm:"type:text" json:"-"`
+	AllowPrivateNetwork bool       `gorm:"default:false" json:"allowPrivateNetwork"`
+	Enabled             bool       `gorm:"default:true" json:"enabled"`
+	LastCheckedAt       *time.Time `json:"lastCheckedAt,omitempty"`
+	LastError           string     `gorm:"size:1024" json:"lastError,omitempty"`
+}
+
+// HelmUpgradePolicy periodically checks a release's source for newer chart
+// versions. Risk changes block the policy until an administrator reviews it.
+type HelmUpgradePolicy struct {
+	ID                uint       `gorm:"primarykey" json:"id"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	UpdatedAt         time.Time  `json:"updatedAt"`
+	Cluster           string     `gorm:"size:64;index;not null" json:"cluster"`
+	Namespace         string     `gorm:"size:64;index;not null" json:"namespace"`
+	ReleaseName       string     `gorm:"size:128;index;not null" json:"releaseName"`
+	RepositoryID      uint       `gorm:"index;not null" json:"repositoryId"`
+	Chart             string     `gorm:"size:512;not null" json:"chart"`
+	VersionConstraint string     `gorm:"size:128" json:"versionConstraint"`
+	ValuesJSON        string     `gorm:"type:text" json:"-"`
+	IntervalMinutes   int        `gorm:"not null;default:60" json:"intervalMinutes"`
+	Enabled           bool       `gorm:"default:false" json:"enabled"`
+	Status            string     `gorm:"size:32;default:idle" json:"status"`
+	LastVersion       string     `gorm:"size:128" json:"lastVersion,omitempty"`
+	LastError         string     `gorm:"size:1024" json:"lastError,omitempty"`
+	LastCheckedAt     *time.Time `json:"lastCheckedAt,omitempty"`
+	NextCheckAt       *time.Time `gorm:"index" json:"nextCheckAt,omitempty"`
+}

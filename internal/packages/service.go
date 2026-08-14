@@ -2,6 +2,10 @@ package packages
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,15 +16,188 @@ import (
 )
 
 type Service struct {
-	adapter Adapter
-	auth    Authorizer
-	audit   Auditor
-	mu      sync.Mutex
-	active  map[string]struct{}
+	adapter  Adapter
+	auth     Authorizer
+	audit    Auditor
+	mu       sync.Mutex
+	active   map[string]struct{}
+	previews map[string]previewGrant
+	catalog  *Catalog
+}
+
+func (s *Service) WithCatalog(catalog *Catalog) *Service { s.catalog = catalog; return s }
+
+type previewGrant struct {
+	ActorID                                 uint
+	Operation, Cluster, Fingerprint, Digest string
+	ExpiresAt                               time.Time
 }
 
 func NewService(adapter Adapter, auth Authorizer, audit Auditor) *Service {
-	return &Service{adapter: adapter, auth: auth, audit: audit, active: make(map[string]struct{})}
+	return &Service{adapter: adapter, auth: auth, audit: audit, active: make(map[string]struct{}), previews: make(map[string]previewGrant)}
+}
+
+func (s *Service) Preview(ctx context.Context, actor Actor, operation, cluster string, opts ChangeOptions) (*Preview, error) {
+	managedRepository := opts.Source.RepositoryID != 0
+	if managedRepository && !isAdmin(actor) {
+		return nil, bizerr.ErrForbidden
+	}
+	if s.catalog != nil {
+		if uploadErr := s.catalog.AuthorizeUpload(actor, opts.Source.UploadID); uploadErr != nil {
+			return nil, uploadErr
+		}
+		resolved, resolveErr := s.catalog.ResolveSource(ctx, actor, opts.Source)
+		if resolveErr != nil {
+			return nil, mapAdapterError(resolveErr)
+		}
+		opts.Source = resolved
+	}
+	permission, err := changePermission(operation)
+	if err != nil {
+		return nil, err
+	}
+	if !s.auth.Allowed(ctx, actor, permission, cluster, opts.Namespace) {
+		return nil, bizerr.ErrForbidden
+	}
+	if err := validateChangeOptions(&opts); err != nil {
+		return nil, err
+	}
+	preview, err := s.adapter.Preview(ctx, operation, cluster, opts)
+	if err != nil {
+		return nil, mapAdapterError(err)
+	}
+	if opts.CreateNamespace {
+		preview.Risks = append(preview.Risks, Risk{Level: "critical", Code: "namespace-create", Message: "creates the target namespace outside the rendered manifest", Resource: "Namespace/" + opts.Namespace})
+	}
+	preview.Operation = operation
+	preview.CanExecute = !hasCriticalRisk(preview.Risks) || actor.Role == "admin" || actor.Role == "super-admin"
+	if preview.CanExecute && !actor.PreviewOnly {
+		token, tokenErr := randomToken()
+		if tokenErr != nil {
+			return nil, bizerr.New(bizerr.CodeInternal, "could not create confirmation")
+		}
+		expires := time.Now().Add(10 * time.Minute)
+		s.mu.Lock()
+		s.prunePreviewsLocked(time.Now())
+		if len(s.previews) >= 5000 {
+			s.mu.Unlock()
+			return nil, bizerr.New(bizerr.CodeConflict, "too many pending package previews; try again later")
+		}
+		s.previews[token] = previewGrant{ActorID: actor.UserID, Operation: operation, Cluster: cluster, Fingerprint: changeFingerprint(opts), Digest: preview.Digest, ExpiresAt: expires}
+		s.mu.Unlock()
+		preview.ConfirmationToken, preview.ExpiresAt = token, expires
+	}
+	preview.Manifest = redactManifest(preview.Manifest)
+	return preview, nil
+}
+
+func (s *Service) Install(ctx context.Context, actor Actor, cluster string, opts ChangeOptions) error {
+	return s.executeChange(ctx, actor, "install", cluster, opts)
+}
+
+func (s *Service) Upgrade(ctx context.Context, actor Actor, cluster string, opts ChangeOptions) error {
+	return s.executeChange(ctx, actor, "upgrade", cluster, opts)
+}
+
+func (s *Service) executeChange(ctx context.Context, actor Actor, operation, cluster string, opts ChangeOptions) error {
+	managedRepository := opts.Source.RepositoryID != 0
+	if managedRepository && !isAdmin(actor) {
+		return bizerr.ErrForbidden
+	}
+	if s.catalog != nil {
+		if uploadErr := s.catalog.AuthorizeUpload(actor, opts.Source.UploadID); uploadErr != nil {
+			return uploadErr
+		}
+		resolved, resolveErr := s.catalog.ResolveSource(ctx, actor, opts.Source)
+		if resolveErr != nil {
+			return mapAdapterError(resolveErr)
+		}
+		opts.Source = resolved
+	}
+	permission, _ := changePermission(operation)
+	if !s.auth.Allowed(ctx, actor, permission, cluster, opts.Namespace) {
+		return bizerr.ErrForbidden
+	}
+	if err := validateChangeOptions(&opts); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	grant, ok := s.previews[opts.ConfirmationToken]
+	delete(s.previews, opts.ConfirmationToken)
+	s.mu.Unlock()
+	if !ok || time.Now().After(grant.ExpiresAt) || grant.ActorID != actor.UserID || grant.Operation != operation || grant.Cluster != cluster || grant.Fingerprint != changeFingerprint(opts) {
+		return bizerr.New(bizerr.CodeValidation, "preview expired or does not match this operation; preview again")
+	}
+	opts.ExpectedDigest = grant.Digest
+	summary := fmt.Sprintf("chart=%s,version=%s,wait=%t,atomic=%t,timeout=%s", opts.Source.Chart, opts.Source.Version, opts.Wait, opts.Atomic, opts.Timeout)
+	return s.mutate(ctx, actor, operation, cluster, opts.Namespace, opts.ReleaseName, 0, summary, func() error {
+		if operation == "install" {
+			return s.adapter.Install(ctx, cluster, opts)
+		}
+		return s.adapter.Upgrade(ctx, cluster, opts)
+	})
+}
+
+func changePermission(operation string) (string, error) {
+	switch operation {
+	case "install":
+		return PermissionInstall, nil
+	case "upgrade":
+		return PermissionUpgrade, nil
+	}
+	return "", bizerr.New(bizerr.CodeParamInvalid, "operation must be install or upgrade")
+}
+
+func validateChangeOptions(opts *ChangeOptions) error {
+	opts.ReleaseName, opts.Namespace, opts.Source.Chart = strings.TrimSpace(opts.ReleaseName), strings.TrimSpace(opts.Namespace), strings.TrimSpace(opts.Source.Chart)
+	if opts.ReleaseName == "" || opts.Namespace == "" || opts.Source.Chart == "" && opts.Source.UploadID == "" {
+		return bizerr.New(bizerr.CodeParamInvalid, "release name, namespace, and chart are required")
+	}
+	if len(opts.ReleaseName) > 53 || len(opts.Namespace) > 63 || len(opts.Source.Chart) > 2048 || len(opts.Source.RepoURL) > 2048 {
+		return bizerr.New(bizerr.CodeParamInvalid, "package input is too long")
+	}
+	if opts.Timeout == 0 {
+		opts.Timeout = 5 * time.Minute
+	}
+	if opts.Timeout < time.Second || opts.Timeout > 30*time.Minute {
+		return bizerr.New(bizerr.CodeParamInvalid, "timeout must be between 1 second and 30 minutes")
+	}
+	encoded, err := json.Marshal(opts.Values)
+	if err != nil || len(encoded) > 512*1024 {
+		return bizerr.New(bizerr.CodeParamInvalid, "values must be valid JSON and no larger than 512 KiB")
+	}
+	return nil
+}
+
+func changeFingerprint(opts ChangeOptions) string {
+	copy := opts
+	copy.ConfirmationToken = ""
+	copy.ExpectedDigest = ""
+	b, _ := json.Marshal(copy)
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+func randomToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+func hasCriticalRisk(risks []Risk) bool {
+	for _, risk := range risks {
+		if risk.Level == "critical" {
+			return true
+		}
+	}
+	return false
+}
+func (s *Service) prunePreviewsLocked(now time.Time) {
+	for token, grant := range s.previews {
+		if now.After(grant.ExpiresAt) {
+			delete(s.previews, token)
+		}
+	}
 }
 
 func (s *Service) List(ctx context.Context, actor Actor, cluster string, opts ListOptions) ([]Release, error) {
@@ -148,11 +325,44 @@ func mapAdapterError(err error) error {
 	if _, ok := err.(*bizerr.BizError); ok {
 		return err
 	}
+	if message, ok := chartValidationMessage(err); ok {
+		return bizerr.New(bizerr.CodeValidation, "chart values are invalid: "+message)
+	}
 	text := strings.ToLower(err.Error())
+	if strings.Contains(text, "cannot re-use a name that is still in use") {
+		return bizerr.New(bizerr.CodeConflict, "release already exists; upgrade or remove it before reinstalling")
+	}
 	if strings.Contains(text, "not found") {
 		return bizerr.New(bizerr.CodeNotFound, "release or revision not found")
 	}
 	return bizerr.New(bizerr.CodeK8sUnavailable, "package operation failed")
+}
+
+func chartValidationMessage(err error) (string, bool) {
+	const (
+		prefix = "execution error at ("
+		marker = "): "
+	)
+	text := err.Error()
+	start := strings.LastIndex(text, prefix)
+	if start < 0 {
+		return "", false
+	}
+	detailStart := strings.Index(text[start:], marker)
+	if detailStart < 0 {
+		return "", false
+	}
+	detail := strings.TrimSpace(text[start+detailStart+len(marker):])
+	if newline := strings.IndexAny(detail, "\r\n"); newline >= 0 {
+		detail = strings.TrimSpace(detail[:newline])
+	}
+	if detail == "" {
+		return "", false
+	}
+	if len(detail) > 512 {
+		detail = detail[:512]
+	}
+	return detail, true
 }
 
 func sanitizeRelease(r *Release) {

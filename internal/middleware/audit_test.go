@@ -208,8 +208,8 @@ func TestAuditMiddleware_BodyCapped(t *testing.T) {
 	}
 }
 
-func TestAuditMiddleware_OmitsAIAndPublicKeyBodies(t *testing.T) {
-	for _, path := range []string{"/api/v1/ai/chat", "/api/v1/ai/continue-action", "/api/v1/auth/public-key/register/finish"} {
+func TestAuditMiddleware_OmitsHighRiskBodies(t *testing.T) {
+	for _, path := range []string{"/api/v1/ai/chat", "/api/v1/ai/continue-action", "/api/v1/auth/public-key/register/finish", "/api/v1/clusters/1/package-releases/preview/install", "/api/v1/clusters/1/package-releases/install", "/api/v1/clusters/1/package-releases/upgrade", "/api/v1/clusters/1/helm/repositories", "/api/v1/clusters/1/helm/charts/upload", "/api/v1/clusters/1/helm/upgrade-policies"} {
 		t.Run(path, func(t *testing.T) {
 			repo := &mockAuditRepo{}
 			svc := newTestAuditService(repo)

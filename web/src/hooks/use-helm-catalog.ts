@@ -1,0 +1,26 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import api from "@/lib/api"
+import type { PackageChangeInput } from "./use-package-releases"
+
+export interface HelmRepository { id: number; name: string; type: "helm" | "oci"; url: string; username?: string; allowPrivateNetwork: boolean; enabled: boolean; lastCheckedAt?: string; lastError?: string }
+export interface RepositoryInput { name: string; type: "helm" | "oci"; url: string; username?: string; password?: string; allowPrivateNetwork: boolean; enabled: boolean }
+export interface ChartSummary { name: string; description?: string; version: string; appVersion?: string; versions?: string[] }
+export interface ChartInspection extends ChartSummary { readme?: string; values: Record<string, unknown>; templates: string[]; dependencies?: ChartSummary[]; digest: string; uploadId?: string }
+export interface ArtifactPackage { packageId: string; name: string; displayName: string; description: string; version: string; appVersion: string; repository: string; repositoryUrl: string }
+export interface UpgradePolicy { id: number; cluster: string; namespace: string; releaseName: string; repositoryId: number; chart: string; versionConstraint: string; intervalMinutes: number; enabled: boolean; status: string; lastVersion?: string; lastError?: string; lastCheckedAt?: string; nextCheckAt?: string }
+export interface UpgradePolicyInput { cluster: string; namespace: string; releaseName: string; repositoryId: number; chart: string; versionConstraint: string; values: Record<string, unknown>; intervalMinutes: number; enabled: boolean }
+
+const helmBase = (cluster: string) => `/clusters/${cluster}/helm`
+
+export function useHelmRepositories(cluster: string) { return useQuery<HelmRepository[]>({ queryKey:["helm-repositories", cluster], queryFn: async () => await api.get(`${helmBase(cluster)}/repositories`) as unknown as HelmRepository[], enabled:!!cluster }) }
+export function useSaveHelmRepository(cluster: string) { const cache=useQueryClient(); return useMutation({ mutationFn:({id,input}:{id?:number;input:RepositoryInput}) => id ? api.put(`${helmBase(cluster)}/repositories/${id}`,input) : api.post(`${helmBase(cluster)}/repositories`,input), onSuccess:()=>cache.invalidateQueries({queryKey:["helm-repositories",cluster]}) }) }
+export function useDeleteHelmRepository(cluster: string) { const cache=useQueryClient(); return useMutation({ mutationFn:(id:number)=>api.delete(`${helmBase(cluster)}/repositories/${id}`), onSuccess:()=>cache.invalidateQueries({queryKey:["helm-repositories",cluster]}) }) }
+export function useTestHelmRepository(cluster: string) { const cache=useQueryClient(); return useMutation({ mutationFn:(id:number)=>api.post(`${helmBase(cluster)}/repositories/${id}/test`,{}, {timeout:120_000}), onSuccess:()=>cache.invalidateQueries({queryKey:["helm-repositories",cluster]}) }) }
+export function useRepositoryCharts(cluster:string, repositoryId:number, query:string) { return useQuery<ChartSummary[]>({queryKey:["helm-repository-charts",cluster,repositoryId,query],queryFn:async()=>await api.get(`${helmBase(cluster)}/repositories/${repositoryId}/charts`,{params:{q:query||undefined},timeout:120_000}) as unknown as ChartSummary[],enabled:!!cluster&&repositoryId>0}) }
+export function useArtifactHubSearch(cluster:string, query:string) { return useQuery<ArtifactPackage[]>({queryKey:["artifact-hub",query],queryFn:async()=>await api.get(`${helmBase(cluster)}/artifact-hub/search`,{params:{q:query,limit:30},timeout:60_000}) as unknown as ArtifactPackage[],enabled:!!cluster&&query.trim().length>=2,staleTime:60_000}) }
+export function useInspectChart(cluster:string) { return useMutation({mutationFn:(source:PackageChangeInput["source"])=>api.post(`${helmBase(cluster)}/charts/inspect`,source,{timeout:120_000}) as unknown as Promise<ChartInspection>}) }
+export function useUploadChart(cluster:string) { return useMutation({mutationFn:(file:File)=>{const data=new FormData();data.append("chart",file);return api.post(`${helmBase(cluster)}/charts/upload`,data,{timeout:120_000}) as unknown as Promise<ChartInspection>}}) }
+export function useUpgradePolicies(cluster:string) { return useQuery<UpgradePolicy[]>({queryKey:["helm-upgrade-policies",cluster],queryFn:async()=>await api.get(`${helmBase(cluster)}/upgrade-policies`) as unknown as UpgradePolicy[],enabled:!!cluster}) }
+export function useSaveUpgradePolicy(cluster:string) { const cache=useQueryClient(); return useMutation({mutationFn:({id,input}:{id?:number;input:UpgradePolicyInput})=>id?api.put(`${helmBase(cluster)}/upgrade-policies/${id}`,input):api.post(`${helmBase(cluster)}/upgrade-policies`,input),onSuccess:()=>cache.invalidateQueries({queryKey:["helm-upgrade-policies",cluster]})}) }
+export function useDeleteUpgradePolicy(cluster:string) { const cache=useQueryClient(); return useMutation({mutationFn:(id:number)=>api.delete(`${helmBase(cluster)}/upgrade-policies/${id}`),onSuccess:()=>cache.invalidateQueries({queryKey:["helm-upgrade-policies",cluster]})}) }
+export function useCheckUpgradePolicy(cluster:string) { const cache=useQueryClient(); return useMutation({mutationFn:(id:number)=>api.post(`${helmBase(cluster)}/upgrade-policies/${id}/check`,{}, {timeout:600_000}),onSuccess:()=>cache.invalidateQueries({queryKey:["helm-upgrade-policies",cluster]})}) }

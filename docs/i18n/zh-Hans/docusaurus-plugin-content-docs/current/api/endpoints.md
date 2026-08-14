@@ -50,9 +50,28 @@ Bearer Token 和对应 RBAC 权限。
 | `GET` | `/clusters/:id/package-releases` | Helm Release 列表 |
 | `GET` | `/clusters/:id/package-releases/:namespace/:name` | Release 详情 |
 | `GET` | `/clusters/:id/package-releases/:namespace/:name/history` | 修订历史 |
+| `POST` | `/clusters/:id/package-releases/preview/:operation` | Dry Run `install` 或 `upgrade` 并签发确认令牌 |
+| `POST` | `/clusters/:id/package-releases/install` | 安装预检中确认的同一请求 |
+| `POST` | `/clusters/:id/package-releases/upgrade` | 升级预检中确认的同一请求 |
 | `POST` | `/clusters/:id/package-releases/:namespace/:name/rollback` | 回滚 |
 | `DELETE` | `/clusters/:id/package-releases/:namespace/:name` | 移除 Release |
+| `GET`, `POST` | `/clusters/:id/helm/repositories` | 列出或创建托管 Helm/OCI 仓库 |
+| `PUT`, `DELETE` | `/clusters/:id/helm/repositories/:repositoryId` | 更新或删除托管仓库 |
+| `POST` | `/clusters/:id/helm/repositories/:repositoryId/test` | 测试托管仓库连接 |
+| `GET` | `/clusters/:id/helm/repositories/:repositoryId/charts` | 浏览带索引的 Helm 仓库 |
+| `GET` | `/clusters/:id/helm/artifact-hub/search` | 在 Artifact Hub 搜索公开 Chart |
+| `POST` | `/clusters/:id/helm/charts/inspect` | 检查 Chart 元数据和内容 |
+| `POST` | `/clusters/:id/helm/charts/upload` | 上传临时打包 Chart |
+| `GET`, `POST` | `/clusters/:id/helm/upgrade-policies` | 列出或创建自动升级策略 |
+| `PUT`, `DELETE` | `/clusters/:id/helm/upgrade-policies/:policyId` | 更新或删除升级策略 |
+| `POST` | `/clusters/:id/helm/upgrade-policies/:policyId/check` | 立即执行升级策略 |
 | `GET` | `/registry-tags` | 查询镜像标签 |
+
+安装和升级请求与预检使用相同请求体，并且必须包含预检返回的一次性
+`confirmationToken`。令牌会绑定用户、集群、命名空间、Release、Chart 来源、
+Values 和操作类型。
+仓库管理、私有凭据和升级策略需要管理员权限。Chart 上传使用
+`multipart/form-data`，30 分钟后过期，并绑定上传用户。
 
 ## AI、插件与自动化
 

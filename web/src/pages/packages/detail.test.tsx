@@ -13,6 +13,7 @@ vi.mock("@/hooks/use-package-releases", () => ({
   usePackageHistory: () => ({ data: [], refetch: vi.fn() }),
   usePackageRollback: () => ({ mutate: vi.fn(), isPending: false }),
   usePackageRemove: () => ({ mutate: vi.fn(), isPending: false }),
+  usePackageChange: () => ({ preview: { mutate: vi.fn(), reset: vi.fn(), isPending: false }, execute: { mutate: vi.fn(), reset: vi.fn(), isPending: false } }),
 }))
 
 vi.mock("react-i18next", () => ({

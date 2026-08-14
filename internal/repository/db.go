@@ -117,6 +117,12 @@ var databaseMigrations = []databaseMigration{
 			)
 		},
 	},
+	{
+		version: 2,
+		up: func(db *gorm.DB) error {
+			return db.AutoMigrate(&model.HelmRepository{}, &model.HelmUpgradePolicy{})
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB, driver string) error {
@@ -236,7 +242,7 @@ func initSystemRoles(db *gorm.DB, logger *zap.Logger) {
 			// pods:exec  — required by the WebSocket terminal handler (checkWSPermission).
 			// pods:list  — required by the WebSocket log-streaming handler (checkWSPermission).
 			// overview:list — required by the cluster overview endpoint.
-			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create","pods:exec","pods:list","overview:list","registry-tags:list","package-releases:read","package-releases:rollback","package-releases:remove"]`,
+			Permissions: `["clusters:get","clusters:list","resources:get","resources:list","resources:create","resources:update","resources:delete","favorites:get","favorites:list","favorites:create","favorites:delete","search:list","topology:list","compare:create","quota-summary:list","scale:update","restart:create","history:list","rollback:create","batch-delete:create","batch-restart:create","pods:exec","pods:list","overview:list","registry-tags:list","package-releases:read","package-releases:install","package-releases:upgrade","package-releases:rollback","package-releases:remove"]`,
 		},
 		{
 			Name:        "viewer",

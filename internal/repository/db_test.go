@@ -71,6 +71,12 @@ func TestNewDB_CreatesDatabaseAndRunsMigrations(t *testing.T) {
 
 	err = db.Model(&model.Webhook{}).Count(&count).Error
 	require.NoError(t, err, "webhooks table should exist after migration")
+
+	err = db.Model(&model.HelmRepository{}).Count(&count).Error
+	require.NoError(t, err, "helm_repositories table should exist after migration")
+
+	err = db.Model(&model.HelmUpgradePolicy{}).Count(&count).Error
+	require.NoError(t, err, "helm_upgrade_policies table should exist after migration")
 }
 
 func TestPurgeDeletedClustersReleasesNames(t *testing.T) {

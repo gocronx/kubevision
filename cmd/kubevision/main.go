@@ -227,8 +227,11 @@ func main() {
 	if cfg.Audit.Enabled {
 		auditService.Start()
 	}
-	packageAdapter := packageclient.NewHelmAdapter(clusterManager)
-	packageService := packageclient.NewService(packageAdapter, packageclient.NewRoleAuthorizer(roleRepo, db), packageclient.NewAuditBridge(auditService))
+	packageCatalog := packageclient.NewCatalog(db, cfg.EncryptKey)
+	packageAdapter := packageclient.NewHelmAdapter(clusterManager).WithCatalog(packageCatalog)
+	packageService := packageclient.NewService(packageAdapter, packageclient.NewRoleAuthorizer(roleRepo, db), packageclient.NewAuditBridge(auditService)).WithCatalog(packageCatalog)
+	packageUpgradeManager := packageclient.NewUpgradeManager(db, packageCatalog, packageService, logger)
+	packageUpgradeManager.Start(context.Background())
 
 	// P3: Webhook, terminal session recording, and compare services.
 	webhookService := service.NewWebhookService(webhookRepo, logger)
@@ -291,7 +294,7 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditRepo)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	registryHandler := handler.NewRegistryHandler(registryService)
-	packageHandler := handler.NewPackageHandler(packageService, clusterService.ResolveClusterID)
+	packageHandler := handler.NewPackageHandler(packageService, clusterService.ResolveClusterID).WithCatalog(packageCatalog).WithUpgradeManager(packageUpgradeManager)
 	directoryHandler := handler.NewDirectoryHandler(directoryService)
 
 	// P3: Webhook, terminal session, and compare handlers.
@@ -391,6 +394,7 @@ func main() {
 	// Stop CRD discovery.
 	crdCancel()
 	healthCancel()
+	packageUpgradeManager.Stop()
 
 	// Stop all informers.
 	informerMgr.StopAll()

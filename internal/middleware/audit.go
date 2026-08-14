@@ -86,6 +86,12 @@ func omitAuditBody(c *gin.Context) bool {
 	path := c.FullPath()
 	return strings.HasPrefix(path, "/api/v1/auth/public-key/") ||
 		path == "/api/v1/ai/chat" || path == "/api/v1/ai/continue-action" ||
+		strings.Contains(path, "/package-releases/preview/") ||
+		strings.HasSuffix(path, "/package-releases/install") ||
+		strings.HasSuffix(path, "/package-releases/upgrade") ||
+		strings.Contains(path, "/helm/repositories") ||
+		strings.Contains(path, "/helm/charts/upload") ||
+		strings.Contains(path, "/helm/upgrade-policies") ||
 		(strings.Contains(path, "/resources/:resource") && strings.EqualFold(c.Param("resource"), "secrets"))
 }
 

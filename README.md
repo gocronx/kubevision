@@ -74,6 +74,7 @@ Full documentation is available at: **[kubevision-docs](https://kubevision-docs.
 - **Resource Topology**: Visual ownership graph displaying real-time relationships for workloads
 - **Global Search**: `Cmd+K` fuzzy search across your entire cluster ecosystem
 - **Deployment Ops**: Seamlessly scale, restart, rollback, and preview diffs before applying changes
+- **Helm Workspace**: Search Artifact Hub, inspect or upload charts, manage encrypted private repositories, and run guarded installs, upgrades, rollbacks, and automatic update policies
 - **Security & Access Control**: 5 built-in RBAC roles, TOTP 2FA, and asynchronous audit logging
 - **Fully Extensible**: 26+ built-in resources with CRDs that are auto-discovered at runtime
 - **Modern UI**: Full i18n localization and native dark mode support

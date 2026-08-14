@@ -51,9 +51,29 @@ Public login, OAuth, refresh, and public-key login routes are documented in
 | `GET` | `/clusters/:id/package-releases` | List Helm releases |
 | `GET` | `/clusters/:id/package-releases/:namespace/:name` | Release details |
 | `GET` | `/clusters/:id/package-releases/:namespace/:name/history` | Revision history |
+| `POST` | `/clusters/:id/package-releases/preview/:operation` | Dry-run an `install` or `upgrade` and issue a confirmation token |
+| `POST` | `/clusters/:id/package-releases/install` | Install the exact request approved by a preview |
+| `POST` | `/clusters/:id/package-releases/upgrade` | Upgrade the exact request approved by a preview |
 | `POST` | `/clusters/:id/package-releases/:namespace/:name/rollback` | Roll back |
 | `DELETE` | `/clusters/:id/package-releases/:namespace/:name` | Remove release |
+| `GET`, `POST` | `/clusters/:id/helm/repositories` | List or create managed Helm/OCI repositories |
+| `PUT`, `DELETE` | `/clusters/:id/helm/repositories/:repositoryId` | Update or delete a managed repository |
+| `POST` | `/clusters/:id/helm/repositories/:repositoryId/test` | Test a managed repository connection |
+| `GET` | `/clusters/:id/helm/repositories/:repositoryId/charts` | Browse an indexed Helm repository |
+| `GET` | `/clusters/:id/helm/artifact-hub/search` | Search public charts on Artifact Hub |
+| `POST` | `/clusters/:id/helm/charts/inspect` | Inspect chart metadata and contents |
+| `POST` | `/clusters/:id/helm/charts/upload` | Upload a temporary packaged chart |
+| `GET`, `POST` | `/clusters/:id/helm/upgrade-policies` | List or create automatic upgrade policies |
+| `PUT`, `DELETE` | `/clusters/:id/helm/upgrade-policies/:policyId` | Update or delete an upgrade policy |
+| `POST` | `/clusters/:id/helm/upgrade-policies/:policyId/check` | Run an upgrade policy immediately |
 | `GET` | `/registry-tags` | Discover image tags |
+
+Install and upgrade requests use the same body as preview and must include the
+one-time `confirmationToken` returned by that preview. The token is bound to the
+user, cluster, namespace, release, chart source, values, and operation.
+Repository management, private credentials, and upgrade policies require an
+administrator. Chart uploads use `multipart/form-data`, expire after 30 minutes,
+and are bound to the uploading user.
 
 ## AI, Plugins, and Automation
 
