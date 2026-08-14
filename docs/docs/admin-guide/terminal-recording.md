@@ -64,6 +64,10 @@ Click any session row in the session list to open the built-in player:
 
 The player is rendered entirely in the browser — no server streaming during playback.
 
+![Terminal session playback and audit list](/img/screenshots/terminal-recording.png)
+
+_Administrators can locate recorded sessions in the audit list and replay them directly in the browser._
+
 ## Access Control
 
 | Role | What They Can See |

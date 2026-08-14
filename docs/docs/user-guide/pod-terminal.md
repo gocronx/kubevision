@@ -18,6 +18,10 @@ KubeVision provides a full in-browser terminal to any running Pod via [xterm.js]
 The shell is determined by the container image. KubeVision tries `bash` first, then falls back to `sh`.
 :::
 
+![Connected Pod terminal in KubeVision](/img/screenshots/pod-terminal.png)
+
+_A connected terminal on a Pod detail page, with container selection and reconnect controls._
+
 ## Features
 
 | Feature | Details |

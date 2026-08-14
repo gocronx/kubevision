@@ -14,6 +14,10 @@ title: 资源拓扑
 
 图形使用 Informer 缓存中已有的数据立即渲染，无需额外的 API 请求。
 
+![KubeVision 中的 Kubernetes 资源拓扑](/img/screenshots/resource-topology.png)
+
+_拓扑视图按类型展示相关的 Service、Deployment、ReplicaSet 和 Pod，并保留资源关系。_
+
 ## 所有权关系
 
 KubeVision 通过 `metadata.ownerReferences` 和常见的标签选择器来追踪所有权关系：

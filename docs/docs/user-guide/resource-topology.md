@@ -14,6 +14,10 @@ The Topology view renders an interactive ownership graph for any resource, makin
 
 The graph renders immediately using data already in the Informer cache — no additional API calls.
 
+![Kubernetes resource topology in KubeVision](/img/screenshots/resource-topology.png)
+
+_The topology view groups related Services, Deployments, ReplicaSets, and Pods while preserving their relationships._
+
 ## Ownership Relationships
 
 KubeVision traces ownership via `metadata.ownerReferences` and well-known label selectors:

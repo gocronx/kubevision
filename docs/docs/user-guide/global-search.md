@@ -17,6 +17,10 @@ in the currently selected cluster without navigating the sidebar.
 
 Alternatively, click the **Search** icon in the top navigation bar.
 
+![Global resource search dialog](/img/screenshots/global-search.png)
+
+_Global Search opens over the current workspace and supports keyboard-first navigation._
+
 ## How It Works
 
 Results appear after a short input debounce. The frontend calls the selected

@@ -18,6 +18,10 @@ KubeVision 通过 [xterm.js](https://xtermjs.org/) 为任意运行中的 Pod 提
 使用的 Shell 由容器镜像决定。KubeVision 会优先尝试 `bash`，失败后回退到 `sh`。
 :::
 
+![KubeVision 中已连接的 Pod 终端](/img/screenshots/pod-terminal.png)
+
+_Pod 详情页中已连接的终端，支持容器选择和重新连接。_
+
 ## 功能特性
 
 | 功能 | 说明 |

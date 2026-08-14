@@ -15,6 +15,10 @@ KubeVision 是一款基于 Go 和 React 构建的 AI 原生 Kubernetes 仪表盘
 系统坚持人机协同：AI 工具继承当前用户的 RBAC 权限，修改操作需要明确批准，
 已批准的变更会写入审计记录。实时仪表盘始终可用于直接检查和手动操作。
 
+![包含 AI 操作确认流程的 KubeVision 概览](/img/screenshots/overview.png)
+
+_集群概览与 AI 助手可同时使用，修改操作执行前会等待用户明确确认。_
+
 ## 为什么选择 KubeVision？
 
 - **AI 运维工作区** — 使用实时上下文检查资源和日志、解释故障、查询指标并准备变更

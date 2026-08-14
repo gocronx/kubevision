@@ -18,6 +18,10 @@ RBAC permissions, mutating operations require explicit approval, and approved
 changes are recorded for audit. The real-time dashboard remains available for
 direct inspection and manual operation at every step.
 
+![KubeVision overview with the AI approval workflow](/img/screenshots/overview.png)
+
+_The cluster overview and AI assistant remain available together, including explicit confirmation before a mutating action._
+
 ## Why KubeVision?
 
 - **AI Operations Workspace** — Inspect resources and logs, explain failures, query metrics, and prepare changes using live context
