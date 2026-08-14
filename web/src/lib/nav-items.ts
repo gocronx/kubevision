@@ -25,6 +25,7 @@ import {
   Bot,
 	ContactRound,
 	PackageOpen,
+	ListChecks,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -112,6 +113,7 @@ export const navGroups: NavGroup[] = [
 		labelKey: "nav.packages",
 		items: [
 			{ titleKey: "nav.packageReleases", icon: PackageOpen, to: "/package-releases", iconClass: NAV_ICON },
+			{ titleKey: "nav.operations", icon: ListChecks, to: "/operations", iconClass: NAV_ICON },
 		],
 	},
   {

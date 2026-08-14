@@ -2,6 +2,7 @@
   "nav": {
     "packages": "应用包",
     "packageReleases": "应用发布",
+    "operations": "操作记录",
     "overview": "概览",
     "workloads": "工作负载",
     "pods": "Pod",
@@ -290,6 +291,27 @@
     "revoke": "撤销凭证",
     "revokeConfirm": "确定撤销“{{label}}”吗？撤销后将无法再用此凭证登录。",
     "revokedToast": "凭证已撤销"
+  },
+  "operations": {
+    "title": "操作记录",
+    "description": "刷新、退出登录或网络中断后，仍可继续查看应用变更进度。",
+    "empty": "暂无操作记录",
+    "queued": "操作已进入后台队列",
+    "stage": "当前阶段",
+    "copyRequestId": "复制请求 ID",
+    "copied": "请求 ID 已复制",
+    "copyFailed": "复制请求 ID 失败",
+    "reviewRollback": "查看回滚选项",
+    "status": { "queued": "排队中", "running": "执行中", "succeeded": "已完成", "failed": "失败" },
+    "actions": { "install": "安装", "upgrade": "升级", "rollback": "回滚", "remove": "移除", "ai_change": "AI 变更" },
+    "stages": { "queued": "排队中", "preparing": "准备中", "applying_resources": "应用资源", "wait_readiness": "等待就绪", "verifying_release": "验证发布状态", "completed": "已完成", "validation": "参数校验", "authorization": "权限校验", "interrupted": "执行中断" }
+  },
+  "packageTemplates": {
+    "title": "快捷部署",
+    "configure": "配置并预览",
+    "postgresql": { "name": "PostgreSQL", "description": "持久化单主数据库，并自动生成凭据。" },
+    "redis": { "name": "Redis", "description": "一个主节点、两个副本，并启用持久化存储。" },
+    "gocron": { "name": "gocron", "description": "两个应用副本，连接已有 PostgreSQL 服务。" }
   },
   "packages": {
     "title": "应用发布",

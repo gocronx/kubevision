@@ -10,6 +10,7 @@ import (
 
 	"github.com/gocronx/kubevision/internal/ai"
 	"github.com/gocronx/kubevision/internal/middleware"
+	"github.com/gocronx/kubevision/internal/operation"
 	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 	"github.com/gocronx/kubevision/internal/pkg/response"
 )
@@ -17,7 +18,13 @@ import (
 // AIHandler exposes the AI assistant: streaming chat, mutation approval, and
 // configuration management.
 type AIHandler struct {
-	svc *ai.Service
+	svc        *ai.Service
+	operations *operation.Manager
+}
+
+func (h *AIHandler) WithOperations(manager *operation.Manager) *AIHandler {
+	h.operations = manager
+	return h
 }
 
 // NewAIHandler creates a new AIHandler.
@@ -268,10 +275,33 @@ func (h *AIHandler) ContinueAction(c *gin.Context) {
 	}
 
 	emit := newSSEWriter(c)
-	h.svc.ContinueAction(c.Request.Context(), req.SessionID, ai.Actor{
+	actor := ai.Actor{
 		UserID: middleware.GetUserID(c), Username: middleware.GetUsername(c),
 		Role: middleware.GetUserRole(c), ClientIP: c.ClientIP(),
-	}, emit)
+	}
+	if h.operations == nil {
+		emit(ai.SSEEvent{Event: ai.EventError, Data: map[string]interface{}{"message": "operation manager is unavailable"}})
+		return
+	}
+	approved, err := h.svc.ApproveAction(req.SessionID, actor)
+	if err != nil {
+		message := err.Error()
+		if business, ok := err.(*bizerr.BizError); ok {
+			message = business.Message
+		}
+		emit(ai.SSEEvent{Event: ai.EventError, Data: map[string]interface{}{"message": message}})
+		return
+	}
+	item, err := h.operations.Submit(c.Request.Context(), operation.Input{UserID: actor.UserID, Username: actor.Username,
+		Kind: ai.OperationKind, Action: "ai_change", Cluster: approved.ClusterName, ResourceName: approved.ToolCall.Function.Name,
+		RequestID: c.GetString("requestID"), Payload: ai.OperationTask{Action: approved}})
+	if err != nil {
+		emit(ai.SSEEvent{Event: ai.EventError, Data: map[string]interface{}{"message": "failed to queue approved action"}})
+		return
+	}
+	emit(ai.SSEEvent{Event: ai.EventOperationQueued, Data: map[string]interface{}{"tool_call_id": approved.ToolCall.ID, "operation_id": item.ID}})
+	emit(ai.SSEEvent{Event: ai.EventMessage, Data: map[string]interface{}{"content": "The approved change is running. [View progress in Operations](/operations)."}})
+	emit(ai.SSEEvent{Event: ai.EventDone, Data: map[string]interface{}{}})
 }
 
 // newSSEWriter prepares the response for Server-Sent Events and returns an emit

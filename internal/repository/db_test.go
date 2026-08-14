@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gocronx/kubevision/internal/auth"
 	"github.com/gocronx/kubevision/internal/config"
@@ -214,6 +215,31 @@ func TestNewDB_AdoptsLegacySQLiteSchemaWithoutLosingData(t *testing.T) {
 	var migrationCount int64
 	require.NoError(t, db.Model(&schemaMigration{}).Count(&migrationCount).Error)
 	assert.Equal(t, int64(len(databaseMigrations)), migrationCount)
+}
+
+func TestMigrationFiveAddsOperationWorkerLeaseColumns(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&schemaMigration{}))
+	require.NoError(t, db.Exec(`CREATE TABLE operations (
+		id text PRIMARY KEY,
+		user_id integer NOT NULL,
+		username text NOT NULL,
+		kind text NOT NULL,
+		action text NOT NULL,
+		status text NOT NULL,
+		stage text NOT NULL,
+		payload_enc text NOT NULL
+	)`).Error)
+	for version := int64(1); version <= 4; version++ {
+		require.NoError(t, db.Create(&schemaMigration{Version: version, AppliedAt: time.Now().UTC()}).Error)
+	}
+
+	require.NoError(t, runMigrations(db, "sqlite"))
+	assert.True(t, db.Migrator().HasColumn(&model.Operation{}, "WorkerID"))
+	assert.True(t, db.Migrator().HasColumn(&model.Operation{}, "HeartbeatAt"))
+	var migration schemaMigration
+	require.NoError(t, db.First(&migration, "version = ?", 5).Error)
 }
 
 func TestNewDB_PostgresIntegration(t *testing.T) {

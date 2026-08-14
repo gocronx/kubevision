@@ -26,6 +26,7 @@ import (
 	"github.com/gocronx/kubevision/internal/kubernetes/informer"
 	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 	"github.com/gocronx/kubevision/internal/middleware"
+	"github.com/gocronx/kubevision/internal/operation"
 	packageclient "github.com/gocronx/kubevision/internal/packages"
 	registryclient "github.com/gocronx/kubevision/internal/registry"
 	"github.com/gocronx/kubevision/internal/repository"
@@ -231,6 +232,8 @@ func main() {
 	packageCatalog := packageclient.NewCatalog(db, cfg.EncryptKey)
 	packageAdapter := packageclient.NewHelmAdapter(clusterManager).WithCatalog(packageCatalog)
 	packageService := packageclient.NewService(packageAdapter, packageclient.NewRoleAuthorizer(roleRepo, db), packageclient.NewAuditBridge(auditService)).WithCatalog(packageCatalog)
+	operationManager := operation.NewManager(db, cfg.EncryptKey, logger)
+	operationManager.Register(packageclient.OperationKind, packageclient.NewOperationExecutor(packageService))
 	packageUpgradeManager := packageclient.NewUpgradeManager(db, packageCatalog, packageService, logger)
 	packageUpgradeManager.Start(context.Background())
 
@@ -264,6 +267,12 @@ func main() {
 		pluginService.GetPrometheus,
 		auditService,
 	)
+	operationManager.Register(ai.OperationKind, ai.NewOperationExecutor(aiService))
+	operationCtx, operationCancel := context.WithCancel(context.Background())
+	if err := operationManager.Start(operationCtx); err != nil {
+		operationCancel()
+		logger.Fatal("failed to start operation manager", zap.Error(err))
+	}
 
 	// Start periodic CRD discovery in the background.
 	crdCtx, crdCancel := context.WithCancel(context.Background())
@@ -295,7 +304,8 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditRepo)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	registryHandler := handler.NewRegistryHandler(registryService)
-	packageHandler := handler.NewPackageHandler(packageService, clusterService.ResolveClusterID).WithCatalog(packageCatalog).WithUpgradeManager(packageUpgradeManager)
+	packageHandler := handler.NewPackageHandler(packageService, clusterService.ResolveClusterID).WithCatalog(packageCatalog).WithUpgradeManager(packageUpgradeManager).WithOperations(operationManager)
+	operationHandler := handler.NewOperationHandler(operationManager)
 	directoryHandler := handler.NewDirectoryHandler(directoryService)
 
 	// P3: Webhook, terminal session, and compare handlers.
@@ -309,7 +319,7 @@ func main() {
 	oauthHandler := handler.NewOAuthHandler(oauthService)
 	pluginHandler := handler.NewPluginHandler(pluginService)
 	templateHandler := handler.NewTemplateHandler(templateService)
-	aiHandler := handler.NewAIHandler(aiService)
+	aiHandler := handler.NewAIHandler(aiService).WithOperations(operationManager)
 
 	// Pod terminal and log streaming handlers.
 	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger).
@@ -353,6 +363,7 @@ func main() {
 		RegistryHandler:        registryHandler,
 		DirectoryHandler:       directoryHandler,
 		PackageHandler:         packageHandler,
+		OperationHandler:       operationHandler,
 		WSHub:                  wsHub,
 		TerminalHandler:        terminalHandler,
 		LogsHandler:            logsHandler,
@@ -396,6 +407,8 @@ func main() {
 	crdCancel()
 	healthCancel()
 	packageUpgradeManager.Stop()
+	operationCancel()
+	operationManager.Stop()
 
 	// Stop all informers.
 	informerMgr.StopAll()

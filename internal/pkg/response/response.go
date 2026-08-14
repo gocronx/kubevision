@@ -48,6 +48,7 @@ func Error(c *gin.Context, code int, message string) {
 	c.JSON(http.StatusOK, Response{
 		Code:    code,
 		Message: message,
+		Meta:    requestMeta(c),
 	})
 }
 
@@ -56,7 +57,17 @@ func ErrorWithBizErr(c *gin.Context, err *bizerr.BizError) {
 	c.JSON(http.StatusOK, Response{
 		Code:    err.Code,
 		Message: err.Message,
+		Meta:    requestMeta(c),
 	})
+}
+
+func requestMeta(c *gin.Context) *Meta {
+	requestID, _ := c.Get("requestID")
+	value, _ := requestID.(string)
+	if value == "" {
+		return nil
+	}
+	return &Meta{RequestID: value}
 }
 
 // Paginated sends a successful paginated response.

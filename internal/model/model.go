@@ -292,3 +292,47 @@ type HelmReleaseSource struct {
 	RepositoryID  uint      `gorm:"index" json:"repositoryId,omitempty"`
 	RepositoryURL string    `gorm:"size:2048" json:"repositoryUrl,omitempty"`
 }
+
+// Operation is a durable record for a long-running write operation. Sensitive
+// executor input is encrypted in PayloadEnc and is never exposed by the API.
+type Operation struct {
+	ID                string           `gorm:"primaryKey;size:36" json:"id"`
+	CreatedAt         time.Time        `gorm:"index" json:"createdAt"`
+	UpdatedAt         time.Time        `json:"updatedAt"`
+	StartedAt         *time.Time       `json:"startedAt,omitempty"`
+	CompletedAt       *time.Time       `json:"completedAt,omitempty"`
+	ParentID          string           `gorm:"size:36;index" json:"parentId,omitempty"`
+	UserID            uint             `gorm:"index;not null" json:"userId"`
+	Username          string           `gorm:"size:64;not null" json:"username"`
+	Kind              string           `gorm:"size:32;index;not null" json:"kind"`
+	Action            string           `gorm:"size:32;index;not null" json:"action"`
+	Status            string           `gorm:"size:24;index;not null" json:"status"`
+	Stage             string           `gorm:"size:64;not null" json:"stage"`
+	Cluster           string           `gorm:"size:64;index" json:"cluster,omitempty"`
+	Namespace         string           `gorm:"size:64;index" json:"namespace,omitempty"`
+	ResourceName      string           `gorm:"size:256;index" json:"resourceName,omitempty"`
+	Progress          int              `json:"progress"`
+	ErrorCode         string           `gorm:"size:64" json:"errorCode,omitempty"`
+	ErrorMessage      string           `gorm:"size:1024" json:"errorMessage,omitempty"`
+	SuggestionsJSON   string           `gorm:"type:text" json:"-"`
+	RequestID         string           `gorm:"size:64;index" json:"requestId,omitempty"`
+	WorkerID          string           `gorm:"size:36;index" json:"-"`
+	HeartbeatAt       *time.Time       `gorm:"index" json:"-"`
+	Retryable         bool             `json:"retryable"`
+	RollbackAvailable bool             `json:"rollbackAvailable"`
+	PayloadEnc        string           `gorm:"type:text;not null" json:"-"`
+	ResultJSON        string           `gorm:"type:text" json:"-"`
+	Events            []OperationEvent `gorm:"foreignKey:OperationID;constraint:OnDelete:CASCADE" json:"events,omitempty"`
+}
+
+// OperationEvent records user-visible progress without storing raw command
+// output or credentials.
+type OperationEvent struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	OperationID string    `gorm:"size:36;index;not null" json:"-"`
+	CreatedAt   time.Time `gorm:"index" json:"createdAt"`
+	Stage       string    `gorm:"size:64;not null" json:"stage"`
+	Status      string    `gorm:"size:24;not null" json:"status"`
+	Message     string    `gorm:"size:512;not null" json:"message"`
+	Progress    int       `json:"progress"`
+}

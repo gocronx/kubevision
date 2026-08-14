@@ -39,6 +39,7 @@ type RouterDeps struct {
 	RegistryHandler        *handler.RegistryHandler
 	DirectoryHandler       *handler.DirectoryHandler
 	PackageHandler         *handler.PackageHandler
+	OperationHandler       *handler.OperationHandler
 	WSHub                  *ws.Hub
 	TerminalHandler        *ws.TerminalHandler
 	LogsHandler            *ws.LogsHandler
@@ -121,6 +122,12 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 			auditWrite = deps.AuditMiddleware
 		}
 		{
+			if deps != nil && deps.OperationHandler != nil {
+				operations := authOnly.Group("/operations")
+				operations.GET("", deps.OperationHandler.List)
+				operations.GET("/:id", deps.OperationHandler.Get)
+				operations.POST("/:id/retry", auditWrite, deps.OperationHandler.Retry)
+			}
 			if deps != nil && deps.PackageHandler != nil {
 				packages := authOnly.Group("/clusters/:id/package-releases")
 				packages.GET("", deps.PackageHandler.List)

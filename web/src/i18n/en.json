@@ -2,6 +2,7 @@
   "nav": {
     "packages": "Packages",
     "packageReleases": "Package releases",
+    "operations": "Operations",
     "overview": "Overview",
     "workloads": "Workloads",
     "pods": "Pods",
@@ -290,6 +291,27 @@
     "revoke": "Revoke credential",
     "revokeConfirm": "Revoke \"{{label}}\"? This credential will no longer be able to sign in.",
     "revokedToast": "Credential revoked"
+  },
+  "operations": {
+    "title": "Operations",
+    "description": "Track package changes after refreshes, sign-outs, and network interruptions.",
+    "empty": "No operations yet",
+    "queued": "Operation queued",
+    "stage": "Stage",
+    "copyRequestId": "Copy request ID",
+    "copied": "Request ID copied",
+    "copyFailed": "Failed to copy request ID",
+    "reviewRollback": "Review rollback",
+    "status": { "queued": "Queued", "running": "Running", "succeeded": "Succeeded", "failed": "Failed" },
+    "actions": { "install": "Install", "upgrade": "Upgrade", "rollback": "Roll back", "remove": "Remove", "ai_change": "AI change" },
+    "stages": { "queued": "Queued", "preparing": "Preparing", "applying_resources": "Applying resources", "wait_readiness": "Waiting for readiness", "verifying_release": "Verifying release", "completed": "Completed", "validation": "Validation", "authorization": "Authorization", "interrupted": "Interrupted" }
+  },
+  "packageTemplates": {
+    "title": "Quick deploy",
+    "configure": "Configure and preview",
+    "postgresql": { "name": "PostgreSQL", "description": "Persistent single-primary database with generated credentials." },
+    "redis": { "name": "Redis", "description": "One primary and two replicas with persistent storage." },
+    "gocron": { "name": "gocron", "description": "Two application replicas using an existing PostgreSQL service." }
   },
   "packages": {
     "title": "Package releases",

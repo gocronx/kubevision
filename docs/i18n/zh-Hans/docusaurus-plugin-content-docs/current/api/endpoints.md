@@ -60,6 +60,9 @@ Bearer Token 和对应 RBAC 权限。
 | `PUT`, `DELETE` | `/clusters/:id/helm/repositories/:repositoryId` | 更新或删除托管仓库 |
 | `POST` | `/clusters/:id/helm/repositories/:repositoryId/test` | 测试托管仓库连接 |
 | `GET` | `/clusters/:id/helm/repositories/:repositoryId/charts` | 浏览带索引的 Helm 仓库 |
+| `GET` | `/operations` | 列出当前用户的持久化后台操作 |
+| `GET` | `/operations/:id` | 获取操作阶段、事件和可处理的错误 |
+| `POST` | `/operations/:id/retry` | 重试明确标记为可重试的操作 |
 | `GET` | `/clusters/:id/helm/artifact-hub/search` | 在 Artifact Hub 搜索公开 Chart |
 | `POST` | `/clusters/:id/helm/charts/inspect` | 检查 Chart 元数据和内容 |
 | `POST` | `/clusters/:id/helm/charts/upload` | 上传临时打包 Chart |

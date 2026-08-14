@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { AxiosRequestConfig } from "axios"
 import { streamSSE } from "./ai-chat-stream"
+import api, { ApiError } from "@/lib/api"
+import type { Operation } from "@/hooks/use-operations"
 import { loadStoredChat, MAX_CHAT_SESSIONS, saveStoredChat } from "./ai-chat-storage"
 import type { APIChatMessage, ChatMessage, ChatSession, ChatWorkspace, PageContext } from "./ai-chat-types"
 
@@ -150,6 +153,20 @@ export function useAIChat(userId?: number) {
           pendingSessionId: String(data.session_id ?? ""), actionStatus: "pending",
         })
         break
+      case "operation_queued": {
+        const callID = String(data.tool_call_id ?? "")
+        updateSession(sessionId, (session) => ({
+          ...session,
+          messages: session.messages.map((message) => message.toolCallId === callID ? {
+            ...message,
+            operationId: String(data.operation_id ?? ""),
+            toolResult: "Approved change queued",
+            actionStatus: "running",
+          } : message),
+          updatedAt: Date.now(),
+        }))
+        break
+      }
       case "error":
         activeAssistantsRef.current.delete(sessionId)
         append({
@@ -159,6 +176,62 @@ export function useAIChat(userId?: number) {
         break
     }
   }, [updateSession])
+
+  const pendingOperationIDs = useMemo(() => workspace.sessions.flatMap((session) =>
+    session.messages.filter((message) => message.operationId && message.actionStatus === "running").map((message) => message.operationId!),
+  ), [workspace])
+  const pendingOperationKey = pendingOperationIDs.slice().sort().join(":")
+
+  useEffect(() => {
+    if (!pendingOperationKey) return
+    let cancelled = false
+    let polling = false
+    const poll = async () => {
+      if (polling) return
+      polling = true
+      try {
+        const quietRequest = { __suppressErrorToast: true } as AxiosRequestConfig
+        const results = await Promise.all(pendingOperationKey.split(":").map(async (id) => {
+          try {
+            return { id, operation: await api.get<Operation>(`/operations/${id}`, quietRequest) }
+          } catch (error) {
+            return { id, missing: error instanceof ApiError && error.code === 40400 }
+          }
+        }))
+        if (cancelled) return
+        const byID = new Map(results.map((result) => [result.id, result]))
+        setWorkspace((current) => ({
+          ...current,
+          sessions: current.sessions.map((session) => ({
+            ...session,
+            messages: session.messages.map((message) => {
+              const result = message.operationId ? byID.get(message.operationId) : undefined
+              if (!result || !result.operation && !result.missing) return message
+              if (result.missing) return { ...message, actionStatus: "error" as const, isError: true, toolResult: "Operation record is no longer available" }
+              const operation = result.operation!
+              if (operation.status === "queued" || operation.status === "running") return message
+              return {
+                ...message,
+                actionStatus: operation.status === "succeeded" ? "confirmed" as const : "error" as const,
+                isError: operation.status === "failed",
+                toolResult: operation.status === "succeeded" ? "Operation completed" : operation.errorMessage || "Operation failed",
+              }
+            }),
+          })),
+        }))
+      } catch {
+        // Keep the operation pending and try again after a transient failure.
+      } finally {
+        polling = false
+      }
+    }
+    void poll()
+    const timer = window.setInterval(() => void poll(), 2_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [pendingOperationKey])
 
   const runStream = useCallback(async (sessionId: string, url: string, body: unknown) => {
     if (controllersRef.current.has(sessionId)) return

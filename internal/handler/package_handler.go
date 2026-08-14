@@ -9,16 +9,23 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocronx/kubevision/internal/middleware"
+	"github.com/gocronx/kubevision/internal/operation"
 	"github.com/gocronx/kubevision/internal/packages"
 	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 	"github.com/gocronx/kubevision/internal/pkg/response"
 )
 
 type PackageHandler struct {
-	service  *packages.Service
-	catalog  *packages.Catalog
-	upgrades *packages.UpgradeManager
-	resolve  func(context.Context, string) (string, error)
+	service    *packages.Service
+	catalog    *packages.Catalog
+	upgrades   *packages.UpgradeManager
+	operations *operation.Manager
+	resolve    func(context.Context, string) (string, error)
+}
+
+func (h *PackageHandler) WithOperations(manager *operation.Manager) *PackageHandler {
+	h.operations = manager
+	return h
 }
 
 func (h *PackageHandler) WithUpgradeManager(manager *packages.UpgradeManager) *PackageHandler {
@@ -116,17 +123,22 @@ func (h *PackageHandler) Install(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid install request")
 		return
 	}
+	h.queueChange(c, "install", cluster, req)
+}
+
+func (h *PackageHandler) queueChange(c *gin.Context, action, cluster string, req packageChangeRequest) {
+	if h.operations == nil {
+		response.Error(c, bizerr.CodeInternal, "operation manager is unavailable")
+		return
+	}
 	actor := packageActor(c)
-	if err := h.service.Install(c.Request.Context(), actor, cluster, req.options()); err != nil {
+	prepared, err := h.service.PrepareChange(c.Request.Context(), actor, action, cluster, req.options())
+	if err != nil {
 		writePackageResult(c, nil, err)
 		return
 	}
-	item, err := h.service.Get(c.Request.Context(), actor, cluster, req.Namespace, req.ReleaseName, 0)
-	if err != nil {
-		response.Success(c, nil)
-		return
-	}
-	response.Success(c, item)
+	item, err := h.operations.Submit(c.Request.Context(), packageOperationInput(c, action, cluster, req.Namespace, req.ReleaseName, packages.NewChangeOperationTask(prepared)))
+	writePackageResult(c, item, err)
 }
 
 func (h *PackageHandler) Upgrade(c *gin.Context) {
@@ -139,17 +151,7 @@ func (h *PackageHandler) Upgrade(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid upgrade request")
 		return
 	}
-	actor := packageActor(c)
-	if err := h.service.Upgrade(c.Request.Context(), actor, cluster, req.options()); err != nil {
-		writePackageResult(c, nil, err)
-		return
-	}
-	item, err := h.service.Get(c.Request.Context(), actor, cluster, req.Namespace, req.ReleaseName, 0)
-	if err != nil {
-		response.Success(c, nil)
-		return
-	}
-	response.Success(c, item)
+	h.queueChange(c, "upgrade", cluster, req)
 }
 
 func (h *PackageHandler) CheckUpgrade(c *gin.Context) {
@@ -366,8 +368,8 @@ func (h *PackageHandler) Rollback(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamInvalid, "revision is required")
 		return
 	}
-	err := h.service.Rollback(c.Request.Context(), packageActor(c), cluster, c.Param("namespace"), c.Param("name"), packages.RollbackOptions{Revision: req.Revision, Wait: req.Wait, Atomic: req.Atomic, Timeout: time.Duration(req.TimeoutSeconds) * time.Second})
-	writePackageResult(c, nil, err)
+	task := packages.OperationTask{Action: "rollback", Cluster: cluster, Namespace: c.Param("namespace"), Name: c.Param("name"), Revision: req.Revision, Wait: req.Wait, Atomic: req.Atomic, TimeoutSeconds: req.TimeoutSeconds}
+	h.queueTask(c, task)
 }
 
 type packageRemoveRequest struct {
@@ -387,8 +389,22 @@ func (h *PackageHandler) Remove(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamInvalid, "confirmation is required")
 		return
 	}
-	err := h.service.Remove(c.Request.Context(), packageActor(c), cluster, c.Param("namespace"), c.Param("name"), packages.RemoveOptions{Confirmation: req.Confirmation, KeepHistory: req.KeepHistory, Wait: req.Wait, Timeout: time.Duration(req.TimeoutSeconds) * time.Second})
-	writePackageResult(c, nil, err)
+	task := packages.OperationTask{Action: "remove", Cluster: cluster, Namespace: c.Param("namespace"), Name: c.Param("name"), Confirmation: req.Confirmation, KeepHistory: req.KeepHistory, Wait: req.Wait, TimeoutSeconds: req.TimeoutSeconds}
+	h.queueTask(c, task)
+}
+
+func (h *PackageHandler) queueTask(c *gin.Context, task packages.OperationTask) {
+	if h.operations == nil {
+		response.Error(c, bizerr.CodeInternal, "operation manager is unavailable")
+		return
+	}
+	item, err := h.operations.Submit(c.Request.Context(), packageOperationInput(c, task.Action, task.Cluster, task.Namespace, task.Name, task))
+	writePackageResult(c, item, err)
+}
+
+func packageOperationInput(c *gin.Context, action, cluster, namespace, name string, payload interface{}) operation.Input {
+	return operation.Input{UserID: middleware.GetUserID(c), Username: middleware.GetUsername(c), Kind: packages.OperationKind,
+		Action: action, Cluster: cluster, Namespace: namespace, ResourceName: name, RequestID: c.GetString("requestID"), Payload: payload}
 }
 
 func (h *PackageHandler) cluster(c *gin.Context) (string, bool) {

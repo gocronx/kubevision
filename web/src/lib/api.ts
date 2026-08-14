@@ -10,11 +10,13 @@ interface ApiResponse<T = unknown> {
 
 export class ApiError extends Error {
   readonly code: number
+  readonly requestId?: string
 
-  constructor(message: string, code: number) {
+  constructor(message: string, code: number, requestId?: string) {
     super(message)
     this.name = "ApiError"
     this.code = code
+    this.requestId = requestId
   }
 }
 
@@ -29,6 +31,13 @@ const transport = axios.create({
   baseURL: "/api/v1",
   timeout: 15000,
 })
+
+function showRequestError(message: string, requestId?: string) {
+  toast.error(message, requestId ? {
+    description: `Request ID: ${requestId}`,
+    action: { label: "Copy", onClick: () => void navigator.clipboard.writeText(requestId) },
+  } : undefined)
+}
 
 transport.interceptors.request.use((config) => {
   const token = localStorage.getItem("token")
@@ -172,20 +181,21 @@ transport.interceptors.response.use(
     }
     // 40300 = permission denied.
     if (body.code === 40300) {
-      toast.error("Permission denied")
-      return Promise.reject(new ApiError(body.message || "Permission denied", body.code))
+      if (!(res.config as unknown as Record<string, unknown>).__suppressErrorToast) showRequestError("Permission denied", body.meta?.requestId)
+      return Promise.reject(new ApiError(body.message || "Permission denied", body.code, body.meta?.requestId))
     }
     if (body.code >= 40000) {
-      toast.error(body.message || "Request failed")
-      return Promise.reject(new ApiError(body.message || "Request failed", body.code))
+      if (!(res.config as unknown as Record<string, unknown>).__suppressErrorToast) showRequestError(body.message || "Request failed", body.meta?.requestId)
+      return Promise.reject(new ApiError(body.message || "Request failed", body.code, body.meta?.requestId))
     }
     return body.data as never
   },
   (error: unknown) => {
     if (axios.isAxiosError(error)) {
-      const message = (error.response?.data as ApiResponse | undefined)?.message
+      const body = error.response?.data as ApiResponse | undefined
+      const message = body?.message
         ?? error.message
-      toast.error(message)
+      if (!(error.config as unknown as Record<string, unknown> | undefined)?.__suppressErrorToast) showRequestError(message, body?.meta?.requestId)
     } else if (error instanceof Error) {
       toast.error(error.message)
     }

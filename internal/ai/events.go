@@ -2,12 +2,13 @@ package ai
 
 // SSE event names emitted by the agent over the chat stream.
 const (
-	EventMessage        = "message"         // assistant text delta: {content}
-	EventToolCall       = "tool_call"       // a tool is being invoked: {tool, tool_call_id, args}
-	EventToolResult     = "tool_result"     // tool finished: {tool, tool_call_id, result, is_error}
-	EventActionRequired = "action_required" // mutation awaiting approval: {tool, tool_call_id, args, session_id}
-	EventError          = "error"           // {message}
-	EventDone           = "done"            // {}
+	EventMessage         = "message"          // assistant text delta: {content}
+	EventToolCall        = "tool_call"        // a tool is being invoked: {tool, tool_call_id, args}
+	EventToolResult      = "tool_result"      // tool finished: {tool, tool_call_id, result, is_error}
+	EventActionRequired  = "action_required"  // mutation awaiting approval: {tool, tool_call_id, args, session_id}
+	EventError           = "error"            // {message}
+	EventDone            = "done"             // {}
+	EventOperationQueued = "operation_queued" // approved mutation queued: {tool_call_id, operation_id}
 )
 
 // SSEEvent is a single server-sent event with a named type and JSON payload.

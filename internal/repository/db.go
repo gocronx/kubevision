@@ -129,6 +129,20 @@ var databaseMigrations = []databaseMigration{
 			return db.AutoMigrate(&model.HelmReleaseSource{})
 		},
 	},
+	{
+		version: 4,
+		up: func(db *gorm.DB) error {
+			return db.AutoMigrate(&model.Operation{}, &model.OperationEvent{})
+		},
+	},
+	{
+		version: 5,
+		up: func(db *gorm.DB) error {
+			// Migration 4 may already be recorded by development databases created
+			// before operation worker leases were added.
+			return db.AutoMigrate(&model.Operation{}, &model.OperationEvent{})
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB, driver string) error {

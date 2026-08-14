@@ -12,8 +12,8 @@ import {
   usePackageChange,
   type PackageChangeInput,
   type PackagePreview,
-  type PackageRelease,
 } from "@/hooks/use-package-releases"
+import type { Operation } from "@/hooks/use-operations"
 import { PackageValuesEditor } from "./package-values-editor"
 
 interface Props {
@@ -28,7 +28,7 @@ interface Props {
   source?: PackageChangeInput["source"]
   initialValues?: Record<string, unknown>
   autoPreview?: boolean
-  onSuccess?: (release: PackageRelease | null) => void
+  onSuccess?: (operation: Operation) => void
 }
 
 interface ChangeForm {
@@ -145,10 +145,10 @@ function PackageChangeDialogSession({
     change.execute.mutate(
       { ...request, confirmationToken: preview.confirmationToken },
       {
-        onSuccess: (release) => {
-          toast.success(t(`packages.${operation}Success`))
+        onSuccess: (queuedOperation) => {
+          toast.success(t("operations.queued"))
           onOpenChange(false)
-          onSuccess?.(release)
+          onSuccess?.(queuedOperation)
         },
         onError: (error) => {
           setOperationError(errorMessage(error))

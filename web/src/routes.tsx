@@ -24,6 +24,7 @@ const NotFoundPage = lazy(() => import("@/pages/not-found").then((module) => ({ 
 const DirectorySettingsPage = lazy(() => import("@/pages/admin/directory").then((module) => ({ default: module.DirectorySettingsPage })))
 const PackageReleasesPage = lazy(() => import("@/pages/packages/index").then((module) => ({ default: module.PackageReleasesPage })))
 const PackageReleaseDetailPage = lazy(() => import("@/pages/packages/detail").then((module) => ({ default: module.PackageReleaseDetailPage })))
+const OperationsPage = lazy(() => import("@/pages/operations/index").then((module) => ({ default: module.OperationsPage })))
 
 function RouteFallback() {
   return (
@@ -63,6 +64,7 @@ export function AppRoutes() {
         <Route path="crds" element={<CRDListPage />} />
         <Route path="package-releases" element={<PackageReleasesPage />} />
         <Route path="package-releases/:namespace/:name" element={<PackageReleaseDetailPage />} />
+        <Route path="operations" element={<OperationsPage />} />
         <Route path=":resource" element={<ResourceListPage />} />
         <Route path=":resource/:name" element={<ResourceDetailPage />} />
       </Route>

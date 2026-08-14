@@ -13,7 +13,7 @@ const headerXRequestID = "X-Request-ID"
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rid := c.GetHeader(headerXRequestID)
-		if rid == "" {
+		if rid == "" || len(rid) > 64 {
 			rid = uuid.New().String()
 		}
 		c.Set("requestID", rid)

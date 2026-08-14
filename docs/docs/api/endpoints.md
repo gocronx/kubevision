@@ -61,6 +61,9 @@ Public login, OAuth, refresh, and public-key login routes are documented in
 | `PUT`, `DELETE` | `/clusters/:id/helm/repositories/:repositoryId` | Update or delete a managed repository |
 | `POST` | `/clusters/:id/helm/repositories/:repositoryId/test` | Test a managed repository connection |
 | `GET` | `/clusters/:id/helm/repositories/:repositoryId/charts` | Browse an indexed Helm repository |
+| `GET` | `/operations` | List the current user's persisted background operations |
+| `GET` | `/operations/:id` | Get operation stages, events, and actionable errors |
+| `POST` | `/operations/:id/retry` | Retry an operation explicitly marked retryable |
 | `GET` | `/clusters/:id/helm/artifact-hub/search` | Search public charts on Artifact Hub |
 | `POST` | `/clusters/:id/helm/charts/inspect` | Inspect chart metadata and contents |
 | `POST` | `/clusters/:id/helm/charts/upload` | Upload a temporary packaged chart |

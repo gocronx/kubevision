@@ -10,15 +10,20 @@ interface PendingStream {
 }
 
 const pending: PendingStream[] = []
+const apiGet = vi.hoisted(() => vi.fn())
 
 vi.mock("./ai-chat-stream", () => ({
   streamSSE: vi.fn((_url: string, _body: unknown, callbacks: StreamCallbacks) =>
     new Promise<void>((resolve) => pending.push({ callbacks, resolve }))
   ),
 }))
+vi.mock("@/lib/api", () => ({ default: { get: apiGet } }))
 
 describe("useAIChat sessions", () => {
-  beforeEach(() => pending.splice(0))
+  beforeEach(() => {
+    pending.splice(0)
+    apiGet.mockReset()
+  })
 
   it("creates and switches between isolated conversations", async () => {
     const { result } = renderHook(() => useAIChat(7))
@@ -124,6 +129,28 @@ describe("useAIChat sessions", () => {
     await waitFor(() => expect(result.current.activeSession.messages.find((message) => message.toolCallId === "second")?.clusterId).toBe(23))
     act(() => pending[1].resolve())
     await waitFor(() => expect(result.current.activeSession.isRunning).toBe(false))
+  })
+
+  it("recovers an approved action from its persisted operation", async () => {
+    apiGet.mockResolvedValue({ id: "operation-1", status: "succeeded" })
+    const { result } = renderHook(() => useAIChat(7))
+    const sessionId = result.current.activeSession.id
+    act(() => result.current.sendMessage(sessionId, "apply change", 23))
+    await waitFor(() => expect(pending).toHaveLength(1))
+    act(() => pending[0].callbacks.onEvent("action_required", {
+      tool_call_id: "change-1", tool: "create_resource", args: {}, session_id: "approval-1",
+    }))
+    act(() => pending[0].resolve())
+    await waitFor(() => expect(result.current.activeSession.isRunning).toBe(false))
+    const action = result.current.activeSession.messages.find((message) => message.toolCallId === "change-1")!
+
+    act(() => result.current.approveAction(sessionId, action))
+    await waitFor(() => expect(pending).toHaveLength(2))
+    act(() => pending[1].callbacks.onEvent("operation_queued", { tool_call_id: "change-1", operation_id: "operation-1" }))
+    act(() => pending[1].resolve())
+
+    await waitFor(() => expect(result.current.activeSession.messages.find((message) => message.toolCallId === "change-1")?.actionStatus).toBe("confirmed"))
+    expect(apiGet).toHaveBeenCalledWith("/operations/operation-1", expect.objectContaining({ __suppressErrorToast: true }))
   })
 
   it("deletes only the requested session and selects the most recent remaining one", () => {

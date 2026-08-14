@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/api"
+import type { Operation } from "@/hooks/use-operations"
 
 export interface PackageResource { apiVersion: string; kind: string; namespace?: string; name: string }
 export interface PackageRelease {
@@ -40,7 +41,7 @@ export function usePackageHistory(cluster: string, namespace: string, name: stri
 
 export function usePackageRollback(cluster: string, namespace: string, name: string) {
   const cache = useQueryClient()
-  return useMutation({ mutationFn: (revision: number) => api.post(`${base(cluster)}/${namespace}/${name}/rollback`, { revision, wait: true, atomic: true, timeoutSeconds: 300 }), onSuccess: () => {
+  return useMutation({ mutationFn: (revision: number) => api.post<Operation>(`${base(cluster)}/${namespace}/${name}/rollback`, { revision, wait: true, atomic: true, timeoutSeconds: 300 }), onSuccess: () => {
     cache.invalidateQueries({ queryKey: ["package-releases"] })
     cache.invalidateQueries({ queryKey: ["package-release", cluster, namespace, name] })
     cache.invalidateQueries({ queryKey: ["package-history", cluster, namespace, name] })
@@ -49,13 +50,13 @@ export function usePackageRollback(cluster: string, namespace: string, name: str
 
 export function usePackageRemove(cluster: string, namespace: string, name: string) {
   const cache = useQueryClient()
-  return useMutation({ mutationFn: ({ confirmation, keepHistory }: { confirmation: string; keepHistory: boolean }) => api.delete(`${base(cluster)}/${namespace}/${name}`, { data: { confirmation, keepHistory, wait: true, timeoutSeconds: 300 } }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
+  return useMutation({ mutationFn: ({ confirmation, keepHistory }: { confirmation: string; keepHistory: boolean }) => api.delete<Operation>(`${base(cluster)}/${namespace}/${name}`, { data: { confirmation, keepHistory, wait: true, timeoutSeconds: 300 } }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
 }
 
 export function usePackageChange(cluster: string, operation: "install" | "upgrade") {
   const cache = useQueryClient()
   const preview = useMutation({ mutationFn: (input: PackageChangeInput) => api.post<PackagePreview>(`${base(cluster)}/preview/${operation}`, input, { timeout: 600_000 }) })
-  const execute = useMutation({ mutationFn: (input: PackageChangeInput) => api.post<PackageRelease | null>(`${base(cluster)}/${operation}`, input, { timeout: 600_000 }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
+  const execute = useMutation({ mutationFn: (input: PackageChangeInput) => api.post<Operation>(`${base(cluster)}/${operation}`, input), onSuccess: () => cache.invalidateQueries({ queryKey: ["operations"] }) })
   return { preview, execute }
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
 	"github.com/gocronx/kubevision/internal/kubernetes/resource"
 	"github.com/gocronx/kubevision/internal/model"
+	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 	"github.com/gocronx/kubevision/internal/repository"
 )
 
@@ -173,6 +174,56 @@ func (s *Service) ContinueAction(ctx context.Context, sessionID string, actor Ac
 
 	messages := append(sess.messages, toolResultMessage(tc.ID, result))
 	r.loop(ctx, messages)
+}
+
+// ApprovedAction is the minimum encrypted payload needed to execute an
+// approved mutation outside the request that collected the confirmation.
+type ApprovedAction struct {
+	ToolCall      ToolCall `json:"toolCall"`
+	ClusterID     uint     `json:"clusterId"`
+	ClusterName   string   `json:"clusterName"`
+	ClientIP      string   `json:"clientIp"`
+	CorrelationID string   `json:"correlationId"`
+}
+
+func (s *Service) ApproveAction(sessionID string, actor Actor) (ApprovedAction, error) {
+	sess, takeResult := s.sessions.takeOwned(sessionID, actor.UserID)
+	if takeResult != sessionTaken {
+		if sess != nil {
+			s.recordApprovalAudit(sess, actor, takeResult)
+		}
+		if takeResult == sessionForbidden {
+			return ApprovedAction{}, bizerr.ErrForbidden
+		}
+		return ApprovedAction{}, bizerr.New(bizerr.CodeValidation, "this action has expired or was already handled")
+	}
+	return ApprovedAction{ToolCall: sess.toolCall, ClusterID: sess.clusterID, ClusterName: sess.clusterName, ClientIP: sess.clientIP, CorrelationID: sess.correlationID}, nil
+}
+
+// ExecuteApprovedAction rechecks authorization and executes exactly one saved
+// mutation. It does not invoke the model again, so retries cannot propose an
+// additional unconfirmed change.
+func (s *Service) ExecuteApprovedAction(ctx context.Context, approved ApprovedAction, actor Actor) (string, error) {
+	cfg, err := s.cfg.Load(ctx)
+	if err != nil || !cfg.Ready() {
+		return "", bizerr.New(bizerr.CodeValidation, "AI assistant is not configured")
+	}
+	r := s.newRun(cfg, approved.ClusterName, approved.ClusterID, actor, func(SSEEvent) {})
+	args := decodeArgs(approved.ToolCall.Function.Arguments)
+	sess := &pendingSession{toolCall: approved.ToolCall, clusterID: approved.ClusterID, clusterName: approved.ClusterName,
+		userID: actor.UserID, username: actor.Username, clientIP: approved.ClientIP, correlationID: approved.CorrelationID}
+	started := time.Now()
+	if deny := r.authz.authorize(ctx, actor.Role, approved.ToolCall.Function.Name, args); deny != "" {
+		s.recordMutationAudit(sess, actor, args, http.StatusForbidden, "denied", time.Since(started))
+		return "", bizerr.New(bizerr.CodeForbidden, deny)
+	}
+	result, execErr := r.exec.execute(ctx, approved.ToolCall.Function.Name, args)
+	if execErr != nil {
+		s.recordMutationAudit(sess, actor, args, http.StatusInternalServerError, "failed", time.Since(started))
+		return "", bizerr.New(bizerr.CodeK8sUnavailable, execErr.Error())
+	}
+	s.recordMutationAudit(sess, actor, args, http.StatusOK, "succeeded", time.Since(started))
+	return limitToolResult(result), nil
 }
 
 // llm is the chat-completions capability the agent loop depends on. *Client is

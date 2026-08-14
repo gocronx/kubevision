@@ -4,13 +4,14 @@ title: Helm Package Releases
 
 # Helm Package Releases
 
-The **Packages** workspace provides four views for managing Helm software in the
+The **Packages** workspace provides five views for managing Helm software in the
 selected cluster:
 
 - **Releases** lists installed releases, values, rendered resources, and revision history.
 - **Chart catalog** searches Artifact Hub, browses managed Helm repositories, and accepts packaged `.tgz` charts.
 - **Repositories** lets administrators manage Helm repositories and OCI registries.
 - **Automation** manages guarded chart upgrade policies.
+- **Quick deploy** provides maintained parameter presets for PostgreSQL, Redis, and gocron.
 
 Authorized users can install charts, upgrade releases, roll back to an earlier
 revision, or remove a release. Removal requires typing the exact release name,
@@ -119,3 +120,25 @@ Helm operations use KubeVision's cluster credentials. Keep install and upgrade
 permissions narrowly assigned and review every preview. Values and Secret
 manifests are redacted before display, but sensitive values should still be
 managed through Kubernetes Secrets or an external secret store.
+
+## Background operations
+
+After confirmation, installs, upgrades, rollbacks, removals, and approved AI
+changes run as persisted background operations. Open **Packages > Operations**
+to see progress, failure suggestions, and the request ID. Refreshing the page,
+signing in again, or losing the network does not discard execution state.
+Retry is offered only when the operation is safe to repeat; AI changes require
+a new inspection before another attempt.
+
+Operation inputs, including Values, are encrypted with KubeVision's encryption
+key and are not returned by the API or written to progress events. Completed
+operation records are retained for 30 days.
+
+## Quick deploy templates
+
+The PostgreSQL and Redis templates use public Bitnami OCI charts. Credentials
+are generated in the browser and remain in the confirmed Helm Values. The
+gocron template uses the public gocron chart, generates application secrets,
+and asks for the password of an existing PostgreSQL service. Templates are
+convenience presets around trusted chart sources, not forks of those charts.
+Always review rendered resources before confirming.

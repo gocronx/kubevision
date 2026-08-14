@@ -95,19 +95,68 @@ func (s *Service) Preview(ctx context.Context, actor Actor, operation, cluster s
 }
 
 func (s *Service) Install(ctx context.Context, actor Actor, cluster string, opts ChangeOptions) error {
-	return s.executeChange(ctx, actor, "install", cluster, opts)
+	prepared, err := s.PrepareChange(ctx, actor, "install", cluster, opts)
+	if err != nil {
+		return err
+	}
+	return s.ExecutePreparedChange(ctx, actor, prepared)
 }
 
 func (s *Service) Upgrade(ctx context.Context, actor Actor, cluster string, opts ChangeOptions) error {
-	return s.executeChange(ctx, actor, "upgrade", cluster, opts)
+	prepared, err := s.PrepareChange(ctx, actor, "upgrade", cluster, opts)
+	if err != nil {
+		return err
+	}
+	return s.ExecutePreparedChange(ctx, actor, prepared)
 }
 
-func (s *Service) executeChange(ctx context.Context, actor Actor, operation, cluster string, opts ChangeOptions) error {
+type PreparedChange struct {
+	Operation      string
+	Cluster        string
+	Options        ChangeOptions
+	ExpectedDigest string
+}
+
+// PrepareChange consumes the one-time preview grant before a background task is queued.
+func (s *Service) PrepareChange(ctx context.Context, actor Actor, operation, cluster string, opts ChangeOptions) (PreparedChange, error) {
 	trackedSource := opts.Source
 	managedRepository := opts.Source.RepositoryID != 0
 	if managedRepository && !isAdmin(actor) {
-		return bizerr.ErrForbidden
+		return PreparedChange{}, bizerr.ErrForbidden
 	}
+	if s.catalog != nil {
+		if uploadErr := s.catalog.AuthorizeUpload(actor, opts.Source.UploadID); uploadErr != nil {
+			return PreparedChange{}, uploadErr
+		}
+		resolved, resolveErr := s.catalog.ResolveSource(ctx, actor, opts.Source)
+		if resolveErr != nil {
+			return PreparedChange{}, mapAdapterError(resolveErr)
+		}
+		opts.Source = resolved
+	}
+	permission, _ := changePermission(operation)
+	if !s.auth.Allowed(ctx, actor, permission, cluster, opts.Namespace) {
+		return PreparedChange{}, bizerr.ErrForbidden
+	}
+	if err := validateChangeOptions(&opts); err != nil {
+		return PreparedChange{}, err
+	}
+	s.mu.Lock()
+	grant, ok := s.previews[opts.ConfirmationToken]
+	delete(s.previews, opts.ConfirmationToken)
+	s.mu.Unlock()
+	if !ok || time.Now().After(grant.ExpiresAt) || grant.ActorID != actor.UserID || grant.Operation != operation || grant.Cluster != cluster || grant.Fingerprint != changeFingerprint(opts) {
+		return PreparedChange{}, bizerr.New(bizerr.CodeValidation, "preview expired or does not match this operation; preview again")
+	}
+	// Persist the original source coordinates. Repository credentials are resolved
+	// again at execution time and never serialized into the operation payload.
+	opts.Source = trackedSource
+	return PreparedChange{Operation: operation, Cluster: cluster, Options: opts, ExpectedDigest: grant.Digest}, nil
+}
+
+func (s *Service) ExecutePreparedChange(ctx context.Context, actor Actor, prepared PreparedChange) error {
+	opts := prepared.Options
+	trackedSource := opts.Source
 	if s.catalog != nil {
 		if uploadErr := s.catalog.AuthorizeUpload(actor, opts.Source.UploadID); uploadErr != nil {
 			return uploadErr
@@ -118,30 +167,26 @@ func (s *Service) executeChange(ctx context.Context, actor Actor, operation, clu
 		}
 		opts.Source = resolved
 	}
-	permission, _ := changePermission(operation)
-	if !s.auth.Allowed(ctx, actor, permission, cluster, opts.Namespace) {
+	permission, err := changePermission(prepared.Operation)
+	if err != nil {
+		return err
+	}
+	if !s.auth.Allowed(ctx, actor, permission, prepared.Cluster, opts.Namespace) {
 		return bizerr.ErrForbidden
 	}
 	if err := validateChangeOptions(&opts); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	grant, ok := s.previews[opts.ConfirmationToken]
-	delete(s.previews, opts.ConfirmationToken)
-	s.mu.Unlock()
-	if !ok || time.Now().After(grant.ExpiresAt) || grant.ActorID != actor.UserID || grant.Operation != operation || grant.Cluster != cluster || grant.Fingerprint != changeFingerprint(opts) {
-		return bizerr.New(bizerr.CodeValidation, "preview expired or does not match this operation; preview again")
-	}
-	opts.ExpectedDigest = grant.Digest
+	opts.ExpectedDigest = prepared.ExpectedDigest
 	summary := fmt.Sprintf("chart=%s,version=%s,wait=%t,atomic=%t,timeout=%s", opts.Source.Chart, opts.Source.Version, opts.Wait, opts.Atomic, opts.Timeout)
-	err := s.mutate(ctx, actor, operation, cluster, opts.Namespace, opts.ReleaseName, 0, summary, func() error {
-		if operation == "install" {
-			return s.adapter.Install(ctx, cluster, opts)
+	err = s.mutate(ctx, actor, prepared.Operation, prepared.Cluster, opts.Namespace, opts.ReleaseName, 0, summary, func() error {
+		if prepared.Operation == "install" {
+			return s.adapter.Install(ctx, prepared.Cluster, opts)
 		}
-		return s.adapter.Upgrade(ctx, cluster, opts)
+		return s.adapter.Upgrade(ctx, prepared.Cluster, opts)
 	})
 	if err == nil && s.catalog != nil {
-		_ = s.catalog.SaveReleaseSource(ctx, cluster, opts.Namespace, opts.ReleaseName, trackedSource)
+		_ = s.catalog.SaveReleaseSource(ctx, prepared.Cluster, opts.Namespace, opts.ReleaseName, trackedSource)
 	}
 	return err
 }

@@ -12,6 +12,7 @@ import { AutomationPanel, CatalogPanel, RepositoriesPanel, type InstallSelection
 import { useAuth } from "@/stores/auth-store"
 import { canAccessAdmin } from "@/lib/permissions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PackageTemplatesPanel, type PackageTemplate } from "./package-templates"
 
 export function PackageReleasesPage() {
   const { t, i18n } = useTranslation()
@@ -21,11 +22,12 @@ export function PackageReleasesPage() {
   const [state, setState] = useState("")
   const [installOpen, setInstallOpen] = useState(false)
   const [selection, setSelection] = useState<InstallSelection | null>(null)
+  const [template, setTemplate] = useState<PackageTemplate | null>(null)
   const { user } = useAuth(); const admin = canAccessAdmin(user?.role ?? "")
   const releases = usePackageReleases(currentCluster, namespace, state)
   return <div className="mx-auto w-full max-w-7xl space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold">{t("packages.title")}</h1><p className="text-sm text-muted-foreground">{t("packages.count", { count: releases.data?.length ?? 0 })}</p></div><div className="flex gap-2"><Button onClick={() => setInstallOpen(true)}><Plus className="size-4" />{t("packages.install")}</Button><Button variant="outline" size="icon" title={t("packages.refresh")} onClick={() => releases.refetch()}><RefreshCw className="size-4" /></Button></div></div>
-    <Tabs defaultValue="releases"><TabsList variant="line"><TabsTrigger value="releases">{t("helm.releases")}</TabsTrigger><TabsTrigger value="catalog">{t("helm.catalog")}</TabsTrigger>{admin&&<TabsTrigger value="repositories">{t("helm.repositories")}</TabsTrigger>}{admin&&<TabsTrigger value="automation">{t("helm.automation")}</TabsTrigger>}</TabsList>
+    <Tabs defaultValue="releases"><TabsList variant="line"><TabsTrigger value="releases">{t("helm.releases")}</TabsTrigger><TabsTrigger value="templates">{t("packageTemplates.title")}</TabsTrigger><TabsTrigger value="catalog">{t("helm.catalog")}</TabsTrigger>{admin&&<TabsTrigger value="repositories">{t("helm.repositories")}</TabsTrigger>}{admin&&<TabsTrigger value="automation">{t("helm.automation")}</TabsTrigger>}</TabsList>
       <TabsContent value="releases" className="space-y-4 pt-3">
         <div className="grid gap-3 sm:max-w-xl sm:grid-cols-2"><Input placeholder={t("common.namespace")} value={namespace} onChange={(e) => setNamespace(e.target.value)} /><Input placeholder={t("common.status")} value={state} onChange={(e) => setState(e.target.value)} /></div>
         {releases.isError ? (
@@ -42,10 +44,11 @@ export function PackageReleasesPage() {
           </div>
         )}
       </TabsContent>
+      <TabsContent value="templates" className="pt-3"><PackageTemplatesPanel onInstall={(item) => { setTemplate(item); setInstallOpen(true) }} /></TabsContent>
       <TabsContent value="catalog" className="pt-3"><CatalogPanel cluster={currentCluster} onInstall={(item)=>{setSelection(item);setInstallOpen(true)}}/></TabsContent>
       {admin&&<TabsContent value="repositories" className="pt-3"><RepositoriesPanel cluster={currentCluster}/></TabsContent>}
       {admin&&<TabsContent value="automation" className="pt-3"><AutomationPanel cluster={currentCluster}/></TabsContent>}
     </Tabs>
-    <PackageChangeDialog open={installOpen} onOpenChange={(open)=>{setInstallOpen(open);if(!open)setSelection(null)}} cluster={currentCluster} operation="install" namespace={namespace || "default"} source={selection?.source} chart={selection?.inspection.name} version={selection?.inspection.version} initialValues={selection?.inspection.values} onSuccess={(release) => { releases.refetch(); if (release) navigate(`/package-releases/${release.namespace}/${release.name}`) }} />
+    <PackageChangeDialog open={installOpen} onOpenChange={(open)=>{setInstallOpen(open);if(!open){setSelection(null);setTemplate(null)}}} cluster={currentCluster} operation="install" releaseName={template?.releaseName} namespace={namespace || "default"} source={template?.source ?? selection?.source} chart={selection?.inspection.name} version={selection?.inspection.version} initialValues={template?.values ?? selection?.inspection.values} onSuccess={() => { releases.refetch(); navigate("/operations") }} />
   </div>
 }

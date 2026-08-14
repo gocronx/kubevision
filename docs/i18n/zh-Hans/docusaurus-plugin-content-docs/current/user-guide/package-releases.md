@@ -4,12 +4,13 @@ title: Helm 软件包 Release
 
 # Helm 软件包 Release
 
-**软件包**工作区提供四个视图，用于管理所选集群中的 Helm 软件：
+**软件包**工作区提供五个视图，用于管理所选集群中的 Helm 软件：
 
 - **发布**：查看已安装 Release、Values、渲染资源和修订历史。
 - **Chart 目录**：搜索 Artifact Hub、浏览托管 Helm 仓库和上传 `.tgz` Chart。
 - **仓库**：由管理员管理 Helm 仓库和 OCI Registry。
 - **自动升级**：管理受安全控制的 Chart 升级策略。
+- **快捷部署**：为 PostgreSQL、Redis 和 gocron 提供受维护的参数预设。
 
 具备权限的用户可以安装 Chart、升级、回滚到早期修订或移除 Release。移除时必须
 输入准确名称，同一 Release 的并发修改会被拒绝。
@@ -92,3 +93,20 @@ Dry Run，输出发生变化时会拒绝操作。
 Helm 操作使用 KubeVision 持有的集群凭据，因此应严格控制安装和升级权限，并在
 每次操作前审查预览。Values 和 Secret 清单会在展示前脱敏，但敏感信息仍应通过
 Kubernetes Secret 或外部密钥系统管理。
+
+## 后台操作
+
+确认后，安装、升级、回滚、移除和已批准的 AI 变更会作为持久化后台操作执行。
+可打开**应用包 > 操作记录**查看进度、失败建议和请求 ID。刷新页面、重新登录或
+网络中断不会丢失执行状态。只有可安全重复的操作才提供重试；AI 变更必须先重新
+检查当前状态，再发起新的操作。
+
+包括 Values 在内的操作输入会使用 KubeVision 加密密钥加密，不会由 API 返回，
+也不会写入进度事件。已完成的操作记录保留 30 天。
+
+## 快捷部署模板
+
+PostgreSQL 和 Redis 模板使用公开的 Bitnami OCI Chart。凭据在浏览器中生成，并
+保留在确认后的 Helm Values 中。gocron 模板使用公开的 gocron Chart，自动生成
+应用密钥，并要求填写已有 PostgreSQL 服务的密码。模板只是可信 Chart 来源的便捷
+参数预设，不会复制第三方 Chart。确认前仍需检查渲染后的资源。

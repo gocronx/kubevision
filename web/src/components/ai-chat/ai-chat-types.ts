@@ -20,6 +20,7 @@ export interface ChatMessage {
 
   // Set when a mutation is awaiting the user's approval.
   pendingSessionId?: string
+  operationId?: string
   actionStatus?: ActionStatus
 }
 
