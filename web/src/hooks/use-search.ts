@@ -42,8 +42,7 @@ async function fetchSearch(
   if (types && types.length > 0) params.types = types.join(",")
   if (limit) params.limit = limit
 
-  const res = await api.get(`/clusters/${clusterID}/search`, { params })
-  const data = res as unknown as SearchResponse
+  const data = await api.get<SearchResponse>(`/clusters/${clusterID}/search`, { params })
   return {
     results: data.results ?? [],
     total: data.total ?? 0,

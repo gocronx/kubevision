@@ -58,6 +58,8 @@ const TAIL_OPTIONS = [
   { label: "All lines",       value: "" },
 ]
 
+const MAX_RETAINED_LOG_LINES = 10_000
+
 export interface PodLogsProps {
   /** Numeric cluster DB id. */
   clusterId: string
@@ -147,10 +149,12 @@ export function PodLogs({
         const msg = JSON.parse(ev.data as string) as LogMsg
         switch (msg.type) {
           case "log":
-            setLines((prev) => [
-              ...prev,
-              { id: ++lineCounter, text: msg.data },
-            ])
+            setLines((prev) => {
+              const next = [...prev, { id: ++lineCounter, text: msg.data }]
+              return next.length > MAX_RETAINED_LOG_LINES
+                ? next.slice(next.length - MAX_RETAINED_LOG_LINES)
+                : next
+            })
             break
           case "error":
             setLines((prev) => [
@@ -191,19 +195,8 @@ export function PodLogs({
   // ---- Follow toggle --------------------------------------------------------
 
   const toggleFollow = useCallback(() => {
-    setFollow((prev) => {
-      const next = !prev
-      // When resuming follow, re-connect so the stream is live again.
-      if (next) {
-        // Short timeout to let state settle before reconnect.
-        setTimeout(() => connect(), 50)
-      } else {
-        disconnect()
-        setStatus("disconnected")
-      }
-      return next
-    })
-  }, [connect, disconnect])
+    setFollow((prev) => !prev)
+  }, [])
 
   // ---- Download logs --------------------------------------------------------
 

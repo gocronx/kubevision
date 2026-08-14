@@ -27,11 +27,10 @@ export function useBatchDelete(clusterID: string) {
 
   return useMutation<BatchResult[], Error, BatchDeleteItem[]>({
     mutationFn: async (items) => {
-      const res = await api.post(
+      return api.post<BatchResult[]>(
         `/clusters/${clusterID}/resources/batch-delete`,
         items
       )
-      return res as unknown as BatchResult[]
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resources", clusterID] })
@@ -44,11 +43,10 @@ export function useBatchRestart(clusterID: string) {
 
   return useMutation<BatchResult[], Error, BatchRestartItem[]>({
     mutationFn: async (items) => {
-      const res = await api.post(
+      return api.post<BatchResult[]>(
         `/clusters/${clusterID}/batch-restart`,
         items
       )
-      return res as unknown as BatchResult[]
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resources", clusterID] })

@@ -34,9 +34,8 @@ export function OAuthCallbackPage() {
     }
 
     api
-      .get(`/auth/oauth/${provider}/callback`, { params: { code, state } })
-      .then((res) => {
-        const data = res as unknown as OAuthCallbackResponse
+      .get<OAuthCallbackResponse>(`/auth/oauth/${provider}/callback`, { params: { code, state } })
+      .then((data) => {
         login(data.accessToken, data.user, data.refreshToken)
         navigate("/overview", { replace: true })
       })

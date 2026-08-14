@@ -16,7 +16,7 @@ export interface RegistryTagPage {
 export function useRegistryTags(image: string, enabled = true) {
   return useQuery({
     queryKey: ["registry-tags", image],
-    queryFn: () => api.get<never, RegistryTagPage>("/registry-tags", {
+    queryFn: () => api.get<RegistryTagPage>("/registry-tags", {
       params: { image, limit: 50 },
     }),
     enabled: enabled && image.trim().length > 0,

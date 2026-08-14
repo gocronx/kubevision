@@ -25,10 +25,9 @@ export function useTopology(clusterID: string, namespace: string, enabled = true
   return useQuery<TopologyData>({
     queryKey: ["topology", clusterID, namespace],
     queryFn: async () => {
-      const res = await api.get(
+      return api.get<TopologyData>(
         `/clusters/${clusterID}/namespaces/${namespace}/topology`
       )
-      return res as unknown as TopologyData
     },
     enabled: enabled && !!clusterID && !!namespace,
     refetchInterval: enabled ? 30000 : false,

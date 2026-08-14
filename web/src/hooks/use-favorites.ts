@@ -45,8 +45,7 @@ export function useFavorites() {
   return useQuery<Favorite[]>({
     queryKey: FAVORITES_QUERY_KEY,
     queryFn: async () => {
-      const res = await api.get("/favorites")
-      return (res as unknown as Favorite[]) ?? []
+      return (await api.get<Favorite[]>("/favorites")) ?? []
     },
   })
 }
@@ -60,8 +59,7 @@ export function useAddFavorite() {
 
   return useMutation<Favorite, Error, AddFavoritePayload>({
     mutationFn: async (payload) => {
-      const res = await api.post("/favorites", payload)
-      return res as unknown as Favorite
+      return api.post<Favorite>("/favorites", payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAVORITES_QUERY_KEY })
@@ -111,8 +109,7 @@ export function useToggleFavorite() {
 
   return useMutation<ToggleFavoriteResponse, Error, AddFavoritePayload>({
     mutationFn: async (payload) => {
-      const res = await api.post("/favorites/toggle", payload)
-      return res as unknown as ToggleFavoriteResponse
+      return api.post<ToggleFavoriteResponse>("/favorites/toggle", payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAVORITES_QUERY_KEY })
@@ -179,8 +176,7 @@ export function useCheckFavorite(params: CheckFavoriteParams, enabled = true) {
       if (params.namespace) {
         searchParams.set("namespace", params.namespace)
       }
-      const res = await api.get(`/favorites/check?${searchParams.toString()}`)
-      return res as unknown as CheckFavoriteResponse
+      return api.get<CheckFavoriteResponse>(`/favorites/check?${searchParams.toString()}`)
     },
     enabled: enabled && !!params.clusterId && !!params.resourceType && !!params.name,
   })

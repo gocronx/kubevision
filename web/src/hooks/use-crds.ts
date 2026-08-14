@@ -18,8 +18,7 @@ export function useCRDs() {
     queryKey: ["crds", currentCluster],
     queryFn: async () => {
       if (!currentCluster) return []
-      const res = await api.get(`/clusters/${currentCluster}/crds`)
-      return (res as unknown as CRDInfo[]) ?? []
+      return (await api.get<CRDInfo[]>(`/clusters/${currentCluster}/crds`)) ?? []
     },
     enabled: isClusterHealthy && !!currentCluster,
   })
@@ -30,8 +29,7 @@ export function useRefreshCRDs() {
   const queryClient = useQueryClient()
   return useMutation<CRDInfo[], Error>({
     mutationFn: async () => {
-      const res = await api.post(`/clusters/${currentCluster}/crds/refresh`)
-      return res as unknown as CRDInfo[]
+      return api.post<CRDInfo[]>(`/clusters/${currentCluster}/crds/refresh`)
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["crds", currentCluster], data)

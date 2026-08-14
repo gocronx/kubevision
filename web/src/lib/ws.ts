@@ -19,7 +19,7 @@ type EventHandler = (event: ResourceEvent) => void
  * - Send: {"action":"unsubscribe","topics":["cluster1:pods"]}
  * - Receive: ResourceEvent JSON per line
  */
-class WebSocketClient {
+export class WebSocketClient {
   private ws: WebSocket | null = null
   private url = ""
   private reconnectAttempts = 0
@@ -29,22 +29,27 @@ class WebSocketClient {
   private handlers = new Set<EventHandler>()
   private subscribedTopics = new Set<string>()
   private connected = false
+  private shouldReconnect = false
 
   connect(url: string) {
     this.url = url
+    this.shouldReconnect = true
+    this.reconnectAttempts = 0
+    this.clearReconnectTimer()
     this.doConnect()
   }
 
   private doConnect() {
-    if (this.ws) {
-      this.ws.close()
-    }
+    this.clearReconnectTimer()
+    this.closeSocket()
 
     const token = localStorage.getItem("token")
     const wsUrl = token ? `${this.url}?token=${token}` : this.url
-    this.ws = new WebSocket(wsUrl)
+    const socket = new WebSocket(wsUrl)
+    this.ws = socket
 
-    this.ws.onopen = () => {
+    socket.onopen = () => {
+      if (this.ws !== socket) return
       this.connected = true
       this.reconnectAttempts = 0
       this.startHeartbeat()
@@ -55,7 +60,8 @@ class WebSocketClient {
       }
     }
 
-    this.ws.onmessage = (event: MessageEvent) => {
+    socket.onmessage = (event: MessageEvent) => {
+      if (this.ws !== socket) return
       try {
         // Backend may batch multiple events separated by newlines.
         const lines = (event.data as string).split("\n")
@@ -69,14 +75,16 @@ class WebSocketClient {
       }
     }
 
-    this.ws.onclose = () => {
+    socket.onclose = () => {
+      if (this.ws !== socket) return
+      this.ws = null
       this.connected = false
       this.stopHeartbeat()
-      this.scheduleReconnect()
+      if (this.shouldReconnect) this.scheduleReconnect()
     }
 
-    this.ws.onerror = () => {
-      this.ws?.close()
+    socket.onerror = () => {
+      socket.close()
     }
   }
 
@@ -97,14 +105,35 @@ class WebSocketClient {
   }
 
   private scheduleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (!this.shouldReconnect || this.reconnectAttempts >= this.maxReconnectAttempts) {
       return
     }
+    this.clearReconnectTimer()
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
     this.reconnectAttempts++
     this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      if (!this.shouldReconnect) return
       this.doConnect()
     }, delay)
+  }
+
+  private clearReconnectTimer() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+  }
+
+  private closeSocket() {
+    if (!this.ws) return
+    const socket = this.ws
+    this.ws = null
+    socket.onopen = null
+    socket.onmessage = null
+    socket.onclose = null
+    socket.onerror = null
+    socket.close()
   }
 
   private sendSubscribe(topics: string[]) {
@@ -148,14 +177,11 @@ class WebSocketClient {
   }
 
   disconnect() {
+    this.shouldReconnect = false
     this.stopHeartbeat()
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = null
-    }
-    this.reconnectAttempts = this.maxReconnectAttempts
-    this.ws?.close()
-    this.ws = null
+    this.clearReconnectTimer()
+    this.reconnectAttempts = 0
+    this.closeSocket()
     this.connected = false
     this.subscribedTopics.clear()
     this.handlers.clear()

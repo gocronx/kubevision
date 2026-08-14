@@ -1,13 +1,12 @@
 import { useState, useMemo, useCallback } from "react"
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { ChevronRight, Copy, Check, Pencil, Trash2, Download } from "lucide-react"
+import { ChevronRight, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,6 @@ import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
 import { ResourceEvents } from "@/components/specialized/resource-events"
 import { PodTerminal } from "@/components/specialized/pod-terminal"
 import { PodLogs } from "@/components/specialized/pod-logs"
-import { PodResourceMetrics } from "@/components/specialized/pod-resource-metrics"
 import { ImageTagEditor } from "@/components/specialized/image-tag-editor"
 import { resourceUIConfig } from "@/config/resource-ui-config"
 import {
@@ -35,12 +33,17 @@ import {
 } from "@/hooks/use-resource"
 import { useCluster } from "@/hooks/use-cluster"
 import { useCheckFavorite } from "@/hooks/use-favorites"
-import { toYaml, getResourceStatus, formatAge } from "@/lib/k8s-utils"
+import { toYaml, getResourceStatus } from "@/lib/k8s-utils"
 import { prepareSecretForEditing } from "@/lib/secret-edit"
 import { toast } from "sonner"
 import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
 import { useAuth } from "@/stores/auth-store"
 import { canAccessAdmin } from "@/lib/permissions"
+import {
+  ResourceOverviewTab,
+  ResourceYamlTab,
+  type ResourceMetadata,
+} from "./resource-detail-tabs"
 
 export function ResourceDetailPage() {
   const { resource = "", name = "" } = useParams<{ resource: string; name: string }>()
@@ -63,7 +66,6 @@ export function ResourceDetailPage() {
     [clusters, currentCluster]
   )
 
-  const [copied, setCopied] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editJson, setEditJson] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -91,15 +93,7 @@ export function ResourceDetailPage() {
     isClusterHealthy && !!currentCluster && !!resource && !!name
   )
 
-  const metadata = data?.metadata as {
-    name?: string
-    namespace?: string
-    uid?: string
-    creationTimestamp?: string
-    labels?: Record<string, string>
-    annotations?: Record<string, string>
-    resourceVersion?: string
-  } | undefined
+  const metadata = data?.metadata as ResourceMetadata | undefined
 
   const yamlContent = useMemo(() => {
     if (!data) return ""
@@ -123,27 +117,6 @@ export function ResourceDetailPage() {
       ...(initContainers ?? []).map((c) => c.name),
     ]
   }, [data, resource])
-
-  const handleCopyYaml = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(yamlContent)
-      setCopied(true)
-      toast.success(t("resource.copiedToast"))
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error(t("resource.copyFailed"))
-    }
-  }, [yamlContent, t])
-
-  const handleDownloadYaml = useCallback(() => {
-    const blob = new Blob([yamlContent], { type: "text/yaml;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${namespace ? namespace + "-" : ""}${name}.yaml`
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [yamlContent, namespace, name])
 
   const handleEditOpen = useCallback(() => {
     if (!data) return
@@ -354,148 +327,19 @@ export function ResourceDetailPage() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="mt-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {resource === "pods" && (
-              <PodResourceMetrics
-                metrics={data.metrics as PodMetrics | undefined}
-                status={data.metricsStatus as string | undefined}
-              />
-            )}
-            {/* Metadata Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("resource.metadata")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid gap-3">
-                  <DetailRow label={t("common.name")} value={metadata?.name ?? "-"} />
-                  {namespace && (
-                    <DetailRow label={t("common.namespace")} value={namespace} />
-                  )}
-                  <DetailRow label={t("resource.uid")} value={metadata?.uid ?? "-"} mono />
-                  <DetailRow
-                    label={t("resource.created")}
-                    value={
-                      metadata?.creationTimestamp
-                        ? `${formatAge(metadata.creationTimestamp)} (${new Date(metadata.creationTimestamp).toLocaleString(undefined)})`
-                        : "-"
-                    }
-                  />
-                  <DetailRow
-                    label={t("resource.resourceVersion")}
-                    value={metadata?.resourceVersion ?? "-"}
-                    mono
-                  />
-                </dl>
-              </CardContent>
-            </Card>
-
-            {/* Labels Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("resource.labels")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {metadata?.labels && Object.keys(metadata.labels).length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(metadata.labels).map(([key, value]) => (
-                      <Badge
-                        key={key}
-                        variant="secondary"
-                        className="font-mono text-xs"
-                      >
-                        {key}={String(value)}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{t("resource.noLabels")}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Annotations Card */}
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base">{t("resource.annotations")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {metadata?.annotations &&
-                Object.keys(metadata.annotations).length > 0 ? (
-                  <dl className="grid gap-2">
-                    {Object.entries(metadata.annotations).map(([key, value]) => (
-                      <div key={key} className="grid gap-1">
-                        <dt className="font-mono text-xs text-muted-foreground break-all">
-                          {key}
-                        </dt>
-                        <dd className="text-sm break-all">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {t("resource.noAnnotations")}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Status Card - show raw status object */}
-            {!!data.status && (
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-base">{t("common.status")}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="max-h-[300px]">
-                    <pre className="rounded-md bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
-                      {toYaml(data.status)}
-                    </pre>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <ResourceOverviewTab
+            resource={resource}
+            namespace={namespace}
+            metadata={metadata}
+            status={data.status}
+            metrics={data.metrics as PodMetrics | undefined}
+            metricsStatus={data.metricsStatus as string | undefined}
+          />
         </TabsContent>
 
         {/* YAML Tab */}
         <TabsContent value="yaml" className="mt-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{t("resource.resourceYaml")}</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadYaml}
-                  >
-                    <Download className="size-4" />
-                    {t("pod.download")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyYaml}
-                  >
-                    {copied ? (
-                      <Check className="size-4" />
-                    ) : (
-                      <Copy className="size-4" />
-                    )}
-                    {copied ? t("resource.copied") : t("resource.copy")}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="max-h-[600px]">
-                <pre className="rounded-md bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
-                  {yamlContent}
-                </pre>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <ResourceYamlTab content={yamlContent} name={name} namespace={namespace} />
         </TabsContent>
 
         {/* Events Tab */}
@@ -675,27 +519,6 @@ export function ResourceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function DetailRow({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string
-  value: string
-  mono?: boolean
-}) {
-  return (
-    <div className="grid grid-cols-[120px_1fr] gap-2">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd
-        className={`text-sm break-all ${mono ? "font-mono text-xs" : ""}`}
-      >
-        {value}
-      </dd>
     </div>
   )
 }

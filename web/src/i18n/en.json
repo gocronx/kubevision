@@ -482,6 +482,7 @@
     "bound_capacity": "Bound Capacity",
     "provisioned_capacity": "Provisioned Capacity",
     "volume_usage_unavailable": "Actual filesystem usage requires volume metrics.",
+    "total_count": "{{total}} total",
     "pod_status": "Pod Status Distribution",
     "running": "Running",
     "succeeded": "Succeeded",

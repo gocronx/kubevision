@@ -6,7 +6,7 @@
  *   Line N: JSON event   [elapsed_seconds, "o", "data"]
  */
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { Terminal } from "@xterm/xterm"
 import { FitAddon } from "@xterm/addon-fit"
 import "@xterm/xterm/css/xterm.css"
@@ -87,11 +87,16 @@ const SPEED_OPTIONS: { label: string; value: number }[] = [
 // Component
 // --------------------------------------------------------------------------
 
-export function TerminalPlayer({ recording, durationMs }: TerminalPlayerProps) {
+export function TerminalPlayer(props: TerminalPlayerProps) {
+  return <TerminalPlayerSession key={`${props.durationMs ?? 0}:${props.recording}`} {...props} />
+}
+
+function TerminalPlayerSession({ recording, durationMs }: TerminalPlayerProps) {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const playbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const restartRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const parsedRef = useRef<ParsedRecording | null>(null)
   const eventIndexRef = useRef(0)
   const playbackStartWallRef = useRef(0)
@@ -100,17 +105,31 @@ export function TerminalPlayer({ recording, durationMs }: TerminalPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [elapsed, setElapsed] = useState(0)
-  const [duration, setDuration] = useState(durationMs ? durationMs / 1000 : 0)
+  const parsed = useMemo(() => parseAsciinema(recording), [recording])
+  const duration = parsed.duration || (durationMs ? durationMs / 1000 : 0)
+
+  const clearPlaybackTimers = useCallback(() => {
+    if (playbackRef.current !== null) {
+      clearTimeout(playbackRef.current)
+      playbackRef.current = null
+    }
+    if (restartRef.current !== null) {
+      clearTimeout(restartRef.current)
+      restartRef.current = null
+    }
+  }, [])
+
+  const stopPlayback = useCallback(() => {
+    clearPlaybackTimers()
+    setIsPlaying(false)
+  }, [clearPlaybackTimers])
 
   // ---- xterm setup ----------------------------------------------------------
 
   useEffect(() => {
     if (!terminalRef.current) return
 
-    const parsed = parseAsciinema(recording)
     parsedRef.current = parsed
-    setDuration(parsed.duration || (durationMs ? durationMs / 1000 : 0))
-    setElapsed(0)
     eventIndexRef.current = 0
 
     const term = new Terminal({
@@ -131,53 +150,48 @@ export function TerminalPlayer({ recording, durationMs }: TerminalPlayerProps) {
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
     term.open(terminalRef.current)
-    requestAnimationFrame(() => fitAddon.fit())
+    const fitFrame = requestAnimationFrame(() => fitAddon.fit())
 
     xtermRef.current = term
     fitAddonRef.current = fitAddon
 
     return () => {
-      stopPlayback()
+      cancelAnimationFrame(fitFrame)
+      clearPlaybackTimers()
       term.dispose()
       xtermRef.current = null
       fitAddonRef.current = null
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recording])
+  }, [clearPlaybackTimers, parsed])
 
   // ---- Playback engine -------------------------------------------------------
 
-  const stopPlayback = useCallback(() => {
-    if (playbackRef.current !== null) {
-      clearTimeout(playbackRef.current)
-      playbackRef.current = null
+  const scheduleNextEvent = useCallback((currentSpeed: number, startWall: number, startElapsed: number) => {
+    const schedule = () => {
+      const parsed = parsedRef.current
+      const term = xtermRef.current
+      if (!parsed || !term) return
+
+      const idx = eventIndexRef.current
+      if (idx >= parsed.events.length) {
+        setIsPlaying(false)
+        return
+      }
+
+      const event = parsed.events[idx]
+      const wallNow = Date.now()
+      const recordingNow = startElapsed + ((wallNow - startWall) / 1000) * currentSpeed
+      const delay = Math.max(0, ((event.elapsed - recordingNow) / currentSpeed) * 1000)
+
+      playbackRef.current = setTimeout(() => {
+        if (!xtermRef.current) return
+        xtermRef.current.write(event.data)
+        setElapsed(event.elapsed)
+        eventIndexRef.current += 1
+        schedule()
+      }, delay)
     }
-    setIsPlaying(false)
-  }, [])
-
-  const scheduleNextEvent = useCallback((currentSpeed: number, currentElapsed: number, startWall: number, startElapsed: number) => {
-    const parsed = parsedRef.current
-    const term = xtermRef.current
-    if (!parsed || !term) return
-
-    const idx = eventIndexRef.current
-    if (idx >= parsed.events.length) {
-      setIsPlaying(false)
-      return
-    }
-
-    const event = parsed.events[idx]
-    const wallNow = Date.now()
-    const recordingNow = startElapsed + ((wallNow - startWall) / 1000) * currentSpeed
-    const delay = Math.max(0, ((event.elapsed - recordingNow) / currentSpeed) * 1000)
-
-    playbackRef.current = setTimeout(() => {
-      if (!xtermRef.current) return
-      xtermRef.current.write(event.data)
-      setElapsed(event.elapsed)
-      eventIndexRef.current += 1
-      scheduleNextEvent(currentSpeed, currentElapsed, startWall, startElapsed)
-    }, delay)
+    schedule()
   }, [])
 
   const startPlayback = useCallback(() => {
@@ -199,7 +213,7 @@ export function TerminalPlayer({ recording, durationMs }: TerminalPlayerProps) {
     }
     eventIndexRef.current = startIdx
     setIsPlaying(true)
-    scheduleNextEvent(speed, startElapsed, startWall, startElapsed)
+    scheduleNextEvent(speed, startWall, startElapsed)
   }, [elapsed, speed, scheduleNextEvent])
 
   const handlePlayPause = useCallback(() => {
@@ -217,12 +231,14 @@ export function TerminalPlayer({ recording, durationMs }: TerminalPlayerProps) {
     setElapsed(0)
     eventIndexRef.current = 0
 
-    setTimeout(() => {
+    restartRef.current = setTimeout(() => {
+      restartRef.current = null
+      if (!xtermRef.current) return
       const startWall = Date.now()
       playbackStartWallRef.current = startWall
       playbackStartElapsedRef.current = 0
       setIsPlaying(true)
-      scheduleNextEvent(speed, 0, startWall, 0)
+      scheduleNextEvent(speed, startWall, 0)
     }, 50)
   }, [stopPlayback, speed, scheduleNextEvent])
 

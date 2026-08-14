@@ -31,8 +31,7 @@ export function usePlugins() {
   return useQuery<PluginInfo[]>({
     queryKey: PLUGINS_QUERY_KEY,
     queryFn: async () => {
-      const res = await api.get("/plugins")
-      return (res as unknown as PluginInfo[]) ?? []
+      return (await api.get<PluginInfo[]>("/plugins")) ?? []
     },
   })
 }
@@ -41,8 +40,7 @@ export function usePluginConfig(name: string) {
   return useQuery<PluginConfig>({
     queryKey: ["plugin-config", name],
     queryFn: async () => {
-      const res = await api.get(`/plugins/${name}`)
-      return res as unknown as PluginConfig
+      return api.get<PluginConfig>(`/plugins/${name}`)
     },
     enabled: !!name,
   })
@@ -52,8 +50,7 @@ export function useConfigurePlugin() {
   const queryClient = useQueryClient()
   return useMutation<PluginConfig, Error, { name: string; payload: PluginConfigPayload }>({
     mutationFn: async ({ name, payload }) => {
-      const res = await api.put(`/plugins/${name}`, payload)
-      return res as unknown as PluginConfig
+      return api.put<PluginConfig>(`/plugins/${name}`, payload)
     },
     onSuccess: (_, { name }) => {
       queryClient.invalidateQueries({ queryKey: PLUGINS_QUERY_KEY })
@@ -66,8 +63,7 @@ export function useConfigurePlugin() {
 export function usePluginHealthCheck() {
   return useMutation<{ status: string }, Error, string>({
     mutationFn: async (name) => {
-      const res = await api.get(`/plugins/${name}/health`)
-      return res as unknown as { status: string }
+      return api.get<{ status: string }>(`/plugins/${name}/health`)
     },
     onSuccess: () => {
       toast.success("Plugin is healthy")
@@ -88,8 +84,7 @@ export function usePrometheusQuery(query: string) {
   return useQuery<PrometheusQueryResult>({
     queryKey: ["prometheus-query", query],
     queryFn: async () => {
-      const res = await api.get(`/plugins/prometheus/query`, { params: { query } })
-      return res as unknown as PrometheusQueryResult
+      return api.get<PrometheusQueryResult>(`/plugins/prometheus/query`, { params: { query } })
     },
     enabled: !!query,
   })
@@ -108,8 +103,7 @@ export function useGrafanaDashboards() {
   return useQuery<GrafanaDashboard[]>({
     queryKey: ["grafana-dashboards"],
     queryFn: async () => {
-      const res = await api.get("/plugins/grafana/dashboards")
-      return (res as unknown as GrafanaDashboard[]) ?? []
+      return (await api.get<GrafanaDashboard[]>("/plugins/grafana/dashboards")) ?? []
     },
   })
 }
@@ -131,8 +125,7 @@ export function useArgoCDApplications() {
   return useQuery<ArgoCDApplication[]>({
     queryKey: ["argocd-applications"],
     queryFn: async () => {
-      const res = await api.get("/plugins/argocd/applications")
-      return (res as unknown as ArgoCDApplication[]) ?? []
+      return (await api.get<ArgoCDApplication[]>("/plugins/argocd/applications")) ?? []
     },
   })
 }

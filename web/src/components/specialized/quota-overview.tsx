@@ -275,8 +275,7 @@ function useQuotaSummary(clusterID: string, namespace: string, enabled: boolean)
     queryFn: async () => {
       const params: Record<string, string> = {}
       if (namespace) params.namespace = namespace
-      const res = await api.get(`/clusters/${clusterID}/quota-summary`, { params })
-      return res as unknown as QuotaSummaryResponse
+      return api.get<QuotaSummaryResponse>(`/clusters/${clusterID}/quota-summary`, { params })
     },
     enabled: enabled && !!clusterID,
     refetchInterval: enabled ? 30_000 : false,

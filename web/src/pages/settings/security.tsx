@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { ShieldCheck, ShieldOff, Copy, CheckCircle, Loader2, Eye, EyeOff, Lock, KeyRound, Pencil, Trash2 } from "lucide-react"
@@ -47,12 +47,27 @@ function PublicKeyCredentialsCard() {
     try { setCredentials(await listPublicKeys()) } catch { setCredentials([]) }
   }
   useEffect(() => {
+    let active = true
     void getPublicKeyConfig()
       .then((config) => {
+        if (!active) return
         setEnabled(config.enabled)
-        if (config.enabled) void refresh()
+        if (config.enabled) {
+          void listPublicKeys()
+            .then((items) => {
+              if (active) setCredentials(items)
+            })
+            .catch(() => {
+              if (active) setCredentials([])
+            })
+        }
       })
-      .catch(() => setEnabled(false))
+      .catch(() => {
+        if (active) setEnabled(false)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   async function register() {
@@ -225,6 +240,11 @@ export function SecuritySettingsPage() {
   const [showDisableDialog, setShowDisableDialog] = useState(false)
   const [showSecret, setShowSecret] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const copiedTimerRef = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (copiedTimerRef.current !== null) window.clearTimeout(copiedTimerRef.current)
+  }, [])
 
   const setup2FA = useSetup2FA()
   const enable2FA = useEnable2FA()
@@ -276,7 +296,11 @@ export function SecuritySettingsPage() {
   async function copyToClipboard(text: string, index: number) {
     await navigator.clipboard.writeText(text)
     setCopiedIndex(index)
-    setTimeout(() => setCopiedIndex(null), 2000)
+    if (copiedTimerRef.current !== null) window.clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = window.setTimeout(() => {
+      copiedTimerRef.current = null
+      setCopiedIndex(null)
+    }, 2000)
   }
 
   async function copyAllCodes() {

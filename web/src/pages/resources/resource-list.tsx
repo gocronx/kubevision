@@ -10,15 +10,12 @@ import { useResourceList, useCreateResource, useDryRunCreate } from "@/hooks/use
 import { useCluster } from "@/hooks/use-cluster"
 import { useAuth } from "@/stores/auth-store"
 import { canMutateResources } from "@/lib/permissions"
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
+import { DataTable } from "@/components/shared/data-table"
 import { NamespaceSelector } from "@/components/shared/namespace-selector"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { ResourceActions } from "@/components/shared/resource-actions"
-import { FavoriteButton } from "@/components/shared/favorite-button"
 import { useFavorites } from "@/hooks/use-favorites"
 import { BatchActionBar } from "@/components/shared/batch-action-bar"
 import { KubectlHint } from "@/components/specialized/kubectl-hint"
-import { extractColumnValue, isNamespaced } from "@/lib/k8s-utils"
+import { isNamespaced } from "@/lib/k8s-utils"
 import {
   Dialog,
   DialogContent,
@@ -34,13 +31,11 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
 import { canAccessAdmin } from "@/lib/permissions"
-import type { PodMetrics } from "@/hooks/use-resource"
-import { formatBytes, formatCPU } from "@/lib/pod-metrics"
-
-type K8sItem = Record<string, unknown>
-
-const statusColumns = new Set(["status"])
-const ageColumns = new Set(["age", "lastSchedule"])
+import {
+  getResourceRowKey,
+  useResourceTableColumns,
+  type K8sItem,
+} from "./use-resource-table-columns"
 
 export function ResourceListPage() {
   const { resource = "" } = useParams<{ resource: string }>()
@@ -208,9 +203,7 @@ export function ResourceListPage() {
   const selectedItems = useMemo(() => {
     return items
       .filter((item) => {
-        const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
-        const key = meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
-        return selectedKeys.has(key)
+        return selectedKeys.has(getResourceRowKey(item))
       })
       .map((item) => {
         const meta = item.metadata as { name?: string; namespace?: string } | undefined
@@ -222,161 +215,25 @@ export function ResourceListPage() {
       })
   }, [items, selectedKeys, resource])
 
-  const handleToggleSelect = useCallback((key: string) => {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
-  }, [])
+  const handleEdit = useCallback((itemName: string, itemNamespace?: string) => {
+    const path = itemNamespace
+      ? `/${resource}/${itemName}?namespace=${itemNamespace}`
+      : `/${resource}/${itemName}`
+    navigate(path)
+  }, [navigate, resource])
 
-  const handleToggleAll = useCallback(() => {
-    setSelectedKeys((prev) => {
-      if (prev.size === items.length && items.length > 0) {
-        return new Set()
-      }
-      const allKeys = items.map((item) => {
-        const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
-        return meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
-      })
-      return new Set(allKeys)
-    })
-  }, [items])
-
-  const tableColumns: DataTableColumn<K8sItem>[] = useMemo(() => {
-    const cols = config?.columns ?? [
-      { key: "name", label: "Name", sortable: true },
-    ]
-
-    // Checkbox column for batch selection — only shown when the user can mutate resources.
-    const selectCol: DataTableColumn<K8sItem> = {
-      key: "_select",
-      label: "",
-      sortable: false,
-      className: "w-[40px]",
-      headerRender: () => (
-        <input
-          type="checkbox"
-          checked={selectedKeys.size > 0 && selectedKeys.size === items.length}
-          ref={(el) => {
-            if (el) el.indeterminate = selectedKeys.size > 0 && selectedKeys.size < items.length
-          }}
-          onChange={handleToggleAll}
-          className="size-4 rounded border-muted-foreground"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-      render: (item: K8sItem) => {
-        const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
-        const key = meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
-        return (
-          <input
-            type="checkbox"
-            checked={selectedKeys.has(key)}
-            onChange={() => handleToggleSelect(key)}
-            className="size-4 rounded border-muted-foreground"
-            onClick={(e) => e.stopPropagation()}
-          />
-        )
-      },
-    }
-
-    const leadingCols = userCanMutate ? [selectCol] : []
-
-    const mapped: DataTableColumn<K8sItem>[] = [...leadingCols, ...cols.map((col) => ({
-      key: col.key,
-      label: t(`resourceColumns.${col.key}`, { defaultValue: col.label }),
-      sortable: col.sortable,
-      render: (item: K8sItem) => {
-        const value = extractColumnValue(resource, item, col.key)
-
-        if (statusColumns.has(col.key)) {
-          return <StatusBadge status={value} />
-        }
-
-        if (ageColumns.has(col.key)) {
-          return (
-            <span className="text-muted-foreground">{value}</span>
-          )
-        }
-
-        if (resource === "pods" && (col.key === "cpu" || col.key === "memory")) {
-          const metrics = item.metrics as PodMetrics | undefined
-          if (!metrics) return <span className="text-muted-foreground">-</span>
-          return <span className="tabular-nums">{col.key === "cpu" ? formatCPU(metrics.cpuMilli) : formatBytes(metrics.memoryBytes)}</span>
-        }
-
-        if (col.key === "name") {
-          return (
-            <span className="font-medium text-foreground">{value}</span>
-          )
-        }
-
-        return <span>{value}</span>
-      },
-    }))]
-
-    // Add actions column
-    mapped.push({
-      key: "_actions",
-      label: t("common.actions"),
-      sortable: false,
-      className: "w-[90px]",
-      render: (item: K8sItem) => {
-        const meta = item.metadata as { name?: string; namespace?: string } | undefined
-        const spec = item.spec as { replicas?: number } | undefined
-        const itemName = meta?.name ?? ""
-        const itemNs = meta?.namespace ?? ""
-        const isFav = favorites.some(
-          (f) =>
-            String(f.clusterId) === String(currentCluster) &&
-            f.resourceType === resource &&
-            f.resourceName === itemName &&
-            (f.namespace ?? "") === itemNs
-        )
-        return (
-          <div className="flex items-center gap-0.5">
-            <FavoriteButton
-              clusterId={String(currentCluster)}
-              resourceType={resource}
-              resourceName={itemName}
-              namespace={itemNs}
-              isFavorited={isFav}
-              size="icon"
-              className="size-7"
-            />
-            <ResourceActions
-              clusterID={currentCluster}
-              resource={resource}
-              name={itemName}
-              namespace={meta?.namespace}
-              currentReplicas={spec?.replicas ?? 0}
-              readOnly={!userCanMutate}
-              onDeleted={handleRefresh}
-              onEdit={() => {
-                const ns = meta?.namespace
-                const path = ns
-                  ? `/${resource}/${itemName}?namespace=${ns}`
-                  : `/${resource}/${itemName}`
-                navigate(path)
-              }}
-            />
-          </div>
-        )
-      },
-    })
-
-    return mapped
-  }, [config, resource, t, currentCluster, handleRefresh, selectedKeys, items, handleToggleAll, handleToggleSelect, userCanMutate, favorites, navigate])
-
-  const getRowKey = useCallback((item: K8sItem) => {
-    const meta = item.metadata as { uid?: string; name?: string; namespace?: string } | undefined
-    return meta?.uid ?? `${meta?.namespace ?? ""}-${meta?.name ?? ""}`
-  }, [])
+  const tableColumns = useResourceTableColumns({
+    config,
+    resource,
+    clusterID: currentCluster,
+    items,
+    selectedKeys,
+    setSelectedKeys,
+    canMutate: userCanMutate,
+    favorites,
+    onRefresh: handleRefresh,
+    onEdit: handleEdit,
+  })
 
   if (selectedCluster?.status === "unhealthy") {
     return (
@@ -465,7 +322,7 @@ export function ResourceListPage() {
         isLoading={isLoading}
         emptyMessage={t("common.noData")}
         onRowClick={handleRowClick}
-        getRowKey={getRowKey}
+        getRowKey={getResourceRowKey}
         defaultSort={config?.defaultSort ?? null}
       />
 

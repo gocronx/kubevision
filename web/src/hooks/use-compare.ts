@@ -23,8 +23,7 @@ export interface CompareResult {
 export function useCompareResources() {
   return useMutation<CompareResult, Error, CompareRequest>({
     mutationFn: async (req) => {
-      const res = await api.post("/compare", req)
-      return res as unknown as CompareResult
+      return api.post<CompareResult>("/compare", req)
     },
   })
 }

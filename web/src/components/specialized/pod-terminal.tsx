@@ -71,11 +71,27 @@ export function PodTerminal({
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const inputSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
+  const connectRef = useRef<() => void>(() => {})
   const mountedRef = useRef(true)
+  const statusRef = useRef<ConnectionStatus>("disconnected")
 
   const [status, setStatus] = useState<ConnectionStatus>("disconnected")
   const [container, setContainer] = useState<string>(containers[0] ?? "")
   const [shell, setShell] = useState<string>("auto")
+
+  const updateStatus = useCallback((next: ConnectionStatus) => {
+    statusRef.current = next
+    setStatus(next)
+  }, [])
+
+  const sendResize = useCallback(() => {
+    const term = xtermRef.current
+    const ws = wsRef.current
+    if (!term || !ws || ws.readyState !== WebSocket.OPEN) return
+    const msg = { type: "resize", cols: term.cols, rows: term.rows }
+    ws.send(JSON.stringify(msg))
+  }, [])
 
   // ---- xterm setup ----------------------------------------------------------
 
@@ -118,7 +134,7 @@ export function PodTerminal({
     term.open(terminalRef.current)
 
     // Small delay lets the container render before fitting.
-    requestAnimationFrame(() => {
+    const fitFrame = requestAnimationFrame(() => {
       fitAddon.fit()
     })
 
@@ -126,6 +142,7 @@ export function PodTerminal({
     fitAddonRef.current = fitAddon
 
     return () => {
+      cancelAnimationFrame(fitFrame)
       term.dispose()
       xtermRef.current = null
       fitAddonRef.current = null
@@ -144,12 +161,13 @@ export function PodTerminal({
     })
     observer.observe(terminalRef.current)
     return () => observer.disconnect()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [sendResize])
 
   // ---- WebSocket connection --------------------------------------------------
 
   const disconnect = useCallback(() => {
+    inputSubscriptionRef.current?.dispose()
+    inputSubscriptionRef.current = null
     if (pingTimerRef.current) {
       clearInterval(pingTimerRef.current)
       pingTimerRef.current = null
@@ -166,19 +184,11 @@ export function PodTerminal({
     }
   }, [])
 
-  const sendResize = useCallback(() => {
-    const term = xtermRef.current
-    const ws = wsRef.current
-    if (!term || !ws || ws.readyState !== WebSocket.OPEN) return
-    const msg = { type: "resize", cols: term.cols, rows: term.rows }
-    ws.send(JSON.stringify(msg))
-  }, [])
-
   const connect = useCallback(() => {
     if (!mountedRef.current) return
     disconnect()
 
-    setStatus("connecting")
+    updateStatus("connecting")
     const term = xtermRef.current
     if (term) {
       term.reset()
@@ -197,14 +207,15 @@ export function PodTerminal({
     wsRef.current = ws
 
     ws.onopen = () => {
-      if (!mountedRef.current) return
-      setStatus("connected")
+      if (!mountedRef.current || wsRef.current !== ws) return
+      updateStatus("connected")
       // Send initial terminal size.
       sendResize()
 
       // Pipe user keystrokes → WebSocket.
       if (xtermRef.current) {
-        xtermRef.current.onData((data) => {
+        inputSubscriptionRef.current?.dispose()
+        inputSubscriptionRef.current = xtermRef.current.onData((data) => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "input", data }))
           }
@@ -229,11 +240,11 @@ export function PodTerminal({
             break
           case "error":
             xtermRef.current.writeln("\r\n\x1b[31mError: " + msg.data + "\x1b[0m")
-            setStatus("error")
+            updateStatus("error")
             break
           case "close":
             xtermRef.current.writeln("\r\n\x1b[90m--- Session ended ---\x1b[0m")
-            setStatus("disconnected")
+            updateStatus("disconnected")
             break
         }
       } catch {
@@ -243,33 +254,42 @@ export function PodTerminal({
 
     ws.onerror = () => {
       if (!mountedRef.current) return
-      setStatus("error")
+      updateStatus("error")
     }
 
     ws.onclose = () => {
-      if (!mountedRef.current) return
+      if (!mountedRef.current || wsRef.current !== ws) return
+      wsRef.current = null
+      inputSubscriptionRef.current?.dispose()
+      inputSubscriptionRef.current = null
       if (pingTimerRef.current) {
         clearInterval(pingTimerRef.current)
         pingTimerRef.current = null
       }
-      if (status !== "disconnected") {
-        setStatus("disconnected")
+      if (statusRef.current !== "disconnected") {
+        updateStatus("disconnected")
         if (xtermRef.current) {
           xtermRef.current.writeln("\r\n\x1b[90m--- Disconnected. Reconnecting in 3s... ---\x1b[0m")
         }
+        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
         reconnectTimerRef.current = setTimeout(() => {
-          if (mountedRef.current) connect()
+          reconnectTimerRef.current = null
+          if (mountedRef.current) connectRef.current()
         }, RECONNECT_DELAY_MS)
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId, namespace, podName, container, shell, disconnect, sendResize])
+  }, [clusterId, namespace, podName, container, shell, disconnect, sendResize, updateStatus])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   // Auto-connect on mount and whenever the key params change.
   useEffect(() => {
     mountedRef.current = true
-    connect()
+    const connectFrame = requestAnimationFrame(() => connect())
     return () => {
+      cancelAnimationFrame(connectFrame)
       mountedRef.current = false
       disconnect()
     }

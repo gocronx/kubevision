@@ -48,7 +48,7 @@ export function publicKeyAvailable(): boolean {
 
 export interface PublicKeyConfig { enabled: boolean }
 export async function getPublicKeyConfig() {
-  return api.get("/auth/public-key/config") as Promise<PublicKeyConfig>
+  return api.get<PublicKeyConfig>("/auth/public-key/config")
 }
 
 export async function publicKeyEnabled(): Promise<boolean> {
@@ -61,20 +61,20 @@ export async function publicKeyEnabled(): Promise<boolean> {
 }
 
 export async function registerPublicKey(label: string, password: string, totpCode: string) {
-  const ceremony = await api.post("/auth/public-key/register/begin", { label, password, totpCode }) as Ceremony<PublicKeyCredentialCreationOptionsJSON>
+  const ceremony = await api.post<Ceremony<PublicKeyCredentialCreationOptionsJSON>>("/auth/public-key/register/begin", { label, password, totpCode })
   const credential = await navigator.credentials.create({ publicKey: creationOptions(ceremony.options) }) as PublicKeyCredential | null
   if (!credential) throw new Error("Credential creation was cancelled")
   return api.post("/auth/public-key/register/finish", serialize(credential), { headers: { "X-WebAuthn-Ceremony": ceremony.ceremonyId } })
 }
 
-export async function loginWithPublicKey(username = "") {
-  const ceremony = await api.post("/auth/public-key/login/begin", { username }) as Ceremony<PublicKeyCredentialRequestOptionsJSON>
+export async function loginWithPublicKey<T = unknown>(username = "") {
+  const ceremony = await api.post<Ceremony<PublicKeyCredentialRequestOptionsJSON>>("/auth/public-key/login/begin", { username })
   const credential = await navigator.credentials.get({ publicKey: requestOptions(ceremony.options) }) as PublicKeyCredential | null
   if (!credential) throw new Error("Authentication was cancelled")
-  return api.post("/auth/public-key/login/finish", serialize(credential), { headers: { "X-WebAuthn-Ceremony": ceremony.ceremonyId } })
+  return api.post<T>("/auth/public-key/login/finish", serialize(credential), { headers: { "X-WebAuthn-Ceremony": ceremony.ceremonyId } })
 }
 
 export interface PublicKeyCredentialInfo { id: number; label: string; transports: string[]; createdAt: string; lastUsedAt?: string; backupEligible: boolean; backupState: boolean }
-export async function listPublicKeys() { return api.get("/auth/public-key/credentials") as Promise<PublicKeyCredentialInfo[]> }
+export async function listPublicKeys() { return api.get<PublicKeyCredentialInfo[]>("/auth/public-key/credentials") }
 export async function renamePublicKey(id: number, label: string) { return api.put(`/auth/public-key/credentials/${id}`, { label }) }
 export async function revokePublicKey(id: number) { return api.delete(`/auth/public-key/credentials/${id}`) }

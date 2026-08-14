@@ -21,8 +21,7 @@ export function useTemplates(category?: string) {
     queryFn: async () => {
       const params: Record<string, string> = {}
       if (category) params.category = category
-      const res = await api.get("/templates", { params })
-      return (res as unknown as Template[]) ?? []
+      return (await api.get<Template[]>("/templates", { params })) ?? []
     },
     staleTime: 60_000,
   })

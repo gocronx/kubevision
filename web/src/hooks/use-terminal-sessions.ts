@@ -38,8 +38,7 @@ export function useTerminalSessionPlay(id: number | null) {
   return useQuery<TerminalSessionPlayData>({
     queryKey: [...SESSIONS_QUERY_KEY, id, "play"],
     queryFn: async () => {
-      const res = await api.get(`/terminal-sessions/${id}/play`)
-      return res as unknown as TerminalSessionPlayData
+      return api.get<TerminalSessionPlayData>(`/terminal-sessions/${id}/play`)
     },
     enabled: id !== null,
   })

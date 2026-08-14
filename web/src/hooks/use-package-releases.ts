@@ -25,17 +25,17 @@ const base = (cluster: string) => `/clusters/${cluster}/package-releases`
 export function usePackageReleases(cluster: string, namespace: string, state: string) {
   return useQuery<PackageRelease[]>({
     queryKey: ["package-releases", cluster, namespace, state],
-    queryFn: async () => (await api.get(base(cluster), { params: { namespace: namespace || undefined, state: state || undefined, limit: 200 } })) as unknown as PackageRelease[],
+    queryFn: () => api.get<PackageRelease[]>(base(cluster), { params: { namespace: namespace || undefined, state: state || undefined, limit: 200 } }),
     enabled: !!cluster,
   })
 }
 
 export function usePackageRelease(cluster: string, namespace: string, name: string) {
-  return useQuery<PackageRelease>({ queryKey: ["package-release", cluster, namespace, name], queryFn: async () => (await api.get(`${base(cluster)}/${namespace}/${name}`)) as unknown as PackageRelease, enabled: !!cluster && !!namespace && !!name })
+  return useQuery<PackageRelease>({ queryKey: ["package-release", cluster, namespace, name], queryFn: () => api.get<PackageRelease>(`${base(cluster)}/${namespace}/${name}`), enabled: !!cluster && !!namespace && !!name })
 }
 
 export function usePackageHistory(cluster: string, namespace: string, name: string) {
-  return useQuery<PackageRelease[]>({ queryKey: ["package-history", cluster, namespace, name], queryFn: async () => (await api.get(`${base(cluster)}/${namespace}/${name}/history`)) as unknown as PackageRelease[], enabled: !!cluster && !!namespace && !!name })
+  return useQuery<PackageRelease[]>({ queryKey: ["package-history", cluster, namespace, name], queryFn: () => api.get<PackageRelease[]>(`${base(cluster)}/${namespace}/${name}/history`), enabled: !!cluster && !!namespace && !!name })
 }
 
 export function usePackageRollback(cluster: string, namespace: string, name: string) {
@@ -54,7 +54,7 @@ export function usePackageRemove(cluster: string, namespace: string, name: strin
 
 export function usePackageChange(cluster: string, operation: "install" | "upgrade") {
   const cache = useQueryClient()
-  const preview = useMutation({ mutationFn: (input: PackageChangeInput) => api.post(`${base(cluster)}/preview/${operation}`, input, { timeout: 600_000 }) as unknown as Promise<PackagePreview> })
+  const preview = useMutation({ mutationFn: (input: PackageChangeInput) => api.post<PackagePreview>(`${base(cluster)}/preview/${operation}`, input, { timeout: 600_000 }) })
   const execute = useMutation({ mutationFn: (input: PackageChangeInput) => api.post(`${base(cluster)}/${operation}`, input, { timeout: 600_000 }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
   return { preview, execute }
 }
@@ -62,7 +62,7 @@ export function usePackageChange(cluster: string, operation: "install" | "upgrad
 export function useCheckPackageUpgrade(cluster: string, namespace: string, name: string) {
   const cache = useQueryClient()
   return useMutation({
-    mutationFn: (source?: PackageChangeInput["source"]) => api.post(`${base(cluster)}/${namespace}/${name}/check-upgrade`, source ? { source } : {}, { timeout: 60_000 }) as unknown as Promise<PackageUpgradeCandidate>,
+    mutationFn: (source?: PackageChangeInput["source"]) => api.post<PackageUpgradeCandidate>(`${base(cluster)}/${namespace}/${name}/check-upgrade`, source ? { source } : {}, { timeout: 60_000 }),
     onSuccess: () => cache.invalidateQueries({ queryKey: ["package-release", cluster, namespace, name] }),
   })
 }

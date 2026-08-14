@@ -15,12 +15,12 @@ export interface ApiMeta {
   requestId?: string
 }
 
-const api = axios.create({
+const transport = axios.create({
   baseURL: "/api/v1",
   timeout: 15000,
 })
 
-api.interceptors.request.use((config) => {
+transport.interceptors.request.use((config) => {
   const token = localStorage.getItem("token")
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -35,20 +35,42 @@ api.interceptors.request.use((config) => {
 // ---------------------------------------------------------------------------
 
 let isRefreshing = false
-let refreshSubscribers: Array<(token: string) => void> = []
-
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb)
+type RefreshWaiter = {
+  resolve: (token: string) => void
+  reject: (error: Error) => void
 }
 
-function onTokenRefreshed(newToken: string) {
-  refreshSubscribers.forEach((cb) => cb(newToken))
-  refreshSubscribers = []
+export class TokenRefreshQueue {
+  private waiters: RefreshWaiter[] = []
+
+  wait(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.waiters.push({ resolve, reject })
+    })
+  }
+
+  resolve(token: string) {
+    const waiters = this.takeWaiters()
+    waiters.forEach((waiter) => waiter.resolve(token))
+  }
+
+  reject(error: Error) {
+    const waiters = this.takeWaiters()
+    waiters.forEach((waiter) => waiter.reject(error))
+  }
+
+  get size() {
+    return this.waiters.length
+  }
+
+  private takeWaiters() {
+    const waiters = this.waiters
+    this.waiters = []
+    return waiters
+  }
 }
 
-function onRefreshFailed() {
-  refreshSubscribers = []
-}
+const refreshQueue = new TokenRefreshQueue()
 
 async function tryRefreshToken(): Promise<string | null> {
   const refreshToken = localStorage.getItem("refreshToken")
@@ -56,7 +78,11 @@ async function tryRefreshToken(): Promise<string | null> {
 
   try {
     // Use a plain axios call to avoid triggering our own interceptors.
-    const res = await axios.post("/api/v1/auth/refresh", { refreshToken })
+    const res = await axios.post(
+      "/api/v1/auth/refresh",
+      { refreshToken },
+      { timeout: 15_000 },
+    )
     const body = res.data as ApiResponse<{
       accessToken: string
       refreshToken: string
@@ -85,7 +111,7 @@ function forceLogout() {
 
 // ---------------------------------------------------------------------------
 
-api.interceptors.response.use(
+transport.interceptors.response.use(
   (res) => {
     const body = res.data as ApiResponse
     if (body.code === 0) {
@@ -105,29 +131,29 @@ api.interceptors.response.use(
       }
       originalRequest._retry = true
 
+      const refreshedToken = refreshQueue.wait()
+
       if (!isRefreshing) {
         isRefreshing = true
         tryRefreshToken().then((newToken) => {
           isRefreshing = false
           if (newToken) {
-            onTokenRefreshed(newToken)
+            refreshQueue.resolve(newToken)
           } else {
-            onRefreshFailed()
+            refreshQueue.reject(new Error("Token refresh failed"))
             forceLogout()
           }
         })
       }
 
       // Queue this request to be retried after the refresh completes.
-      return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((newToken: string) => {
+      return refreshedToken.then((newToken) => {
           originalRequest.headers = {
             ...originalRequest.headers,
             Authorization: `Bearer ${newToken}`,
           }
           // Retry the original request with the new token.
-          api.request(originalRequest).then(resolve, reject)
-        })
+          return transport.request(originalRequest)
       })
     }
     // 40102 = 2FA required — return the full body so callers can handle it.
@@ -161,15 +187,32 @@ api.interceptors.response.use(
  * GET request that preserves the `meta` field from paginated API responses.
  * Use this for endpoints that return meta (total, stale, etc.).
  */
+export interface ApiClient {
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
+  post<T = unknown, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<T>
+  put<T = unknown, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<T>
+  patch<T = unknown, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<T>
+  request<T = unknown>(config: AxiosRequestConfig): Promise<T>
+}
+
+const api: ApiClient = {
+  get: <T,>(url: string, config?: AxiosRequestConfig) => transport.get<T, T>(url, config),
+  delete: <T,>(url: string, config?: AxiosRequestConfig) => transport.delete<T, T>(url, config),
+  post: <T, D>(url: string, data?: D, config?: AxiosRequestConfig<D>) => transport.post<T, T, D>(url, data, config),
+  put: <T, D>(url: string, data?: D, config?: AxiosRequestConfig<D>) => transport.put<T, T, D>(url, data, config),
+  patch: <T, D>(url: string, data?: D, config?: AxiosRequestConfig<D>) => transport.patch<T, T, D>(url, data, config),
+  request: <T,>(config: AxiosRequestConfig) => transport.request<T, T>(config),
+}
+
 export async function getWithMeta<T = unknown>(
   url: string,
-  config?: Parameters<typeof api.get>[1]
+  config?: AxiosRequestConfig,
 ): Promise<{ data: T; meta?: ApiMeta }> {
-  const res = await api.get(url, {
+  return api.get<{ data: T; meta?: ApiMeta }>(url, {
     ...config,
     __preserveMeta: true,
-  } as Parameters<typeof api.get>[1])
-  return res as unknown as { data: T; meta?: ApiMeta }
+  } as AxiosRequestConfig)
 }
 
 export default api

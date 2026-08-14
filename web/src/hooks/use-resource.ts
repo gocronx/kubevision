@@ -136,11 +136,10 @@ export function useResource(
       if (namespace) params.namespace = namespace
       if (includeMetrics) params.includeMetrics = "true"
 
-      const res = await api.get(
+      const item = await api.get<Record<string, unknown>>(
         `/clusters/${clusterID}/resources/${resource}/${name}`,
         { params }
       )
-      const item = res as unknown as Record<string, unknown>
       const raw = item.raw as Record<string, unknown> | undefined
       if (raw && typeof raw === "object") {
         return { ...raw, ...item }
@@ -163,12 +162,11 @@ export function useCreateResource(clusterID: string, resource: string) {
       const params: Record<string, string> = {}
       if (variables.namespace) params.namespace = variables.namespace
 
-      const res = await api.post(
+      return api.post<Record<string, unknown>>(
         `/clusters/${clusterID}/resources/${resource}`,
         variables.body,
         { params }
       )
-      return res as unknown as Record<string, unknown>
     },
     onSuccess: () => {
       // Delay to allow the informer cache to receive the watch event.
@@ -192,12 +190,11 @@ export function useUpdateResource(clusterID: string, resource: string) {
       const params: Record<string, string> = {}
       if (variables.namespace) params.namespace = variables.namespace
 
-      const res = await api.put(
+      return api.put<Record<string, unknown>>(
         `/clusters/${clusterID}/resources/${resource}/${variables.name}`,
         variables.body,
         { params }
       )
-      return res as unknown as Record<string, unknown>
     },
     onSuccess: (_data, variables) => {
       // Delay to allow the informer cache to receive the watch event.
@@ -254,12 +251,11 @@ export function useDryRunCreate(clusterID: string, resource: string) {
       const params: Record<string, string> = {}
       if (variables.namespace) params.namespace = variables.namespace
 
-      const res = await api.post(
+      return api.post<DryRunResult>(
         `/clusters/${clusterID}/resources/${resource}/dry-run`,
         variables.body,
         { params }
       )
-      return res as unknown as DryRunResult
     },
   })
 }
@@ -276,12 +272,11 @@ export function useDryRunUpdate(clusterID: string, resource: string) {
       const params: Record<string, string> = {}
       if (variables.namespace) params.namespace = variables.namespace
 
-      const res = await api.put(
+      return api.put<DryRunResult>(
         `/clusters/${clusterID}/resources/${resource}/${variables.name}/dry-run`,
         variables.body,
         { params }
       )
-      return res as unknown as DryRunResult
     },
   })
 }

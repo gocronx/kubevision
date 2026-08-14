@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   ClipboardList,
@@ -204,6 +204,11 @@ function APIKeysTab() {
   const [showKey, setShowKey] = useState(false)
   const [copied, setCopied] = useState(false)
   const [revokeTarget, setRevokeTarget] = useState<APIKey | null>(null)
+  const copiedTimerRef = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (copiedTimerRef.current !== null) window.clearTimeout(copiedTimerRef.current)
+  }, [])
 
   async function handleGenerate() {
     if (!newKeyName.trim()) return
@@ -231,7 +236,11 @@ function APIKeysTab() {
   function copyKey(text: string) {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      if (copiedTimerRef.current !== null) window.clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = window.setTimeout(() => {
+        copiedTimerRef.current = null
+        setCopied(false)
+      }, 2000)
     })
   }
 

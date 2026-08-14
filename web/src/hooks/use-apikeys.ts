@@ -28,8 +28,7 @@ export function useApiKeys() {
   return useQuery<APIKey[]>({
     queryKey: API_KEYS_QUERY_KEY,
     queryFn: async () => {
-      const res = await api.get("/api-keys")
-      return (res as unknown as APIKey[]) ?? []
+      return (await api.get<APIKey[]>("/api-keys")) ?? []
     },
   })
 }
@@ -43,8 +42,7 @@ export function useGenerateApiKey() {
 
   return useMutation<GeneratedAPIKey, Error, GenerateAPIKeyPayload>({
     mutationFn: async (payload) => {
-      const res = await api.post("/api-keys", payload)
-      return res as unknown as GeneratedAPIKey
+      return api.post<GeneratedAPIKey>("/api-keys", payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: API_KEYS_QUERY_KEY })

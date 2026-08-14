@@ -30,8 +30,7 @@ export function useWebhooks() {
   return useQuery<Webhook[]>({
     queryKey: WEBHOOKS_QUERY_KEY,
     queryFn: async () => {
-      const res = await api.get("/webhooks")
-      return (res as unknown as Webhook[]) ?? []
+      return (await api.get<Webhook[]>("/webhooks")) ?? []
     },
   })
 }
@@ -40,8 +39,7 @@ export function useCreateWebhook() {
   const queryClient = useQueryClient()
   return useMutation<Webhook, Error, WebhookPayload>({
     mutationFn: async (payload) => {
-      const res = await api.post("/webhooks", payload)
-      return res as unknown as Webhook
+      return api.post<Webhook>("/webhooks", payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY })
@@ -54,8 +52,7 @@ export function useUpdateWebhook() {
   const queryClient = useQueryClient()
   return useMutation<Webhook, Error, { id: number; payload: WebhookPayload }>({
     mutationFn: async ({ id, payload }) => {
-      const res = await api.put(`/webhooks/${id}`, payload)
-      return res as unknown as Webhook
+      return api.put<Webhook>(`/webhooks/${id}`, payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY })

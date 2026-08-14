@@ -35,7 +35,7 @@ export function DirectorySettingsPage() {
   const loadSettings = useCallback(async () => {
     if (!admin) return
     try {
-      const value = await api.get("/directory/config") as unknown as Partial<Settings>
+      const value = await api.get<Partial<Settings>>("/directory/config")
       setForm({
         ...defaults,
         ...value,
@@ -51,9 +51,8 @@ export function DirectorySettingsPage() {
   useEffect(() => {
     if (!admin) return
     let active = true
-    api.get("/directory/config").then((value) => {
+    api.get<Partial<Settings>>("/directory/config").then((settings) => {
       if (!active) return
-      const settings = value as unknown as Partial<Settings>
       setForm({
         ...defaults,
         ...settings,

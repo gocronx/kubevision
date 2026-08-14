@@ -134,10 +134,9 @@ export function useRolloutHistory(
   return useQuery<RolloutRevision[]>({
     queryKey: ["rollout-history", clusterID, namespace, name],
     queryFn: async () => {
-      const res = await api.get(
+      return (await api.get<RolloutRevision[]>(
         `${deploymentActionBase(clusterID, namespace, name)}/history`
-      )
-      return (res as unknown as RolloutRevision[]) ?? []
+      )) ?? []
     },
     enabled: enabled && !!clusterID && !!namespace && !!name,
     // History does not change frequently; a 30-second stale time avoids

@@ -58,6 +58,7 @@ export function LoginPage() {
   const [recoveryCode, setRecoveryCode] = useState("")
 
   const totpInputRef = useRef<HTMLInputElement>(null)
+  const autoSubmitTimerRef = useRef<number | null>(null)
 
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/overview"
 
@@ -71,9 +72,14 @@ export function LoginPage() {
   // Auto-focus the TOTP input when switching to the 2FA step
   useEffect(() => {
     if (step === "2fa") {
-      setTimeout(() => totpInputRef.current?.focus(), 50)
+      const timer = window.setTimeout(() => totpInputRef.current?.focus(), 50)
+      return () => window.clearTimeout(timer)
     }
   }, [step])
+
+  useEffect(() => () => {
+    if (autoSubmitTimerRef.current !== null) window.clearTimeout(autoSubmitTimerRef.current)
+  }, [])
 
   function handleLoginSuccess(data: LoginResponse) {
     login(data.accessToken, data.user, data.refreshToken)
@@ -87,7 +93,7 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const data = await api.post("/auth/login", { username, password, provider }) as LoginResponse
+      const data = await api.post<LoginResponse>("/auth/login", { username, password, provider })
       handleLoginSuccess(data)
     } catch (err: unknown) {
       // Check if it is the 2FA-required signal from the api interceptor
@@ -106,7 +112,7 @@ export function LoginPage() {
   async function handlePublicKeyLogin() {
     setLoading(true)
     try {
-      const data = await loginWithPublicKey(username.trim()) as unknown as LoginResponse
+      const data = await loginWithPublicKey<LoginResponse>(username.trim())
       handleLoginSuccess(data)
     } finally {
       setLoading(false)
@@ -129,10 +135,15 @@ export function LoginPage() {
   function handleTotpChange(e: ChangeEvent<HTMLInputElement>) {
     const value = e.target.value.replace(/\D/g, "").slice(0, 6)
     setTotpCode(value)
+    if (autoSubmitTimerRef.current !== null) {
+      window.clearTimeout(autoSubmitTimerRef.current)
+      autoSubmitTimerRef.current = null
+    }
     // Auto-submit when 6 digits are entered
     if (value.length === 6) {
       // Use a small timeout to let React update the state before reading it
-      setTimeout(async () => {
+      autoSubmitTimerRef.current = window.setTimeout(async () => {
+        autoSubmitTimerRef.current = null
         try {
           const data = await verify2FA.mutateAsync({ tempToken, code: value })
           handleLoginSuccess(data as LoginResponse)

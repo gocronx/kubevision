@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { Terminal, ChevronDown, ChevronRight, Copy, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -42,12 +42,21 @@ export function KubectlHint({
 
   const [open, setOpen] = useState(defaultOpen)
   const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (copiedTimerRef.current !== null) window.clearTimeout(copiedTimerRef.current)
+  }, [])
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(command)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      if (copiedTimerRef.current !== null) window.clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = window.setTimeout(() => {
+        copiedTimerRef.current = null
+        setCopied(false)
+      }, 2000)
     } catch {
       // Clipboard API unavailable — silently ignore; the user can still
       // manually select and copy the displayed text.

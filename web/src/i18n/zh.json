@@ -482,6 +482,7 @@
     "bound_capacity": "已绑定容量",
     "provisioned_capacity": "已配置容量",
     "volume_usage_unavailable": "实际文件系统使用量需要卷指标支持。",
+    "total_count": "共 {{total}} 个",
     "pod_status": "Pod 状态分布",
     "running": "运行中",
     "succeeded": "已完成",

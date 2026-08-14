@@ -48,8 +48,7 @@ export function useUsers() {
   return useQuery<User[]>({
     queryKey: USERS_QUERY_KEY,
     queryFn: async () => {
-      const res = await api.get("/users")
-      return (res as unknown as User[]) ?? []
+      return (await api.get<User[]>("/users")) ?? []
     },
   })
 }
@@ -62,8 +61,7 @@ export function useUser(id: number) {
   return useQuery<User>({
     queryKey: [...USERS_QUERY_KEY, id],
     queryFn: async () => {
-      const res = await api.get(`/users/${id}`)
-      return res as unknown as User
+      return api.get<User>(`/users/${id}`)
     },
     enabled: id > 0,
   })
@@ -78,8 +76,7 @@ export function useCreateUser() {
 
   return useMutation<User, Error, CreateUserPayload>({
     mutationFn: async (payload) => {
-      const res = await api.post("/users", payload)
-      return res as unknown as User
+      return api.post<User>("/users", payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY })
@@ -96,8 +93,7 @@ export function useUpdateUser() {
 
   return useMutation<User, Error, { id: number; payload: UpdateUserPayload }>({
     mutationFn: async ({ id, payload }) => {
-      const res = await api.put(`/users/${id}`, payload)
-      return res as unknown as User
+      return api.put<User>(`/users/${id}`, payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY })
