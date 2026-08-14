@@ -6,7 +6,7 @@ deploymentStrategy:
   type: Recreate
 
 image:
-  repository: gocronx/kubevision
+  repository: ghcr.io/gocronx/kubevision
   pullPolicy: IfNotPresent
   tag: ""  # Defaults to .Chart.AppVersion
 

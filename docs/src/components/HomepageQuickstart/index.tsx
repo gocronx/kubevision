@@ -22,15 +22,14 @@ export default function HomepageQuickstart(): JSX.Element {
           <Tabs>
             <TabItem value="helm" label="Helm" default>
               <CodeBlock language="bash">
-                {`# Add the KubeVision Helm repository
-helm repo add kubevision https://kubevision.github.io/charts
-helm repo update
-
-# Install KubeVision
-helm install kubevision gocronx/kubevision
+                {`# Install KubeVision v0.2.0 from the public OCI registry
+helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \\
+  --version 0.2.0 \\
+  --namespace kubevision \\
+  --create-namespace
 
 # Temporarily access the dashboard from this machine
-kubectl port-forward svc/kubevision 8080:8080
+kubectl port-forward --namespace kubevision svc/kubevision 8080:8080
 open http://localhost:8080`}
               </CodeBlock>
             </TabItem>

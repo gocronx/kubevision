@@ -2,8 +2,8 @@ apiVersion: v2
 name: kubevision
 description: KubeVision - Modern Kubernetes Dashboard with multi-cluster support
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.2.0"
 keywords:
   - kubernetes
   - dashboard

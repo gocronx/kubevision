@@ -85,11 +85,14 @@ Full documentation is available at: **[kubevision-docs](https://kubevision-docs.
 The fastest way to deploy KubeVision in your cluster is via Helm:
 
 ```bash
-# 1. Install KubeVision
-helm install kubevision deploy/helm/kubevision
+# 1. Install KubeVision v0.2.0 from the public OCI registry
+helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
+  --namespace kubevision \
+  --create-namespace
 
 # 2. Temporarily access the dashboard from your local machine
-kubectl port-forward svc/kubevision 8080:8080
+kubectl port-forward --namespace kubevision svc/kubevision 8080:8080
 
 # 3. Open the web interface
 # http://localhost:8080

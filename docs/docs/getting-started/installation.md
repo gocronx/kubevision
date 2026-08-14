@@ -16,13 +16,14 @@ KubeVision can be deployed via Helm, Docker, or from source.
 ## Helm (Recommended)
 
 ```bash
-helm repo add kubevision https://kubevision.github.io/charts
-helm repo update
-
-helm install kubevision gocronx/kubevision \
+helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
   --namespace kubevision \
   --create-namespace
 ```
+
+The chart and application image are published by the GitHub Release workflow.
+Pin `--version` in production so upgrades happen only when explicitly requested.
 
 ### Custom Values
 
@@ -30,8 +31,8 @@ helm install kubevision gocronx/kubevision \
 # values.yaml
 replicaCount: 1
 image:
-  repository: gocronx/kubevision
-  tag: latest
+  repository: ghcr.io/gocronx/kubevision
+  tag: "0.2.0"
 
 service:
   type: ClusterIP
@@ -46,7 +47,11 @@ auth:
 ```
 
 ```bash
-helm install kubevision gocronx/kubevision -f values.yaml
+helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
+  --namespace kubevision \
+  --create-namespace \
+  -f values.yaml
 ```
 
 ## Accessing KubeVision
@@ -84,7 +89,8 @@ ingress:
 ```
 
 ```bash
-helm upgrade --install kubevision gocronx/kubevision \
+helm upgrade --install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
   --namespace kubevision \
   --create-namespace \
   -f production-values.yaml
@@ -99,7 +105,8 @@ RP ID and origin.
 If the cluster provides external load balancers, expose the Service directly:
 
 ```bash
-helm upgrade --install kubevision gocronx/kubevision \
+helm upgrade --install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
   --namespace kubevision \
   --create-namespace \
   --set service.type=LoadBalancer

@@ -16,13 +16,14 @@ KubeVision 支持通过 Helm、Docker 或从源码进行部署。
 ## Helm（推荐）
 
 ```bash
-helm repo add kubevision https://kubevision.github.io/charts
-helm repo update
-
-helm install kubevision gocronx/kubevision \
+helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
   --namespace kubevision \
   --create-namespace
 ```
+
+Chart 和应用镜像均由 GitHub Release 工作流发布。生产环境应固定 `--version`，
+确保只有在明确操作时才执行升级。
 
 ### 自定义配置值
 
@@ -30,8 +31,8 @@ helm install kubevision gocronx/kubevision \
 # values.yaml
 replicaCount: 1
 image:
-  repository: gocronx/kubevision
-  tag: latest
+  repository: ghcr.io/gocronx/kubevision
+  tag: "0.2.0"
 
 service:
   type: ClusterIP
@@ -46,7 +47,11 @@ auth:
 ```
 
 ```bash
-helm install kubevision gocronx/kubevision -f values.yaml
+helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
+  --namespace kubevision \
+  --create-namespace \
+  -f values.yaml
 ```
 
 ## 访问 KubeVision
@@ -84,7 +89,8 @@ ingress:
 ```
 
 ```bash
-helm upgrade --install kubevision gocronx/kubevision \
+helm upgrade --install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
   --namespace kubevision \
   --create-namespace \
   -f production-values.yaml
@@ -98,7 +104,8 @@ helm upgrade --install kubevision gocronx/kubevision \
 如果集群支持外部负载均衡器，也可以直接暴露 Service：
 
 ```bash
-helm upgrade --install kubevision gocronx/kubevision \
+helm upgrade --install kubevision oci://ghcr.io/gocronx/charts/kubevision \
+  --version 0.2.0 \
   --namespace kubevision \
   --create-namespace \
   --set service.type=LoadBalancer
