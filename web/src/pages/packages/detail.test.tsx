@@ -13,6 +13,7 @@ vi.mock("@/hooks/use-package-releases", () => ({
   usePackageHistory: () => ({ data: [], refetch: vi.fn() }),
   usePackageRollback: () => ({ mutate: vi.fn(), isPending: false }),
   usePackageRemove: () => ({ mutate: vi.fn(), isPending: false }),
+  useCheckPackageUpgrade: () => ({ mutate: vi.fn(), isPending: false }),
   usePackageChange: () => ({ preview: { mutate: vi.fn(), reset: vi.fn(), isPending: false }, execute: { mutate: vi.fn(), reset: vi.fn(), isPending: false } }),
 }))
 
@@ -36,4 +37,5 @@ it("links back to the package release list", () => {
   )
 
   expect(screen.getByRole("link", { name: "packages.backToList" })).toHaveAttribute("href", "/package-releases")
+  expect(screen.getByRole("button", { name: "packages.checkUpdates" })).toBeInTheDocument()
 })

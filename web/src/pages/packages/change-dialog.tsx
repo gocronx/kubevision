@@ -9,13 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; cluster: string; operation: "install" | "upgrade"; releaseName?: string; namespace?: string; chart?: string; version?: string; source?: PackageChangeInput["source"]; initialValues?: Record<string, unknown>; onSuccess?: () => void }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; cluster: string; operation: "install" | "upgrade"; releaseName?: string; namespace?: string; chart?: string; version?: string; source?: PackageChangeInput["source"]; initialValues?: Record<string, unknown>; autoPreview?: boolean; onSuccess?: () => void }
 
-export function PackageChangeDialog({ open, onOpenChange, cluster, operation, releaseName = "", namespace = "default", chart = "", version = "", source, initialValues, onSuccess }: Props) {
+export function PackageChangeDialog({ open, onOpenChange, cluster, operation, releaseName = "", namespace = "default", chart = "", version = "", source, initialValues, autoPreview = false, onSuccess }: Props) {
   const { t } = useTranslation(); const change = usePackageChange(cluster, operation)
   const [form, setForm] = useState({ releaseName, namespace, chart, repoUrl: "", version, values: "{}", createNamespace: false, wait: true, atomic: true })
   const [preview, setPreview] = useState<PackagePreview | null>(null)
-  useEffect(() => { if (open) { setForm({ releaseName, namespace, chart: source?.chart ?? chart, repoUrl: source?.repoUrl ?? "", version: source?.version ?? version, values: JSON.stringify(initialValues ?? {}, null, 2), createNamespace: false, wait: true, atomic: true }); setPreview(null); change.preview.reset(); change.execute.reset() } }, [open, releaseName, namespace, chart, version, source, initialValues]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { const nextForm = { releaseName, namespace, chart: source?.chart ?? chart, repoUrl: source?.repoUrl ?? "", version: source?.version ?? version, values: JSON.stringify(initialValues ?? {}, null, 2), createNamespace: false, wait: true, atomic: true }; setForm(nextForm); setPreview(null); change.preview.reset(); change.execute.reset(); if (autoPreview && source?.chart) change.preview.mutate({ releaseName: nextForm.releaseName.trim(), namespace: nextForm.namespace.trim(), source, values: initialValues ?? {}, createNamespace: false, wait: true, atomic: true, timeoutSeconds: 300 }, { onSuccess: setPreview }) } }, [open, releaseName, namespace, chart, version, source, initialValues, autoPreview]) // eslint-disable-line react-hooks/exhaustive-deps
   const set = (key: keyof typeof form, value: string | boolean) => { setForm((current) => ({ ...current, [key]: value })); setPreview(null) }
   const input = (): PackageChangeInput | null => {
     try {

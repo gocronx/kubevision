@@ -21,6 +21,11 @@ KubeVision 使用同一组集群级 CRUD 路由管理 Kubernetes 内置资源和
 命名空间（列表接口使用查询参数，资源清单使用 `metadata.namespace`）。资源名
 使用小写复数，例如 `pods`、`deployments` 或 CRD 的复数名。
 
+Pod 列表和详情请求可以增加 `includeMetrics=true`，返回当前 CPU、内存、容器级
+使用量、请求值和限制值。KubeVision 读取 `metrics.k8s.io/v1beta1`；如果 Metrics
+Server 不可用，资源请求仍会成功，并返回 `metricsStatus: "unavailable"`，但不
+包含 `metrics` 对象。
+
 ## Dry Run
 
 | 方法 | 路径 | 操作 |
@@ -65,6 +70,7 @@ KubeVision 使用同一组集群级 CRUD 路由管理 Kubernetes 内置资源和
 ## 相关文档
 
 - [资源增删改查](/docs/user-guide/resource-crud)
+- [Pod 指标](/docs/user-guide/pod-metrics)
 - [Dry Run](/docs/user-guide/dry-run)
 - [批量操作](/docs/user-guide/batch-actions)
 - [自定义资源](/docs/user-guide/custom-resources)

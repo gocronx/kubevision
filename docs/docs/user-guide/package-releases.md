@@ -57,6 +57,22 @@ redacted manifest. The one-time confirmation expires after ten minutes and is
 bound to the user, cluster, release, chart source, Values, operation, and rendered
 digest. Execution repeats the dry run and rejects changed output.
 
+### Check for updates
+
+KubeVision records the non-secret chart source after a successful install or
+upgrade. On the release detail page, select **Check for updates** to compare the
+installed chart with the newest stable semantic version in its indexed Helm
+repository. When an update exists, KubeVision opens the normal guarded upgrade
+flow with the chart and target version already filled in. An empty override
+object reuses the release's existing Helm Values, including stable secrets,
+without sending redacted values back to the cluster.
+
+Releases installed before source tracking ask for their chart name and repository
+URL once. KubeVision verifies the repository before associating it. OCI charts,
+direct archives, and temporary uploads do not provide portable version indexes,
+so they continue to use **Manual upgrade**. Update checks never skip preview or
+critical-risk confirmation.
+
 ## Automatic upgrades
 
 Administrators can bind an installed release to an enabled managed Helm

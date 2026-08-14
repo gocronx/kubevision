@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gocronx/kubevision/internal/kubernetes/cluster"
@@ -65,6 +66,24 @@ func TestClusterService_AddRejectsInvalidCredentials(t *testing.T) {
 	}
 	if len(repo.clusters) != 0 {
 		t.Fatalf("failed import persisted %d clusters", len(repo.clusters))
+	}
+}
+
+func TestClusterService_AddRejectsInClusterAuthOutsideKubernetes(t *testing.T) {
+	t.Setenv("KUBERNETES_SERVICE_HOST", "")
+	t.Setenv("KUBERNETES_SERVICE_PORT", "")
+	svc := newClusterServiceForAddTest(newMockClusterRepo())
+
+	_, err := svc.Add(context.Background(), &AddClusterRequest{
+		Name:     "local",
+		AuthType: "in-cluster",
+	})
+	bizErr, ok := err.(*errors.BizError)
+	if !ok || bizErr.Code != errors.CodeParamInvalid {
+		t.Fatalf("expected invalid parameter error, got %v", err)
+	}
+	if !strings.Contains(bizErr.Message, "use a kubeconfig for local development") {
+		t.Fatalf("unexpected error message: %q", bizErr.Message)
 	}
 }
 

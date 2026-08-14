@@ -233,6 +233,29 @@ func TestResourceHandler_List_Success(t *testing.T) {
 	assert.Equal(t, 0, resp.Code, "list should succeed")
 }
 
+func TestResourceHandler_List_MetricsUnavailableDoesNotFail(t *testing.T) {
+	k8sRepo := &fullStubK8sRepo{
+		listFn: func(_ context.Context, _, _, _ string, _ repository.ListOptions) (*repository.ResourceList, error) {
+			return &repository.ResourceList{Items: []repository.Resource{
+				{Name: "pod-1", Namespace: "default", Kind: "Pod"},
+			}, Total: 1}, nil
+		},
+	}
+	handler := setupResourceHandler(t, k8sRepo)
+	router := gin.New()
+	router.GET("/api/v1/clusters/:id/resources/:resource", handler.List)
+
+	w := performRequest(router, "GET", "/api/v1/clusters/1/resources/pods?namespace=default&includeMetrics=true", nil)
+
+	var resp authAPIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, 0, resp.Code)
+	var items []repository.Resource
+	require.NoError(t, json.Unmarshal(resp.Data, &items))
+	require.Len(t, items, 1)
+	require.Equal(t, "unavailable", items[0].MetricsStatus)
+}
+
 // ---------------------------------------------------------------------------
 // Get tests
 // ---------------------------------------------------------------------------

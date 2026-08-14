@@ -54,6 +54,7 @@ Public login, OAuth, refresh, and public-key login routes are documented in
 | `POST` | `/clusters/:id/package-releases/preview/:operation` | Dry-run an `install` or `upgrade` and issue a confirmation token |
 | `POST` | `/clusters/:id/package-releases/install` | Install the exact request approved by a preview |
 | `POST` | `/clusters/:id/package-releases/upgrade` | Upgrade the exact request approved by a preview |
+| `POST` | `/clusters/:id/package-releases/:namespace/:name/check-upgrade` | Check the tracked or supplied indexed Helm source for a newer stable chart version |
 | `POST` | `/clusters/:id/package-releases/:namespace/:name/rollback` | Roll back |
 | `DELETE` | `/clusters/:id/package-releases/:namespace/:name` | Remove release |
 | `GET`, `POST` | `/clusters/:id/helm/repositories` | List or create managed Helm/OCI repositories |
@@ -71,6 +72,10 @@ Public login, OAuth, refresh, and public-key login routes are documented in
 Install and upgrade requests use the same body as preview and must include the
 one-time `confirmationToken` returned by that preview. The token is bound to the
 user, cluster, namespace, release, chart source, values, and operation.
+The upgrade-check body may be empty when the release has a tracked source, or
+may contain `{"source":{"chart":"name","repoUrl":"https://..."}}` to verify
+and associate an indexed repository with an older release. Release source
+records contain chart coordinates only, never repository credentials.
 Repository management, private credentials, and upgrade policies require an
 administrator. Chart uploads use `multipart/form-data`, expire after 30 minutes,
 and are bound to the uploading user.

@@ -155,6 +155,36 @@ func TestServicePreviewBindsOneTimeConfirmationToRequest(t *testing.T) {
 	require.Error(t, service.Install(context.Background(), actor, "cluster-a", opts), "token must be one-time")
 }
 
+func TestServiceTracksSourceAfterSuccessfulInstall(t *testing.T) {
+	db := newCatalogTestDB(t)
+	catalog := NewCatalog(db, "key")
+	adapter := &fakeAdapter{preview: &Preview{Digest: "abc"}}
+	service := NewService(adapter, fakeAuth{permissions: map[string]bool{PermissionInstall: true}}, nil).WithCatalog(catalog)
+	actor := Actor{UserID: 7, Role: "editor"}
+	opts := ChangeOptions{ReleaseName: "demo", Namespace: "default", Source: ChartSource{Chart: "demo", RepoURL: "https://charts.example", Version: "1.0.0"}}
+	preview, err := service.Preview(context.Background(), actor, "install", "local", opts)
+	require.NoError(t, err)
+	opts.ConfirmationToken = preview.ConfirmationToken
+	require.NoError(t, service.Install(context.Background(), actor, "local", opts))
+
+	stored, found, err := catalog.ReleaseSource(context.Background(), "local", "default", "demo")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "https://charts.example", stored.RepoURL)
+	require.Empty(t, stored.Version)
+}
+
+func TestServiceUpgradeCheckRequestsSourceForExistingRelease(t *testing.T) {
+	db := newCatalogTestDB(t)
+	adapter := &fakeAdapter{releases: []Release{{Name: "demo", Namespace: "default", Chart: "demo", ChartVersion: "1.0.0", Revision: 1}}}
+	service := NewService(adapter, fakeAuth{permissions: map[string]bool{PermissionUpgrade: true}}, nil).WithCatalog(NewCatalog(db, "key"))
+
+	candidate, err := service.CheckUpgrade(context.Background(), Actor{Role: "editor"}, "local", "default", "demo", nil)
+	require.NoError(t, err)
+	require.True(t, candidate.SourceRequired)
+	require.Equal(t, "1.0.0", candidate.CurrentVersion)
+}
+
 func TestServiceRejectsChangedRequestAfterPreview(t *testing.T) {
 	service := NewService(&fakeAdapter{}, fakeAuth{permissions: map[string]bool{PermissionUpgrade: true}}, nil)
 	actor := Actor{UserID: 9, Role: "editor"}

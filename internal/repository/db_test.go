@@ -77,6 +77,9 @@ func TestNewDB_CreatesDatabaseAndRunsMigrations(t *testing.T) {
 
 	err = db.Model(&model.HelmUpgradePolicy{}).Count(&count).Error
 	require.NoError(t, err, "helm_upgrade_policies table should exist after migration")
+
+	err = db.Model(&model.HelmReleaseSource{}).Count(&count).Error
+	require.NoError(t, err, "helm_release_sources table should exist after migration")
 }
 
 func TestPurgeDeletedClustersReleasesNames(t *testing.T) {

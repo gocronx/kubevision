@@ -24,6 +24,15 @@ type ChartSource struct {
 	AllowPrivateNetwork bool   `json:"-"`
 }
 
+type UpgradeCandidate struct {
+	SourceRequired bool        `json:"sourceRequired"`
+	Available      bool        `json:"available"`
+	CurrentVersion string      `json:"currentVersion"`
+	LatestVersion  string      `json:"latestVersion,omitempty"`
+	AppVersion     string      `json:"appVersion,omitempty"`
+	Source         ChartSource `json:"source,omitempty"`
+}
+
 type ChangeOptions struct {
 	ReleaseName       string                 `json:"releaseName" binding:"required"`
 	Namespace         string                 `json:"namespace" binding:"required"`
@@ -85,6 +94,7 @@ type Release struct {
 	Notes        string                 `json:"notes,omitempty"`
 	Values       map[string]interface{} `json:"values,omitempty"`
 	Resources    []ResourceRef          `json:"resources,omitempty"`
+	Source       *ChartSource           `json:"source,omitempty"`
 }
 
 type ListOptions struct {

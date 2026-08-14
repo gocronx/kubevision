@@ -56,6 +56,8 @@ export const resourceUIConfig: Record<string, ResourceUIConfig> = {
       { key: "name", label: "Name", sortable: true },
       { key: "namespace", label: "Namespace", sortable: true },
       { key: "status", label: "Status", sortable: true },
+      { key: "cpu", label: "CPU", sortable: false },
+      { key: "memory", label: "Memory", sortable: false },
       { key: "restarts", label: "Restarts", sortable: true },
       { key: "node", label: "Node", sortable: true },
       { key: "age", label: "Age", sortable: true },

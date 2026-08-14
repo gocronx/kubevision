@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 )
 
@@ -100,6 +101,7 @@ func (s *Service) Upgrade(ctx context.Context, actor Actor, cluster string, opts
 }
 
 func (s *Service) executeChange(ctx context.Context, actor Actor, operation, cluster string, opts ChangeOptions) error {
+	trackedSource := opts.Source
 	managedRepository := opts.Source.RepositoryID != 0
 	if managedRepository && !isAdmin(actor) {
 		return bizerr.ErrForbidden
@@ -130,12 +132,69 @@ func (s *Service) executeChange(ctx context.Context, actor Actor, operation, clu
 	}
 	opts.ExpectedDigest = grant.Digest
 	summary := fmt.Sprintf("chart=%s,version=%s,wait=%t,atomic=%t,timeout=%s", opts.Source.Chart, opts.Source.Version, opts.Wait, opts.Atomic, opts.Timeout)
-	return s.mutate(ctx, actor, operation, cluster, opts.Namespace, opts.ReleaseName, 0, summary, func() error {
+	err := s.mutate(ctx, actor, operation, cluster, opts.Namespace, opts.ReleaseName, 0, summary, func() error {
 		if operation == "install" {
 			return s.adapter.Install(ctx, cluster, opts)
 		}
 		return s.adapter.Upgrade(ctx, cluster, opts)
 	})
+	if err == nil && s.catalog != nil {
+		_ = s.catalog.SaveReleaseSource(ctx, cluster, opts.Namespace, opts.ReleaseName, trackedSource)
+	}
+	return err
+}
+
+func (s *Service) CheckUpgrade(ctx context.Context, actor Actor, cluster, namespace, name string, provided *ChartSource) (*UpgradeCandidate, error) {
+	if !s.auth.Allowed(ctx, actor, PermissionUpgrade, cluster, namespace) {
+		return nil, bizerr.ErrForbidden
+	}
+	if s.catalog == nil {
+		return nil, bizerr.New(bizerr.CodeInternal, "Helm catalog is unavailable")
+	}
+	release, err := s.adapter.Get(ctx, cluster, namespace, name, 0)
+	if err != nil {
+		return nil, mapAdapterError(err)
+	}
+	source := ChartSource{}
+	found := false
+	if provided != nil {
+		source = *provided
+		found = true
+	} else {
+		source, found, err = s.catalog.ReleaseSource(ctx, cluster, namespace, name)
+		if err != nil {
+			return nil, mapAdapterError(err)
+		}
+	}
+	result := &UpgradeCandidate{SourceRequired: !found, CurrentVersion: release.ChartVersion}
+	if !found {
+		return result, nil
+	}
+	source.Chart = strings.TrimSpace(source.Chart)
+	if source.Chart == "" || source.Chart != release.Chart {
+		return nil, bizerr.New(bizerr.CodeValidation, "chart source must match the installed release chart")
+	}
+	latest, err := s.catalog.LatestVersion(ctx, actor, source)
+	if err != nil {
+		return nil, mapAdapterError(err)
+	}
+	currentVersion, currentErr := semver.NewVersion(release.ChartVersion)
+	latestVersion, latestErr := semver.NewVersion(latest.Version)
+	if currentErr != nil || latestErr != nil {
+		return nil, bizerr.New(bizerr.CodeValidation, "installed and repository chart versions must use semantic versioning")
+	}
+	if provided != nil {
+		if err := s.catalog.SaveReleaseSource(ctx, cluster, namespace, name, source); err != nil {
+			return nil, mapAdapterError(err)
+		}
+	}
+	source.Version = latest.Version
+	result.SourceRequired = false
+	result.Available = latestVersion.GreaterThan(currentVersion)
+	result.LatestVersion = latest.Version
+	result.AppVersion = latest.AppVersion
+	result.Source = source
+	return result, nil
 }
 
 func changePermission(operation string) (string, error) {
@@ -228,6 +287,11 @@ func (s *Service) Get(ctx context.Context, actor Actor, cluster, namespace, name
 	if err != nil {
 		return nil, mapAdapterError(err)
 	}
+	if s.catalog != nil && revision == 0 {
+		if source, found, sourceErr := s.catalog.ReleaseSource(ctx, cluster, namespace, name); sourceErr == nil && found {
+			r.Source = &source
+		}
+	}
 	sanitizeRelease(r)
 	return r, nil
 }
@@ -285,9 +349,13 @@ func (s *Service) Remove(ctx context.Context, actor Actor, cluster, namespace, n
 	if opts.Timeout < time.Second || opts.Timeout > 30*time.Minute {
 		return bizerr.New(bizerr.CodeParamInvalid, "timeout must be between 1 second and 30 minutes")
 	}
-	return s.mutate(ctx, actor, "remove", cluster, namespace, name, 0,
+	err := s.mutate(ctx, actor, "remove", cluster, namespace, name, 0,
 		fmt.Sprintf("keepHistory=%t,wait=%t,timeout=%s", opts.KeepHistory, opts.Wait, opts.Timeout),
 		func() error { return s.adapter.Remove(ctx, cluster, namespace, name, opts) })
+	if err == nil && s.catalog != nil {
+		_ = s.catalog.DeleteReleaseSource(ctx, cluster, namespace, name)
+	}
+	return err
 }
 
 func (s *Service) mutate(ctx context.Context, actor Actor, action, cluster, namespace, name string, revision int, summary string, fn func() error) (err error) {

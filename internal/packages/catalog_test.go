@@ -13,14 +13,50 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/repo"
+	"sigs.k8s.io/yaml"
 )
 
 func newCatalogTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.HelmRepository{}, &model.HelmUpgradePolicy{}))
+	require.NoError(t, db.AutoMigrate(&model.HelmRepository{}, &model.HelmUpgradePolicy{}, &model.HelmReleaseSource{}))
 	return db
+}
+
+func TestCatalogStoresOnlyNonSecretReleaseSource(t *testing.T) {
+	catalog := NewCatalog(newCatalogTestDB(t), "key")
+	source := ChartSource{Chart: "demo", RepoURL: "https://charts.example/", Username: "alice", Password: "secret", Version: "1.2.3"}
+	require.NoError(t, catalog.SaveReleaseSource(context.Background(), "local", "default", "demo", source))
+
+	stored, found, err := catalog.ReleaseSource(context.Background(), "local", "default", "demo")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "demo", stored.Chart)
+	require.Equal(t, "https://charts.example", stored.RepoURL)
+	require.Empty(t, stored.Username)
+	require.Empty(t, stored.Password)
+	require.Empty(t, stored.Version)
+}
+
+func TestCatalogFindsLatestStableChartVersion(t *testing.T) {
+	var index repo.IndexFile
+	require.NoError(t, yaml.Unmarshal([]byte(`apiVersion: v1
+entries:
+  demo:
+    - version: 1.2.0
+      appVersion: 2.0.0
+    - version: 2.0.0-beta.1
+      appVersion: 3.0.0-beta.1
+    - version: 1.1.0
+      appVersion: 1.9.0
+`), &index))
+
+	latest, err := latestStableChartVersion(index, "demo")
+	require.NoError(t, err)
+	require.Equal(t, "1.2.0", latest.Version)
+	require.Equal(t, "2.0.0", latest.AppVersion)
 }
 
 func TestCatalogEncryptsRepositoryCredentials(t *testing.T) {

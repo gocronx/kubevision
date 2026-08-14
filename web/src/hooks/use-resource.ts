@@ -8,6 +8,29 @@ interface ResourceListOptions {
   fieldSelector?: string
   limit?: number
   enabled?: boolean
+  includeMetrics?: boolean
+}
+
+export interface ContainerMetrics {
+  name: string
+  cpuMilli: number
+  memoryBytes: number
+  cpuRequestMilli?: number
+  cpuLimitMilli?: number
+  memoryRequestBytes?: number
+  memoryLimitBytes?: number
+}
+
+export interface PodMetrics {
+  timestamp: string
+  window?: string
+  cpuMilli: number
+  memoryBytes: number
+  cpuRequestMilli?: number
+  cpuLimitMilli?: number
+  memoryRequestBytes?: number
+  memoryLimitBytes?: number
+  containers: ContainerMetrics[]
 }
 
 interface ResourceListResult {
@@ -61,16 +84,17 @@ export function useResourceList(
   resource: string,
   options: ResourceListOptions = {}
 ) {
-  const { namespace, labelSelector, fieldSelector, limit, enabled = true } = options
+  const { namespace, labelSelector, fieldSelector, limit, enabled = true, includeMetrics = false } = options
 
   return useQuery<ResourceListResult>({
-    queryKey: ["resources", clusterID, resource, namespace ?? "", labelSelector ?? "", fieldSelector ?? ""],
+    queryKey: ["resources", clusterID, resource, namespace ?? "", labelSelector ?? "", fieldSelector ?? "", includeMetrics],
     queryFn: async () => {
       const params: Record<string, string | number> = {}
       if (namespace) params.namespace = namespace
       if (labelSelector) params.labelSelector = labelSelector
       if (fieldSelector) params.fieldSelector = fieldSelector
       if (limit) params.limit = limit
+      if (includeMetrics) params.includeMetrics = "true"
 
       const res = await getWithMeta<Record<string, unknown>[]>(
         `/clusters/${clusterID}/resources/${resource}`,
@@ -90,6 +114,7 @@ export function useResourceList(
       return { items, meta: res.meta }
     },
     enabled: enabled && !!clusterID && !!resource,
+    refetchInterval: includeMetrics ? 15_000 : false,
   })
 }
 
@@ -101,13 +126,15 @@ export function useResource(
   resource: string,
   namespace: string,
   name: string,
-  enabled = true
+  enabled = true,
+  includeMetrics = false
 ) {
   return useQuery<Record<string, unknown>>({
-    queryKey: ["resource", clusterID, resource, namespace, name],
+    queryKey: ["resource", clusterID, resource, namespace, name, includeMetrics],
     queryFn: async () => {
       const params: Record<string, string> = {}
       if (namespace) params.namespace = namespace
+      if (includeMetrics) params.includeMetrics = "true"
 
       const res = await api.get(
         `/clusters/${clusterID}/resources/${resource}/${name}`,
@@ -121,6 +148,7 @@ export function useResource(
       return item
     },
     enabled: enabled && !!clusterID && !!resource && !!name,
+    refetchInterval: includeMetrics ? 15_000 : false,
   })
 }
 

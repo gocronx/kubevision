@@ -23,6 +23,7 @@ import { DryRunDialog } from "@/components/specialized/dry-run-dialog"
 import { ResourceEvents } from "@/components/specialized/resource-events"
 import { PodTerminal } from "@/components/specialized/pod-terminal"
 import { PodLogs } from "@/components/specialized/pod-logs"
+import { PodResourceMetrics } from "@/components/specialized/pod-resource-metrics"
 import { ImageTagEditor } from "@/components/specialized/image-tag-editor"
 import { resourceUIConfig } from "@/config/resource-ui-config"
 import {
@@ -30,6 +31,7 @@ import {
   useUpdateResource,
   useDeleteResource,
   useDryRunUpdate,
+  type PodMetrics,
 } from "@/hooks/use-resource"
 import { useCluster } from "@/hooks/use-cluster"
 import { useCheckFavorite } from "@/hooks/use-favorites"
@@ -57,7 +59,7 @@ export function ResourceDetailPage() {
 
   // Resolve the human-readable cluster name for the --context flag.
   const clusterContext = useMemo(
-    () => clusters.find((c) => c.id === currentCluster)?.name,
+    () => clusters.find((c) => String(c.id) === String(currentCluster))?.name,
     [clusters, currentCluster]
   )
 
@@ -77,7 +79,8 @@ export function ResourceDetailPage() {
     resource,
     namespace,
     name,
-    isClusterHealthy
+    isClusterHealthy,
+    resource === "pods"
   )
   const updateMutation = useUpdateResource(currentCluster, resource)
   const deleteMutation = useDeleteResource(currentCluster, resource)
@@ -352,6 +355,12 @@ export function ResourceDetailPage() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2">
+            {resource === "pods" && (
+              <PodResourceMetrics
+                metrics={data.metrics as PodMetrics | undefined}
+                status={data.metricsStatus as string | undefined}
+              />
+            )}
             {/* Metadata Card */}
             <Card>
               <CardHeader>

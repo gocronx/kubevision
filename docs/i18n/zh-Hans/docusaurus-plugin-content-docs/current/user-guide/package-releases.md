@@ -45,6 +45,18 @@ Artifact Hub 搜索同时支持 HTTPS Helm 仓库和公开 OCI Chart 引用。�
 集群、Release、Chart 来源、Values、操作类型和渲染摘要。执行前会再次 Dry Run，
 输出发生变化时会拒绝操作。
 
+### 检查更新
+
+安装或升级成功后，KubeVision 会记录不含凭据的 Chart 来源。在 Release 详情页选择
+**检查更新**，即可将当前 Chart 与索引 Helm 仓库中的最新稳定语义版本进行比较。
+发现更新后，KubeVision 会自动填入 Chart 和目标版本并进入原有的受控升级流程。
+覆盖值保持为空对象时，Helm 会复用 Release 已有 Values，包括长期密钥，不会把页面
+中的脱敏值重新写回集群。
+
+启用来源记录之前安装的 Release 只需填写一次 Chart 名称和仓库地址，KubeVision
+验证仓库后会保存关联。OCI Chart、归档直链和临时上传不提供可移植的版本索引，仍
+使用**手动升级**。检查更新不会跳过预览或高风险确认。
+
 ## 自动升级
 
 管理员可以将已安装 Release 绑定到启用的托管 Helm 仓库，并配置语义化版本约束、

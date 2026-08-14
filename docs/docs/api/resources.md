@@ -23,6 +23,12 @@ list endpoint uses query parameters and manifests carry `metadata.namespace`).
 Use lowercase plural resource names such as `pods`, `deployments`, or the
 plural name of a CRD.
 
+For Pod list and detail requests, add `includeMetrics=true` to include current
+CPU and memory usage, per-container usage, requests, and limits. KubeVision
+reads `metrics.k8s.io/v1beta1`; when Metrics Server is unavailable, the resource
+request still succeeds and returns `metricsStatus: "unavailable"` without a
+`metrics` object.
+
 ## Dry Run
 
 | Method | Path | Operation |
@@ -69,6 +75,7 @@ The search endpoint is cluster-scoped; it is not `/api/v1/search`.
 ## Related
 
 - [Resource CRUD](/docs/user-guide/resource-crud)
+- [Pod Metrics](/docs/user-guide/pod-metrics)
 - [Dry Run](/docs/user-guide/dry-run)
 - [Batch Actions](/docs/user-guide/batch-actions)
 - [Custom Resources](/docs/user-guide/custom-resources)

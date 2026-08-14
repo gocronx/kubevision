@@ -5,7 +5,7 @@ export interface PackageResource { apiVersion: string; kind: string; namespace?:
 export interface PackageRelease {
   name: string; namespace: string; revision: number; status: string
   chart: string; chartVersion: string; appVersion: string; updatedAt: string
-  notes?: string; values?: Record<string, unknown>; resources?: PackageResource[]
+  notes?: string; values?: Record<string, unknown>; resources?: PackageResource[]; source?: PackageChangeInput["source"]
 }
 export interface PackageChangeInput {
   releaseName: string; namespace: string; source: { chart?: string; repoUrl?: string; version?: string; repositoryId?: number; uploadId?: string }
@@ -15,6 +15,9 @@ export interface PackagePreview {
   operation: "install" | "upgrade"; chart: string; chartVersion: string; appVersion?: string; digest: string
   manifest: string; resources: PackageResource[]; risks: Array<{ level: string; code: string; message: string; resource?: string }>
   canExecute: boolean; confirmationToken?: string; expiresAt?: string
+}
+export interface PackageUpgradeCandidate {
+  sourceRequired: boolean; available: boolean; currentVersion: string; latestVersion?: string; appVersion?: string; source?: PackageChangeInput["source"]
 }
 
 const base = (cluster: string) => `/clusters/${cluster}/package-releases`
@@ -54,4 +57,12 @@ export function usePackageChange(cluster: string, operation: "install" | "upgrad
   const preview = useMutation({ mutationFn: (input: PackageChangeInput) => api.post(`${base(cluster)}/preview/${operation}`, input, { timeout: 600_000 }) as unknown as Promise<PackagePreview> })
   const execute = useMutation({ mutationFn: (input: PackageChangeInput) => api.post(`${base(cluster)}/${operation}`, input, { timeout: 600_000 }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
   return { preview, execute }
+}
+
+export function useCheckPackageUpgrade(cluster: string, namespace: string, name: string) {
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: (source?: PackageChangeInput["source"]) => api.post(`${base(cluster)}/${namespace}/${name}/check-upgrade`, source ? { source } : {}, { timeout: 60_000 }) as unknown as Promise<PackageUpgradeCandidate>,
+    onSuccess: () => cache.invalidateQueries({ queryKey: ["package-release", cluster, namespace, name] }),
+  })
 }

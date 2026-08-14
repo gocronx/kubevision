@@ -5,6 +5,7 @@ import { AuthProvider } from "@/stores/auth-store"
 import { AppearanceProvider } from "@/components/appearance-provider"
 import { AppRoutes } from "@/routes"
 import { useWebSocket } from "@/hooks/use-websocket"
+import { ClusterProvider } from "@/hooks/use-cluster"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,13 +26,15 @@ export function App() {
   return (
     <AppearanceProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <WebSocketManager />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-          <Toaster position="top-right" />
-        </AuthProvider>
+        <ClusterProvider>
+          <AuthProvider>
+            <WebSocketManager />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+            <Toaster position="top-right" />
+          </AuthProvider>
+        </ClusterProvider>
       </QueryClientProvider>
     </AppearanceProvider>
   )

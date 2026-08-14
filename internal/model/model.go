@@ -278,3 +278,17 @@ type HelmUpgradePolicy struct {
 	LastCheckedAt     *time.Time `json:"lastCheckedAt,omitempty"`
 	NextCheckAt       *time.Time `gorm:"index" json:"nextCheckAt,omitempty"`
 }
+
+// HelmReleaseSource stores only the non-secret chart coordinates needed to
+// check and prepare upgrades for a release managed through KubeVision.
+type HelmReleaseSource struct {
+	ID            uint      `gorm:"primarykey" json:"id"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+	Cluster       string    `gorm:"size:64;uniqueIndex:idx_helm_release_source,priority:1;not null" json:"cluster"`
+	Namespace     string    `gorm:"size:64;uniqueIndex:idx_helm_release_source,priority:2;not null" json:"namespace"`
+	ReleaseName   string    `gorm:"size:128;uniqueIndex:idx_helm_release_source,priority:3;not null" json:"releaseName"`
+	Chart         string    `gorm:"size:2048;not null" json:"chart"`
+	RepositoryID  uint      `gorm:"index" json:"repositoryId,omitempty"`
+	RepositoryURL string    `gorm:"size:2048" json:"repositoryUrl,omitempty"`
+}

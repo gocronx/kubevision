@@ -60,11 +60,37 @@ type ResourceList struct {
 
 // Resource is a generic holder for a Kubernetes resource.
 type Resource struct {
-	APIVersion string                 `json:"apiVersion"`
-	Kind       string                 `json:"kind"`
-	Name       string                 `json:"name"`
-	Namespace  string                 `json:"namespace,omitempty"`
-	Raw        map[string]interface{} `json:"raw,omitempty"`
+	APIVersion    string                 `json:"apiVersion"`
+	Kind          string                 `json:"kind"`
+	Name          string                 `json:"name"`
+	Namespace     string                 `json:"namespace,omitempty"`
+	Raw           map[string]interface{} `json:"raw,omitempty"`
+	Metrics       *PodMetrics            `json:"metrics,omitempty"`
+	MetricsStatus string                 `json:"metricsStatus,omitempty"`
+}
+
+// PodMetrics contains current resource usage reported by metrics-server.
+type PodMetrics struct {
+	Timestamp          time.Time          `json:"timestamp"`
+	Window             string             `json:"window,omitempty"`
+	CPUMilli           int64              `json:"cpuMilli"`
+	MemoryBytes        int64              `json:"memoryBytes"`
+	CPURequestMilli    int64              `json:"cpuRequestMilli,omitempty"`
+	CPULimitMilli      int64              `json:"cpuLimitMilli,omitempty"`
+	MemoryRequestBytes int64              `json:"memoryRequestBytes,omitempty"`
+	MemoryLimitBytes   int64              `json:"memoryLimitBytes,omitempty"`
+	Containers         []ContainerMetrics `json:"containers"`
+}
+
+// ContainerMetrics contains current usage and configured resources for one container.
+type ContainerMetrics struct {
+	Name               string `json:"name"`
+	CPUMilli           int64  `json:"cpuMilli"`
+	MemoryBytes        int64  `json:"memoryBytes"`
+	CPURequestMilli    int64  `json:"cpuRequestMilli,omitempty"`
+	CPULimitMilli      int64  `json:"cpuLimitMilli,omitempty"`
+	MemoryRequestBytes int64  `json:"memoryRequestBytes,omitempty"`
+	MemoryLimitBytes   int64  `json:"memoryLimitBytes,omitempty"`
 }
 
 // ResourceRegistry manages which Kubernetes resource types are known and

@@ -29,9 +29,12 @@ If your kubeconfig has multiple contexts, all of them are imported automatically
 | Field | Description |
 |-------|-------------|
 | **Name** | Display name shown in the sidebar |
+| **Authentication Type** | Use **Kubeconfig** for local or external clusters; use **In-Cluster** only when KubeVision runs inside the target cluster |
 | **kubeconfig** | Paste the kubeconfig YAML or upload the file |
 
-4. Click **Save** — KubeVision validates connectivity before saving
+4. Click **Add Cluster** — KubeVision validates connectivity before saving
+
+For a local k3d cluster, export a standalone kubeconfig with `k3d kubeconfig get <cluster-name>` and paste or upload that output. Kubeconfig contents contain client credentials and should not be committed to source control.
 
 ## Removing a Cluster
 

@@ -29,9 +29,12 @@ KUBECONFIG=/path/to/kubeconfig ./kubevision
 | 字段 | 说明 |
 |-------|-------------|
 | **Name** | 显示在侧边栏中的名称 |
+| **认证方式** | 本地或外部集群使用 **Kubeconfig**；仅当 KubeVision 运行在目标集群内时使用 **In-Cluster** |
 | **kubeconfig** | 粘贴 kubeconfig YAML 内容或上传文件 |
 
-4. 点击 **Save** — KubeVision 会在保存前验证连通性
+4. 点击 **添加集群** — KubeVision 会在保存前验证连通性
+
+对于本地 k3d 集群，可运行 `k3d kubeconfig get <集群名称>` 导出独立 kubeconfig，然后粘贴或上传输出内容。kubeconfig 包含客户端凭据，不应提交到源代码仓库。
 
 ## 删除集群
 

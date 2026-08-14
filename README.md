@@ -71,10 +71,11 @@ Full documentation is available at: **[kubevision-docs](https://kubevision-docs.
 - **Real-time Sync**: Sub-second updates with zero polling via Informer to WebSocket Push architecture
 - **Multi-cluster**: Manage all your clusters efficiently from a single, unified dashboard
 - **Pod Terminal & Logs**: Integrated terminal emulator with fully recorded and replayable sessions
+- **Live Pod Metrics**: Current CPU and memory usage with per-container requests and limits from Metrics Server
 - **Resource Topology**: Visual ownership graph displaying real-time relationships for workloads
 - **Global Search**: `Cmd+K` fuzzy search across your entire cluster ecosystem
 - **Deployment Ops**: Seamlessly scale, restart, rollback, and preview diffs before applying changes
-- **Helm Workspace**: Search Artifact Hub, inspect or upload charts, manage encrypted private repositories, and run guarded installs, upgrades, rollbacks, and automatic update policies
+- **Helm Workspace**: Search Artifact Hub, inspect or upload charts, check releases for one-click updates, manage encrypted private repositories, and run guarded installs, upgrades, rollbacks, and automatic update policies
 - **Security & Access Control**: 5 built-in RBAC roles, TOTP 2FA, and asynchronous audit logging
 - **Fully Extensible**: 26+ built-in resources with CRDs that are auto-discovered at runtime
 - **Modern UI**: Full i18n localization and native dark mode support

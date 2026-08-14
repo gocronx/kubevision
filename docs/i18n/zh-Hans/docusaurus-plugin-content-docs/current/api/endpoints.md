@@ -53,6 +53,7 @@ Bearer Token 和对应 RBAC 权限。
 | `POST` | `/clusters/:id/package-releases/preview/:operation` | Dry Run `install` 或 `upgrade` 并签发确认令牌 |
 | `POST` | `/clusters/:id/package-releases/install` | 安装预检中确认的同一请求 |
 | `POST` | `/clusters/:id/package-releases/upgrade` | 升级预检中确认的同一请求 |
+| `POST` | `/clusters/:id/package-releases/:namespace/:name/check-upgrade` | 从已记录或本次提供的索引 Helm 来源检查新的稳定 Chart 版本 |
 | `POST` | `/clusters/:id/package-releases/:namespace/:name/rollback` | 回滚 |
 | `DELETE` | `/clusters/:id/package-releases/:namespace/:name` | 移除 Release |
 | `GET`, `POST` | `/clusters/:id/helm/repositories` | 列出或创建托管 Helm/OCI 仓库 |
@@ -70,6 +71,9 @@ Bearer Token 和对应 RBAC 权限。
 安装和升级请求与预检使用相同请求体，并且必须包含预检返回的一次性
 `confirmationToken`。令牌会绑定用户、集群、命名空间、Release、Chart 来源、
 Values 和操作类型。
+Release 已记录来源时，检查更新请求体可以为空；旧 Release 可以提交
+`{"source":{"chart":"name","repoUrl":"https://..."}}`，验证并关联带索引的
+Helm 仓库。Release 来源记录只保存 Chart 坐标，不保存仓库凭据。
 仓库管理、私有凭据和升级策略需要管理员权限。Chart 上传使用
 `multipart/form-data`，30 分钟后过期，并绑定上传用户。
 

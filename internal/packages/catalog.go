@@ -13,10 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gocronx/kubevision/internal/auth"
 	"github.com/gocronx/kubevision/internal/model"
 	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/repo"
@@ -87,6 +89,89 @@ func NewCatalog(db *gorm.DB, encryptKey string) *Catalog {
 	return &Catalog{db: db, encryptKey: encryptKey, uploads: make(map[string]uploadEntry), artifactClient: publicHTTPClient()}
 }
 
+func (c *Catalog) SaveReleaseSource(ctx context.Context, cluster, namespace, releaseName string, source ChartSource) error {
+	if source.UploadID != "" {
+		return nil
+	}
+	item := model.HelmReleaseSource{
+		Cluster:       cluster,
+		Namespace:     namespace,
+		ReleaseName:   releaseName,
+		Chart:         strings.TrimSpace(source.Chart),
+		RepositoryID:  source.RepositoryID,
+		RepositoryURL: strings.TrimRight(strings.TrimSpace(source.RepoURL), "/"),
+	}
+	if item.Chart == "" {
+		return bizerr.New(bizerr.CodeValidation, "chart source cannot be saved without a chart")
+	}
+	return c.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "cluster"}, {Name: "namespace"}, {Name: "release_name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"chart", "repository_id", "repository_url", "updated_at"}),
+	}).Create(&item).Error
+}
+
+func (c *Catalog) ReleaseSource(ctx context.Context, cluster, namespace, releaseName string) (ChartSource, bool, error) {
+	var item model.HelmReleaseSource
+	err := c.db.WithContext(ctx).Where("cluster = ? AND namespace = ? AND release_name = ?", cluster, namespace, releaseName).First(&item).Error
+	if err == gorm.ErrRecordNotFound {
+		return ChartSource{}, false, nil
+	}
+	if err != nil {
+		return ChartSource{}, false, err
+	}
+	return ChartSource{Chart: item.Chart, RepoURL: item.RepositoryURL, RepositoryID: item.RepositoryID}, true, nil
+}
+
+func (c *Catalog) DeleteReleaseSource(ctx context.Context, cluster, namespace, releaseName string) error {
+	return c.db.WithContext(ctx).Where("cluster = ? AND namespace = ? AND release_name = ?", cluster, namespace, releaseName).Delete(&model.HelmReleaseSource{}).Error
+}
+
+func (c *Catalog) LatestVersion(ctx context.Context, actor Actor, source ChartSource) (ChartSummary, error) {
+	if source.RepositoryID != 0 && !isAdmin(actor) {
+		return ChartSummary{}, bizerr.ErrForbidden
+	}
+	resolved, err := c.ResolveSource(ctx, actor, source)
+	if err != nil {
+		return ChartSummary{}, err
+	}
+	if resolved.RepoURL == "" {
+		return ChartSummary{}, bizerr.New(bizerr.CodeValidation, "one-click update checks require an indexed Helm repository")
+	}
+	data, err := fetchWithSource(ctx, strings.TrimRight(resolved.RepoURL, "/")+"/index.yaml", 10<<20, resolved)
+	if err != nil {
+		return ChartSummary{}, err
+	}
+	var index repo.IndexFile
+	if err := yaml.Unmarshal(data, &index); err != nil {
+		return ChartSummary{}, fmt.Errorf("parse repository index: %w", err)
+	}
+	return latestStableChartVersion(index, resolved.Chart)
+}
+
+func latestStableChartVersion(index repo.IndexFile, chartName string) (ChartSummary, error) {
+	versions := index.Entries[chartName]
+	if len(versions) == 0 {
+		return ChartSummary{}, bizerr.New(bizerr.CodeNotFound, "chart was not found in the configured repository")
+	}
+	type candidate struct {
+		version *semver.Version
+		entry   *repo.ChartVersion
+	}
+	candidates := make([]candidate, 0, len(versions))
+	for _, entry := range versions {
+		version, parseErr := semver.NewVersion(entry.Version)
+		if parseErr == nil && version.Prerelease() == "" {
+			candidates = append(candidates, candidate{version: version, entry: entry})
+		}
+	}
+	if len(candidates) == 0 {
+		return ChartSummary{}, bizerr.New(bizerr.CodeValidation, "repository has no stable semantic chart versions")
+	}
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i].version.GreaterThan(candidates[j].version) })
+	latest := candidates[0].entry
+	return ChartSummary{Name: chartName, Version: latest.Version, AppVersion: latest.AppVersion, Description: latest.Description}, nil
+}
+
 func (c *Catalog) ListRepositories(ctx context.Context, actor Actor) ([]model.HelmRepository, error) {
 	if !isAdmin(actor) {
 		return nil, bizerr.ErrForbidden
@@ -154,6 +239,9 @@ func (c *Catalog) DeleteRepository(ctx context.Context, actor Actor, id uint) er
 	}
 	return c.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("repository_id = ?", id).Delete(&model.HelmUpgradePolicy{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("repository_id = ?", id).Delete(&model.HelmReleaseSource{}).Error; err != nil {
 			return err
 		}
 		return tx.Delete(&model.HelmRepository{}, id).Error

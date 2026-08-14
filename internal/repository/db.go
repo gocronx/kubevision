@@ -123,6 +123,12 @@ var databaseMigrations = []databaseMigration{
 			return db.AutoMigrate(&model.HelmRepository{}, &model.HelmUpgradePolicy{})
 		},
 	},
+	{
+		version: 3,
+		up: func(db *gorm.DB) error {
+			return db.AutoMigrate(&model.HelmReleaseSource{})
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB, driver string) error {

@@ -129,6 +129,7 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				packages.POST("/preview/:operation", auditWrite, deps.PackageHandler.Preview)
 				packages.POST("/install", auditWrite, deps.PackageHandler.Install)
 				packages.POST("/upgrade", auditWrite, deps.PackageHandler.Upgrade)
+				packages.POST("/:namespace/:name/check-upgrade", auditWrite, deps.PackageHandler.CheckUpgrade)
 				packages.POST("/:namespace/:name/rollback", auditWrite, deps.PackageHandler.Rollback)
 				packages.DELETE("/:namespace/:name", auditWrite, deps.PackageHandler.Remove)
 

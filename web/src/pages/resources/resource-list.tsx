@@ -34,6 +34,8 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { ClusterUnavailable } from "@/components/shared/cluster-unavailable"
 import { canAccessAdmin } from "@/lib/permissions"
+import type { PodMetrics } from "@/hooks/use-resource"
+import { formatBytes, formatCPU } from "@/lib/pod-metrics"
 
 type K8sItem = Record<string, unknown>
 
@@ -57,7 +59,7 @@ export function ResourceListPage() {
 
   // Resolve the human-readable cluster name for the --context flag.
   const clusterContext = useMemo(
-    () => clusters.find((c) => c.id === currentCluster)?.name,
+    () => clusters.find((c) => String(c.id) === String(currentCluster))?.name,
     [clusters, currentCluster]
   )
 
@@ -88,6 +90,7 @@ export function ResourceListPage() {
   const { data, isLoading } = useResourceList(currentCluster, resource, {
     namespace: namespaced ? namespace : undefined,
     enabled: !!currentCluster && isClusterHealthy,
+    includeMetrics: resource === "pods",
   })
 
   const createMutation = useCreateResource(currentCluster, resource)
@@ -299,6 +302,12 @@ export function ResourceListPage() {
           return (
             <span className="text-muted-foreground">{value}</span>
           )
+        }
+
+        if (resource === "pods" && (col.key === "cpu" || col.key === "memory")) {
+          const metrics = item.metrics as PodMetrics | undefined
+          if (!metrics) return <span className="text-muted-foreground">-</span>
+          return <span className="tabular-nums">{col.key === "cpu" ? formatCPU(metrics.cpuMilli) : formatBytes(metrics.memoryBytes)}</span>
         }
 
         if (col.key === "name") {

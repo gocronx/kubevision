@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -70,6 +72,10 @@ func NewClusterService(
 func (s *ClusterService) Add(ctx context.Context, req *AddClusterRequest) (*ClusterResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return nil, bizerr.New(bizerr.CodeParamInvalid, "cluster name is required")
+	}
 
 	// Check name uniqueness.
 	if existing, _ := s.clusterRepo.GetByName(ctx, req.Name); existing != nil {
@@ -80,13 +86,16 @@ func (s *ClusterService) Add(ctx context.Context, req *AddClusterRequest) (*Clus
 	clusterID := req.Name // use name as cluster ID for simplicity
 	switch req.AuthType {
 	case "kubeconfig":
-		if req.Kubeconfig == "" {
+		if strings.TrimSpace(req.Kubeconfig) == "" {
 			return nil, bizerr.New(bizerr.CodeParamInvalid, "kubeconfig is required for auth type 'kubeconfig'")
 		}
 		if err := s.clusterManager.Add(clusterID, []byte(req.Kubeconfig)); err != nil {
 			return nil, bizerr.New(bizerr.CodeK8sUnavailable, fmt.Sprintf("failed to connect: %s", err.Error()))
 		}
 	case "in-cluster":
+		if os.Getenv("KUBERNETES_SERVICE_HOST") == "" || os.Getenv("KUBERNETES_SERVICE_PORT") == "" {
+			return nil, bizerr.New(bizerr.CodeParamInvalid, "in-cluster authentication is only available when KubeVision runs inside Kubernetes; use a kubeconfig for local development")
+		}
 		if err := s.clusterManager.AddInCluster(clusterID); err != nil {
 			return nil, bizerr.New(bizerr.CodeK8sUnavailable, fmt.Sprintf("failed to connect: %s", err.Error()))
 		}

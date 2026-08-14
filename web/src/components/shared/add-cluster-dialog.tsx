@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import api from "@/lib/api"
+import { preventSubmitWhileComposing } from "@/lib/form-events"
 import { readFileAsText } from "@/lib/read-file"
 
 interface AddClusterDialogProps {
@@ -22,23 +23,25 @@ interface AddClusterDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+type ClusterAuthType = "kubeconfig" | "in-cluster"
+
+interface AddClusterPayload {
+  name: string
+  authType: ClusterAuthType
+  kubeconfig?: string
+}
+
 export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState("")
-  const [authType, setAuthType] = useState<"kubeconfig" | "in-cluster">("kubeconfig")
+  const [authType, setAuthType] = useState<ClusterAuthType>("kubeconfig")
   const [kubeconfig, setKubeconfig] = useState("")
   const [kubeconfigFileName, setKubeconfigFileName] = useState("")
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      return api.post("/clusters", {
-        name,
-        authType,
-        kubeconfig: authType === "kubeconfig" ? kubeconfig : undefined,
-      })
-    },
+    mutationFn: (payload: AddClusterPayload) => api.post("/clusters", payload),
     onSuccess: () => {
       toast.success(t("cluster.add_success"))
       queryClient.invalidateQueries({ queryKey: ["clusters"] })
@@ -50,13 +53,37 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
     },
   })
 
-  function resetAndClose() {
+  useEffect(() => {
+    if (open) resetForm()
+  }, [open])
+
+  function resetForm() {
     setName("")
     setAuthType("kubeconfig")
     setKubeconfig("")
     setKubeconfigFileName("")
     if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  function resetAndClose() {
+    resetForm()
     onOpenChange(false)
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const trimmedName = name.trim()
+    if (!trimmedName) return
+    if (authType === "kubeconfig" && !kubeconfig.trim()) {
+      toast.error(t("cluster.kubeconfig_required"))
+      return
+    }
+
+    mutation.mutate({
+      name: trimmedName,
+      authType,
+      kubeconfig: authType === "kubeconfig" ? kubeconfig : undefined,
+    })
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -88,7 +115,11 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
           <DialogDescription>{t("cluster.add_desc")}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmit}
+          onKeyDownCapture={preventSubmitWhileComposing}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="cluster-name">
               {t("cluster.name")}
@@ -106,28 +137,33 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
 
           <fieldset className="space-y-1.5">
             <legend className="text-sm font-medium leading-none">{t("cluster.auth_type")}</legend>
-            <div className="flex gap-2" role="radiogroup" aria-label={t("cluster.auth_type")}>
-              <Button
-                type="button"
-                size="sm"
-                role="radio"
-                aria-checked={authType === "kubeconfig"}
-                variant={authType === "kubeconfig" ? "default" : "outline"}
-                onClick={() => setAuthType("kubeconfig")}
-              >
-                Kubeconfig
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                role="radio"
-                aria-checked={authType === "in-cluster"}
-                variant={authType === "in-cluster" ? "default" : "outline"}
-                onClick={() => setAuthType("in-cluster")}
-              >
-                In-Cluster
-              </Button>
+            <div className="grid grid-cols-2 gap-2">
+              {(["kubeconfig", "in-cluster"] as const).map((value) => (
+                <label
+                  key={value}
+                  className={`cursor-pointer rounded-md border px-3 py-2 text-sm transition-colors ${
+                    authType === value
+                      ? "border-primary bg-primary/5 text-foreground"
+                      : "border-input text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <input
+                      type="radio"
+                      name="cluster-auth-type"
+                      value={value}
+                      checked={authType === value}
+                      onChange={() => setAuthType(value)}
+                      className="size-4 accent-primary"
+                    />
+                    {value === "kubeconfig" ? "Kubeconfig" : "In-Cluster"}
+                  </span>
+                </label>
+              ))}
             </div>
+            {authType === "in-cluster" && (
+              <p className="text-xs text-muted-foreground">{t("cluster.in_cluster_hint")}</p>
+            )}
           </fieldset>
 
           {authType === "kubeconfig" && (
@@ -177,7 +213,7 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
               {t("common.cancel")}
             </Button>
             <Button
-              onClick={() => mutation.mutate()}
+              type="submit"
               disabled={
                 !name.trim() ||
                 (authType === "kubeconfig" && !kubeconfig.trim()) ||
@@ -188,7 +224,7 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
               {mutation.isPending ? t("common.loading") : t("cluster.add_submit")}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

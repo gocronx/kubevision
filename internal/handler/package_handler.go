@@ -43,6 +43,10 @@ type packageChangeRequest struct {
 	ConfirmationToken string                 `json:"confirmationToken"`
 }
 
+type packageUpgradeCheckRequest struct {
+	Source *packages.ChartSource `json:"source,omitempty"`
+}
+
 func (r packageChangeRequest) options() packages.ChangeOptions {
 	return packages.ChangeOptions{ReleaseName: r.ReleaseName, Namespace: r.Namespace, Source: r.Source, Values: r.Values, CreateNamespace: r.CreateNamespace, Wait: r.Wait, Atomic: r.Atomic, Timeout: time.Duration(r.TimeoutSeconds) * time.Second, ConfirmationToken: r.ConfirmationToken}
 }
@@ -126,6 +130,20 @@ func (h *PackageHandler) Upgrade(c *gin.Context) {
 		return
 	}
 	writePackageResult(c, nil, h.service.Upgrade(c.Request.Context(), packageActor(c), cluster, req.options()))
+}
+
+func (h *PackageHandler) CheckUpgrade(c *gin.Context) {
+	cluster, ok := h.cluster(c)
+	if !ok {
+		return
+	}
+	var req packageUpgradeCheckRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, bizerr.CodeParamInvalid, "invalid upgrade check request")
+		return
+	}
+	item, err := h.service.CheckUpgrade(c.Request.Context(), packageActor(c), cluster, c.Param("namespace"), c.Param("name"), req.Source)
+	writePackageResult(c, item, err)
 }
 
 func (h *PackageHandler) ListRepositories(c *gin.Context) {

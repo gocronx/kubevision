@@ -53,3 +53,13 @@ it("requires a new preview after execution fails", () => {
 
   expect(screen.getByRole("button", { name: "packages.preview" })).toBeInTheDocument()
 })
+
+it("automatically previews a trusted upgrade candidate", () => {
+  render(<PackageChangeDialog open autoPreview onOpenChange={vi.fn()} cluster="1" operation="upgrade" releaseName="demo" source={{ chart: "demo", repoUrl: "https://charts.example", version: "1.1.0" }} initialValues={{}} />)
+
+  expect(previewMutate).toHaveBeenCalledWith(expect.objectContaining({
+    releaseName: "demo",
+    source: { chart: "demo", repoUrl: "https://charts.example", version: "1.1.0" },
+    values: {},
+  }), expect.any(Object))
+})

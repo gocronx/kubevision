@@ -16,6 +16,7 @@ import (
 type ResourceHandler struct {
 	resourceService       *service.ResourceService
 	resourceActionService *service.ResourceActionService
+	podMetricsService     *service.PodMetricsService
 }
 
 // NewResourceHandler creates a new ResourceHandler with the given services.
@@ -26,6 +27,12 @@ func NewResourceHandler(resourceService *service.ResourceService, resourceAction
 	if len(resourceActionService) > 0 {
 		h.resourceActionService = resourceActionService[0]
 	}
+	return h
+}
+
+// WithPodMetrics enables optional metrics-server data on Pod responses.
+func (h *ResourceHandler) WithPodMetrics(metrics *service.PodMetricsService) *ResourceHandler {
+	h.podMetricsService = metrics
 	return h
 }
 
@@ -60,6 +67,13 @@ func (h *ResourceHandler) List(c *gin.Context) {
 		}
 		response.Error(c, bizerr.CodeInternal, "internal server error")
 		return
+	}
+	if resourceName == "pods" && c.Query("includeMetrics") == "true" {
+		items := make([]*repository.Resource, len(result.Items))
+		for i := range result.Items {
+			items[i] = &result.Items[i]
+		}
+		h.attachPodMetrics(c, clusterID, namespace, items)
 	}
 
 	response.SuccessWithMeta(c, result.Items, &response.Meta{
@@ -100,8 +114,37 @@ func (h *ResourceHandler) Get(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "internal server error")
 		return
 	}
+	if resourceName == "pods" && c.Query("includeMetrics") == "true" {
+		h.attachPodMetrics(c, clusterID, namespace, []*repository.Resource{res})
+	}
 
 	response.Success(c, res)
+}
+
+func (h *ResourceHandler) attachPodMetrics(c *gin.Context, clusterID uint, namespace string, resources []*repository.Resource) {
+	if h.podMetricsService == nil {
+		for _, item := range resources {
+			item.MetricsStatus = "unavailable"
+		}
+		return
+	}
+	metrics, err := h.podMetricsService.List(c.Request.Context(), clusterID, namespace)
+	if err != nil {
+		for _, item := range resources {
+			item.MetricsStatus = "unavailable"
+		}
+		return
+	}
+	for _, item := range resources {
+		usage, found := metrics[item.Namespace+"/"+item.Name]
+		if !found {
+			item.MetricsStatus = "pending"
+			continue
+		}
+		service.ApplyPodResourceAllocations(usage, item.Raw)
+		item.Metrics = usage
+		item.MetricsStatus = "available"
+	}
 }
 
 // Create handles POST /api/v1/clusters/:clusterID/resources/:resource.
