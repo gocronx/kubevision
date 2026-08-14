@@ -1,0 +1,7 @@
+# One vulnerability ID per line. Every exception must have a documented reason.
+#
+# Helm v3.21 imports x/crypto/openpgp for optional chart provenance handling.
+# GO-2026-5932 marks that entire package as unsafe by design and has no fixed
+# release. KubeVision does not enable ChartPathOptions.Verify, so retain the
+# scanner warning while allowing CI to proceed until Helm replaces OpenPGP.
+GO-2026-5932

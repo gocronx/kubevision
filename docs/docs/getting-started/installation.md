@@ -11,7 +11,7 @@ KubeVision can be deployed via Helm, Docker, or from source.
 
 - Kubernetes cluster (v1.24+)
 - `kubectl` configured with cluster access
-- For development: Go 1.23+, Node.js 18+, pnpm
+- For development: Go 1.26.6+, Node.js 22+, pnpm 10
 
 ## Helm (Recommended)
 

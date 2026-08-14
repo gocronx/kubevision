@@ -9,7 +9,7 @@ title: 技术栈
 
 | 技术 | 用途 |
 |------|------|
-| **Go 1.23** | 主要编程语言 |
+| **Go 1.26.6** | 主要编程语言 |
 | **Gin** | HTTP 框架 |
 | **GORM** | ORM（支持 SQLite 与 PostgreSQL） |
 | **client-go** | Kubernetes API 客户端与 Informer |

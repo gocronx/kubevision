@@ -62,7 +62,7 @@ unattended cluster controller.
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Go 1.23, Gin, GORM, client-go |
+| Backend | Go 1.26.6, Gin, GORM, client-go |
 | Frontend | React 19, TypeScript, Vite, shadcn/ui |
 | State | TanStack Query v5 |
 | Database | SQLite (dev) / PostgreSQL (prod) |

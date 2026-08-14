@@ -174,7 +174,7 @@ export function LoginPage() {
         <Card className="relative w-full max-w-sm">
           <LanguageToggle i18n={i18n} />
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
+            <h1 className="text-2xl font-semibold leading-none">{t("login.title")}</h1>
             <CardDescription>{t("login.description")}</CardDescription>
           </CardHeader>
           <CardContent>

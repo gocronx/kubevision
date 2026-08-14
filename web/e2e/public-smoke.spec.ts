@@ -1,6 +1,16 @@
 import { expect, test } from "@playwright/test"
 
 test.describe("public authentication surface", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/v1/auth/public-key/config", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ code: 0, message: "success", data: { enabled: false } }),
+      })
+    })
+  })
+
   test("shows the login form", async ({ page }) => {
     await page.goto("/login")
 

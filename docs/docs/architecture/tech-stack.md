@@ -9,7 +9,7 @@ title: Tech Stack
 
 | Technology | Purpose |
 |-----------|---------|
-| **Go 1.23** | Primary language |
+| **Go 1.26.6** | Primary language |
 | **Gin** | HTTP framework |
 | **GORM** | ORM (SQLite + PostgreSQL) |
 | **client-go** | Kubernetes API client & Informer |

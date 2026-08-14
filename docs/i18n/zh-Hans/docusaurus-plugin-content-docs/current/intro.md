@@ -58,7 +58,7 @@ KubeVision 不在后台运行自治修复，也不会绕过 Kubernetes 或应用
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Go 1.23、Gin、GORM、client-go |
+| 后端 | Go 1.26.6、Gin、GORM、client-go |
 | 前端 | React 19、TypeScript、Vite、shadcn/ui |
 | 状态管理 | TanStack Query v5 |
 | 数据库 | SQLite（开发环境）/ PostgreSQL（生产环境）|

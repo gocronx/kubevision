@@ -11,7 +11,7 @@ KubeVision 支持通过 Helm、Docker 或从源码进行部署。
 
 - Kubernetes 集群（v1.24+）
 - 已配置好集群访问权限的 `kubectl`
-- 开发环境：Go 1.23+、Node.js 18+、pnpm
+- 开发环境：Go 1.26.6+、Node.js 22+、pnpm 10
 
 ## Helm（推荐）
 
