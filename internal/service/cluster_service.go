@@ -335,7 +335,7 @@ func (s *ClusterService) refreshClusterHealth(ctx context.Context, c *model.Clus
 // the cluster name used by the K8s cluster manager.
 func (s *ClusterService) ResolveClusterID(ctx context.Context, clusterIDStr string) (string, error) {
 	// Try numeric ID first.
-	if id, err := strconv.ParseUint(clusterIDStr, 10, 64); err == nil {
+	if id, err := strconv.ParseUint(clusterIDStr, 10, strconv.IntSize); err == nil {
 		c, err := s.clusterRepo.GetByID(ctx, uint(id))
 		if err != nil {
 			return "", bizerr.New(bizerr.CodeNotFound, "cluster not found")

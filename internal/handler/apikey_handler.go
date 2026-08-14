@@ -80,7 +80,7 @@ func (h *APIKeyHandler) Revoke(c *gin.Context) {
 		return
 	}
 
-	keyID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	keyID, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid key id")
 		return

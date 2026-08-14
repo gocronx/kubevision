@@ -37,7 +37,7 @@ func (h *ClusterHandler) List(c *gin.Context) {
 
 // Get handles GET /api/v1/clusters/:id.
 func (h *ClusterHandler) Get(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid cluster id")
 		return
@@ -77,7 +77,7 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 
 // Delete handles DELETE /api/v1/clusters/:id.
 func (h *ClusterHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid cluster id")
 		return

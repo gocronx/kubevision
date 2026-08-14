@@ -120,7 +120,7 @@ func (h *WebhookHandler) Test(c *gin.Context) {
 // parseUintParam extracts a named URL parameter as a uint.
 func parseUintParam(c *gin.Context, paramName string) (uint, error) {
 	raw := c.Param(paramName)
-	id, err := strconv.ParseUint(raw, 10, 64)
+	id, err := strconv.ParseUint(raw, 10, strconv.IntSize)
 	if err != nil {
 		return 0, err
 	}

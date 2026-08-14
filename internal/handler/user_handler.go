@@ -38,7 +38,7 @@ func (h *UserHandler) List(c *gin.Context) {
 // Get handles GET /api/v1/users/:id.
 // Returns the detail of a single user (admin+).
 func (h *UserHandler) Get(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid user id")
 		return
@@ -93,7 +93,7 @@ type updateUserRequest struct {
 // Update handles PUT /api/v1/users/:id.
 // Updates a user's role and active status (admin+).
 func (h *UserHandler) Update(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid user id")
 		return
@@ -132,7 +132,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 // Delete handles DELETE /api/v1/users/:id.
 // Deletes a user (admin+).
 func (h *UserHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid user id")
 		return
@@ -163,7 +163,7 @@ type resetPasswordRequest struct {
 // ResetPassword handles PUT /api/v1/users/:id/reset-password.
 // Allows an admin to reset another user's password (admin+).
 func (h *UserHandler) ResetPassword(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid user id")
 		return

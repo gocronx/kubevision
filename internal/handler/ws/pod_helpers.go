@@ -75,7 +75,7 @@ func checkWSPermission(ctx context.Context, roleRepo repository.RoleRepo, role, 
 // resolveClusterName converts a raw cluster ID string (numeric DB ID or
 // cluster name) to the cluster name key used by the cluster.Manager.
 func resolveClusterName(ctx context.Context, clusterIDStr string, clusterRepo repository.ClusterRepo) (string, error) {
-	if id, err := strconv.ParseUint(clusterIDStr, 10, 64); err == nil {
+	if id, err := strconv.ParseUint(clusterIDStr, 10, strconv.IntSize); err == nil {
 		c, err := clusterRepo.GetByID(ctx, uint(id))
 		if err != nil {
 			return "", err

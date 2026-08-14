@@ -192,7 +192,7 @@ func (h *PackageHandler) UpdateRepository(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
 		return
@@ -210,7 +210,7 @@ func (h *PackageHandler) DeleteRepository(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
 		return
@@ -222,7 +222,7 @@ func (h *PackageHandler) TestRepository(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
 		return
@@ -234,7 +234,7 @@ func (h *PackageHandler) RepositoryCharts(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "Helm catalog is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("repositoryId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid repository ID")
 		return
@@ -310,7 +310,7 @@ func (h *PackageHandler) UpdateUpgradePolicy(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("policyId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("policyId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid policy ID")
 		return
@@ -328,7 +328,7 @@ func (h *PackageHandler) DeleteUpgradePolicy(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("policyId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("policyId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid policy ID")
 		return
@@ -340,7 +340,7 @@ func (h *PackageHandler) CheckUpgradePolicy(c *gin.Context) {
 		response.Error(c, bizerr.CodeInternal, "upgrade manager is unavailable")
 		return
 	}
-	id, err := strconv.ParseUint(c.Param("policyId"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("policyId"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid policy ID")
 		return

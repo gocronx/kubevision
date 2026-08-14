@@ -77,7 +77,7 @@ func (h *FavoriteHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid favorite id")
 		return

@@ -84,10 +84,21 @@ jobs:
       - name: Enforce CodeQL findings
         shell: bash
         run: |
-          finding_count="$(jq -s '[.[].runs[]?.results[]?] | length' codeql-results/*.sarif)"
+          findings_file="$(mktemp)"
+          trap 'rm -f "$findings_file"' EXIT
+          jq -s '[
+            .[] | .runs[]? as $run | $run.results[]? as $result |
+            {
+              rule: ($result.ruleId // $run.tool.driver.rules[$result.ruleIndex].id // "unknown"),
+              path: ($result.locations[0].physicalLocation.artifactLocation.uri // "unknown"),
+              line: ($result.locations[0].physicalLocation.region.startLine // 0),
+              message: $result.message.text
+            }
+          ]' codeql-results/*.sarif > "$findings_file"
+          finding_count="$(jq 'length' "$findings_file")"
           if [[ "$finding_count" -gt 0 ]]; then
             echo "::error::CodeQL reported $finding_count security finding(s)"
-            jq -r '.runs[]?.results[]? | "\(.ruleId): \(.message.text)"' codeql-results/*.sarif
+            jq -r '.[] | "\(.rule) \(.path):\(.line): \(.message)"' "$findings_file"
             exit 1
           fi
           echo "CodeQL reported no security findings"

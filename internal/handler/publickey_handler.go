@@ -80,7 +80,7 @@ func (h *PublicKeyHandler) List(c *gin.Context) {
 }
 
 func (h *PublicKeyHandler) Rename(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid credential id")
 		return
@@ -95,7 +95,7 @@ func (h *PublicKeyHandler) Rename(c *gin.Context) {
 }
 
 func (h *PublicKeyHandler) Revoke(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid credential id")
 		return
@@ -110,8 +110,8 @@ func (h *PublicKeyHandler) AdminRevoke(c *gin.Context) {
 		response.Error(c, bizerr.CodeForbidden, "forbidden")
 		return
 	}
-	userID, userErr := strconv.ParseUint(c.Param("id"), 10, 64)
-	credentialID, credentialErr := strconv.ParseUint(c.Param("credentialId"), 10, 64)
+	userID, userErr := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
+	credentialID, credentialErr := strconv.ParseUint(c.Param("credentialId"), 10, strconv.IntSize)
 	if userErr != nil || credentialErr != nil {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid user or credential id")
 		return

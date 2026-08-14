@@ -541,7 +541,7 @@ func (h *ResourceHandler) BatchRestart(c *gin.Context) {
 // parseClusterID extracts and validates the cluster :id URL parameter as a uint.
 func parseClusterID(c *gin.Context) (uint, error) {
 	raw := c.Param("id")
-	id, err := strconv.ParseUint(raw, 10, 64)
+	id, err := strconv.ParseUint(raw, 10, strconv.IntSize)
 	if err != nil {
 		return 0, err
 	}

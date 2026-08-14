@@ -63,9 +63,7 @@ func (s *APIKeyService) Generate(ctx context.Context, userID uint, name string, 
 	}
 	plainKey := apiKeyPrefix + hex.EncodeToString(raw)
 
-	// Compute SHA-256 hash for storage.
-	sum := sha256.Sum256([]byte(plainKey))
-	keyHash := hex.EncodeToString(sum[:])
+	keyHash := hashAPIKey(plainKey)
 
 	// KeyPrefix is the first 10 characters shown in listings.
 	keyPrefix := plainKey[:min(10, len(plainKey))]
@@ -95,8 +93,7 @@ func (s *APIKeyService) Generate(ctx context.Context, userID uint, name string, 
 // Validate looks up a plain-text API key, verifies it has not expired, and
 // returns the matching model.APIKey on success.
 func (s *APIKeyService) Validate(ctx context.Context, plainKey string) (*model.APIKey, error) {
-	sum := sha256.Sum256([]byte(plainKey))
-	keyHash := hex.EncodeToString(sum[:])
+	keyHash := hashAPIKey(plainKey)
 
 	record, err := s.repo.GetByKeyHash(ctx, keyHash)
 	if err != nil {
@@ -108,6 +105,13 @@ func (s *APIKeyService) Validate(ctx context.Context, plainKey string) (*model.A
 	}
 
 	return record, nil
+}
+
+func hashAPIKey(key string) string {
+	// API keys contain 256 bits from crypto/rand, so a fast one-way lookup hash
+	// is not vulnerable to the low-entropy password attacks covered by this rule.
+	sum := sha256.Sum256([]byte(key)) // codeql[go/weak-sensitive-data-hashing]
+	return hex.EncodeToString(sum[:])
 }
 
 // APIKeyInfo is a safe view of an API key that omits the hash.

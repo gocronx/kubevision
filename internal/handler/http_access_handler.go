@@ -97,7 +97,7 @@ func (h *HTTPAccessHandler) Serve(c *gin.Context) {
 		return
 	}
 
-	clusterID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	clusterID, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil || clusterID == 0 {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid cluster ID")
 		return
