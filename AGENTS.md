@@ -26,13 +26,21 @@ This repository is a Go backend with a React/Vite frontend, Docker image, and He
 
 ## Frontend Rules
 
+- Keep clear ownership boundaries: pages coordinate routing and feature state, hooks own data access and reusable stateful behavior, feature components own domain UI, and `components/ui` remains domain-agnostic.
+- Do not combine data fetching, complex mutations, dialogs, table definitions, and large rendering trees in one component. Extract a boundary when it makes ownership or lifecycle easier to verify.
+- Treat 400-500 lines as a review signal, not an automatic split rule. Split by cohesive responsibility and keep tightly coupled logic together.
+- Add new top-level pages through route-level lazy imports. Keep loading fallbacks compact and preserve existing route and authorization behavior.
+- Declare API response types at the request boundary, for example `api.get<Resource[]>()`. Do not use `any` or `as unknown as` in feature code; unavoidable browser or transport boundary conversions must stay localized and documented by their surrounding types.
+- Keep React Query keys stable and include every input that changes the response. Mutations must invalidate or update all affected caches without changing unrelated entries.
 - Every `useEffect` that creates a subscription, timer, WebSocket, event listener, terminal, observer, or async request must return cleanup.
 - Prefer `AbortController` or React Query cancellation-aware patterns for fetches that can outlive the component.
 - Store timer, socket, and xterm handles in refs, not state.
-- Clear reconnect timers before opening a replacement WebSocket.
+- Clear existing timers and detach stale handlers before opening replacement WebSockets or terminal sessions. Explicit disconnects and unmounts must never schedule reconnects.
+- Bound long-lived client data such as logs, events, terminal output, and chat history. Use pagination, a ring buffer, or an explicit retention limit instead of unbounded arrays.
 - Keep React state immutable. Do not mutate arrays or objects in place.
-- Avoid `any`. If an API shape is uncertain, model the narrow shape the component actually reads.
-- Keep components focused: data fetching in hooks or page-level components, rendering in leaf components.
+- Do not add an abstraction only to reduce line count. Shared hooks or components must remove real duplication, centralize a lifecycle, or establish a clear feature boundary.
+- Preserve behavior during component extraction: routes, query keys, request payloads, permissions, confirmation flows, and visible interaction semantics must remain unchanged unless the task explicitly extends them.
+- Add focused tests for lifecycle-sensitive behavior, including reconnect, explicit close, cancellation, timer cleanup, unmount, and bounded stream retention where applicable.
 
 ## Documentation Sync
 
@@ -49,7 +57,7 @@ Run the narrowest relevant checks, then expand based on risk:
 - Commit messages must be a single concise English line and follow Conventional Commits, for example `feat: add AI action safeguards`.
 
 - Backend only: `go test ./cmd/kubevision` or the touched package, then `go test -race ./...` for concurrency or shared-service changes.
-- Frontend only: `make frontend-lint`, `make frontend-typecheck`, and targeted `pnpm --dir web test`.
+- Frontend only: `make frontend-lint`, `make frontend-typecheck`, targeted `pnpm --dir web test`, and `pnpm --dir web build` for routing, dependency, or production-bundle changes.
 - Deployment/Helm: `make helm-validate`.
 - Documentation or user-facing feature changes: confirm the English and Chinese README/docs are synchronized, then run `make docs`.
 - Release or CI changes: inspect rendered workflow paths and run `make verify` locally when feasible.
