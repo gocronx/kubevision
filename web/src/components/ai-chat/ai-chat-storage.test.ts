@@ -19,6 +19,8 @@ describe("AI chat session storage", () => {
   it("restores multiple sessions and the active selection after refresh", () => {
     saveStoredChat(7, workspace)
 
+    expect(localStorage.getItem("kubevision:ai-chat:7")).toContain("Pod logs")
+    expect(sessionStorage.getItem("kubevision:ai-chat:7")).toBeNull()
     expect(loadStoredChat(7)).toEqual({
       activeSessionId: "second",
       sessions: [
@@ -47,6 +49,8 @@ describe("AI chat session storage", () => {
       activeSessionId: "migrated",
       sessions: [{ id: "migrated", title: "old question", draft: "", messages: [{ id: "legacy", content: "old question" }] }],
     })
+    expect(localStorage.getItem("kubevision:ai-chat:7")).toContain("old question")
+    expect(sessionStorage.getItem("kubevision:ai-chat:7")).toBeNull()
   })
 
   it.each([

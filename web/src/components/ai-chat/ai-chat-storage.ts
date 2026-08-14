@@ -22,6 +22,19 @@ function storageKey(userId: number): string {
   return `${STORAGE_PREFIX}${userId}`
 }
 
+function readStorage(storage: Storage, key: string): string | null {
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function migrateSessionStorage(userId: number, workspace: ChatWorkspace, shouldMigrate: boolean) {
+  if (!shouldMigrate) return
+  saveStoredChat(userId, workspace)
+}
+
 function isRole(value: unknown): value is ChatRole {
   return value === "user" || value === "assistant" || value === "tool"
 }
@@ -67,14 +80,18 @@ function messageForStorage(message: ChatMessage): ChatMessage {
 export function loadStoredChat(userId?: number): ChatWorkspace | null {
   if (!userId) return null
   try {
-    const raw = sessionStorage.getItem(storageKey(userId))
+    const key = storageKey(userId)
+    const persistent = readStorage(localStorage, key)
+    const temporary = readStorage(sessionStorage, key)
+    const raw = temporary ?? persistent
+    const shouldMigrate = temporary !== null
     if (!raw) return null
     const stored = JSON.parse(raw) as Partial<StoredChatV1 & StoredChatV2>
     if (stored.version === LEGACY_STORAGE_VERSION && Array.isArray(stored.messages)) {
       const messages = cleanMessages(stored.messages)
       if (!messages.length) return null
       const firstUserMessage = messages.find((message) => message.role === "user")
-      return {
+      const workspace = {
         activeSessionId: "migrated",
         sessions: [{
           id: "migrated",
@@ -85,6 +102,8 @@ export function loadStoredChat(userId?: number): ChatWorkspace | null {
           isRunning: false,
         }],
       }
+      migrateSessionStorage(userId, workspace, shouldMigrate)
+      return workspace
     }
     if (stored.version !== STORAGE_VERSION || !Array.isArray(stored.sessions)) return null
     const sessions = stored.sessions
@@ -102,7 +121,9 @@ export function loadStoredChat(userId?: number): ChatWorkspace | null {
     const activeSessionId = sessions.some((session) => session.id === requestedActive)
       ? requestedActive
       : sessions[0].id
-    return { sessions, activeSessionId }
+    const workspace = { sessions, activeSessionId }
+    migrateSessionStorage(userId, workspace, shouldMigrate)
+    return workspace
   } catch {
     return null
   }
@@ -110,27 +131,40 @@ export function loadStoredChat(userId?: number): ChatWorkspace | null {
 
 export function saveStoredChat(userId: number | undefined, workspace: ChatWorkspace): void {
   if (!userId) return
+  const stored: StoredChatV2 = {
+    version: STORAGE_VERSION,
+    activeSessionId: workspace.activeSessionId,
+    sessions: workspace.sessions
+      .slice()
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_CHAT_SESSIONS)
+      .map((session) => ({
+        ...session,
+        draft: session.draft.slice(0, MAX_DRAFT_LENGTH),
+        messages: session.messages.slice(-MAX_MESSAGES).map(messageForStorage),
+      })),
+  }
   try {
-    const stored: StoredChatV2 = {
-      version: STORAGE_VERSION,
-      activeSessionId: workspace.activeSessionId,
-      sessions: workspace.sessions
-        .slice()
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, MAX_CHAT_SESSIONS)
-        .map((session) => ({
-          ...session,
-          draft: session.draft.slice(0, MAX_DRAFT_LENGTH),
-          messages: session.messages.slice(-MAX_MESSAGES).map(messageForStorage),
-        })),
-    }
-    sessionStorage.setItem(storageKey(userId), JSON.stringify(stored))
+    const key = storageKey(userId)
+    localStorage.setItem(key, JSON.stringify(stored))
+    sessionStorage.removeItem(key)
   } catch {
-    // Storage may be disabled or full; chat remains available in memory.
+    // Storage may be disabled or full; preserve the current-tab fallback.
+    try {
+      sessionStorage.setItem(storageKey(userId), JSON.stringify(stored))
+    } catch {
+      // Chat remains available in memory.
+    }
   }
 }
 
 export function clearStoredChat(userId?: number): void {
   if (!userId) return
-  sessionStorage.removeItem(storageKey(userId))
+  const key = storageKey(userId)
+  try {
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  } catch {
+    // Storage may be disabled.
+  }
 }

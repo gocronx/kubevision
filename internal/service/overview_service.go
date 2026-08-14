@@ -4,24 +4,25 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 
 	bizerr "github.com/gocronx/kubevision/internal/pkg/errors"
 	"github.com/gocronx/kubevision/internal/repository"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-// ResourceMetric holds allocatable vs requested vs limited for a single resource dimension.
+// ResourceMetric holds current usage and configured allocation for one resource dimension.
 type ResourceMetric struct {
 	Allocatable int64 `json:"allocatable"` // millicores for CPU, bytes for memory
+	Usage       int64 `json:"usage"`
 	Requests    int64 `json:"requests"`
 	Limits      int64 `json:"limits"`
 }
 
-// ResourceUsage holds CPU and Memory allocation summaries.
+// ResourceUsage holds CPU and memory usage and allocation summaries.
 type ResourceUsage struct {
-	CPU    ResourceMetric `json:"cpu"`
-	Memory ResourceMetric `json:"memory"`
+	CPU              ResourceMetric `json:"cpu"`
+	Memory           ResourceMetric `json:"memory"`
+	MetricsAvailable bool           `json:"metricsAvailable"`
 }
 
 // EventSummary is a condensed representation of a Kubernetes event.
@@ -79,7 +80,10 @@ type OverviewResponse struct {
 	BoundPVCs              int   `json:"boundPVCs"`
 	PendingPVCs            int   `json:"pendingPVCs"`
 	TotalStorageBytes      int64 `json:"totalStorageBytes"`
-	UsedStorageBytes       int64 `json:"usedStorageBytes"`
+	AllocatedStorageBytes  int64 `json:"allocatedStorageBytes"`
+	// UsedStorageBytes is retained for API compatibility. It represents bound PV
+	// capacity, not filesystem usage; use AllocatedStorageBytes in new clients.
+	UsedStorageBytes int64 `json:"usedStorageBytes"`
 
 	// Pod status distribution
 	PodStatusDistribution PodStatusDist `json:"podStatusDistribution"`
@@ -89,6 +93,11 @@ type OverviewResponse struct {
 type OverviewService struct {
 	k8sRepo     repository.K8sResourceRepo
 	clusterRepo repository.ClusterRepo
+	podMetrics  podMetricsReader
+}
+
+type podMetricsReader interface {
+	List(context.Context, uint, string) (map[string]*repository.PodMetrics, error)
 }
 
 // NewOverviewService creates a new OverviewService.
@@ -100,6 +109,12 @@ func NewOverviewService(
 		k8sRepo:     k8sRepo,
 		clusterRepo: clusterRepo,
 	}
+}
+
+// WithPodMetrics enables best-effort live CPU and memory usage in the overview.
+func (s *OverviewService) WithPodMetrics(metrics podMetricsReader) *OverviewService {
+	s.podMetrics = metrics
+	return s
 }
 
 // GetOverview fetches counts for pods, deployments, services, nodes, and
@@ -248,7 +263,7 @@ func (s *OverviewService) GetOverview(
 	availablePVs := 0
 	releasedPVs := 0
 	var totalStorageBytes int64
-	var usedStorageBytes int64
+	var allocatedStorageBytes int64
 	for _, pv := range lists["persistentvolumes"].Items {
 		phase := getNestedString(pv.Raw, "status", "phase")
 		capacity := getNestedMap(pv.Raw, "spec", "capacity")
@@ -262,7 +277,7 @@ func (s *OverviewService) GetOverview(
 		switch phase {
 		case "Bound":
 			boundPVs++
-			usedStorageBytes += pvBytes
+			allocatedStorageBytes += pvBytes
 		case "Available":
 			availablePVs++
 		case "Released":
@@ -313,31 +328,24 @@ func (s *OverviewService) GetOverview(
 
 	// Aggregate pod resource requests and limits
 	for _, pod := range lists["pods"].Items {
-		containers := getNestedSlice(pod.Raw, "spec", "containers")
-		for _, c := range containers {
-			container, ok := c.(map[string]any)
-			if !ok {
-				continue
-			}
-			res := getNestedMap(container, "resources")
-			if res == nil {
-				continue
-			}
-			if requests, ok := res["requests"].(map[string]any); ok {
-				if cpu, ok := requests["cpu"].(string); ok {
-					resources.CPU.Requests += parseCPUQuantity(cpu)
-				}
-				if mem, ok := requests["memory"].(string); ok {
-					resources.Memory.Requests += parseMemoryQuantity(mem)
-				}
-			}
-			if limits, ok := res["limits"].(map[string]any); ok {
-				if cpu, ok := limits["cpu"].(string); ok {
-					resources.CPU.Limits += parseCPUQuantity(cpu)
-				}
-				if mem, ok := limits["memory"].(string); ok {
-					resources.Memory.Limits += parseMemoryQuantity(mem)
-				}
+		if isTerminalPod(pod) {
+			continue
+		}
+		allocation := effectivePodAllocation(pod.Raw)
+		resources.CPU.Requests += allocation.cpuRequests
+		resources.CPU.Limits += allocation.cpuLimits
+		resources.Memory.Requests += allocation.memoryRequests
+		resources.Memory.Limits += allocation.memoryLimits
+	}
+
+	// Metrics Server is optional. Allocation data remains useful when live
+	// metrics are unavailable, so a metrics error must not fail the overview.
+	if s.podMetrics != nil {
+		if metrics, metricsErr := s.podMetrics.List(ctx, clusterID, ""); metricsErr == nil {
+			resources.MetricsAvailable = true
+			for _, podMetrics := range metrics {
+				resources.CPU.Usage += podMetrics.CPUMilli
+				resources.Memory.Usage += podMetrics.MemoryBytes
 			}
 		}
 	}
@@ -418,52 +426,128 @@ func (s *OverviewService) GetOverview(
 		BoundPVCs:              boundPVCs,
 		PendingPVCs:            pendingPVCs,
 		TotalStorageBytes:      totalStorageBytes,
-		UsedStorageBytes:       usedStorageBytes,
+		AllocatedStorageBytes:  allocatedStorageBytes,
+		UsedStorageBytes:       allocatedStorageBytes,
 
 		PodStatusDistribution: podStatusDist,
 	}, nil
 }
 
-// parseCPUQuantity parses a Kubernetes CPU quantity string into millicores.
-// Examples: "500m" -> 500, "1" -> 1000, "2.5" -> 2500
+func isTerminalPod(pod repository.Resource) bool {
+	phase := getNestedString(pod.Raw, "status", "phase")
+	return phase == "Succeeded" || phase == "Failed"
+}
+
+type podAllocation struct {
+	cpuRequests    int64
+	cpuLimits      int64
+	memoryRequests int64
+	memoryLimits   int64
+}
+
+func (a *podAllocation) add(other podAllocation) {
+	a.cpuRequests += other.cpuRequests
+	a.cpuLimits += other.cpuLimits
+	a.memoryRequests += other.memoryRequests
+	a.memoryLimits += other.memoryLimits
+}
+
+func (a *podAllocation) max(other podAllocation) {
+	a.cpuRequests = max(a.cpuRequests, other.cpuRequests)
+	a.cpuLimits = max(a.cpuLimits, other.cpuLimits)
+	a.memoryRequests = max(a.memoryRequests, other.memoryRequests)
+	a.memoryLimits = max(a.memoryLimits, other.memoryLimits)
+}
+
+func effectivePodAllocation(pod map[string]any) podAllocation {
+	var steadyState podAllocation
+	for _, rawContainer := range getNestedSlice(pod, "spec", "containers") {
+		if container, ok := rawContainer.(map[string]any); ok {
+			steadyState.add(containerAllocation(container))
+		}
+	}
+
+	// Restartable init containers (sidecars) remain active after startup. A
+	// regular init container runs alongside all restartable init containers
+	// declared before it, while ordinary init containers run sequentially.
+	var sidecars podAllocation
+	var initPeak podAllocation
+	for _, rawContainer := range getNestedSlice(pod, "spec", "initContainers") {
+		container, ok := rawContainer.(map[string]any)
+		if !ok {
+			continue
+		}
+		current := containerAllocation(container)
+		if getNestedString(container, "restartPolicy") == "Always" {
+			sidecars.add(current)
+			initPeak.max(sidecars)
+			continue
+		}
+		current.add(sidecars)
+		initPeak.max(current)
+	}
+
+	steadyState.add(sidecars)
+	steadyState.max(initPeak)
+	if overhead := getNestedMap(pod, "spec", "overhead"); overhead != nil {
+		values := resourceListValues(overhead)
+		steadyState.add(podAllocation{
+			cpuRequests:    values.cpu,
+			cpuLimits:      values.cpu,
+			memoryRequests: values.memory,
+			memoryLimits:   values.memory,
+		})
+	}
+	return steadyState
+}
+
+func containerAllocation(container map[string]any) podAllocation {
+	resources := getNestedMap(container, "resources")
+	if resources == nil {
+		return podAllocation{}
+	}
+	requests, _ := resources["requests"].(map[string]any)
+	limits, _ := resources["limits"].(map[string]any)
+	requestValues := resourceListValues(requests)
+	limitValues := resourceListValues(limits)
+	return podAllocation{
+		cpuRequests:    requestValues.cpu,
+		cpuLimits:      limitValues.cpu,
+		memoryRequests: requestValues.memory,
+		memoryLimits:   limitValues.memory,
+	}
+}
+
+type resourceValues struct {
+	cpu    int64
+	memory int64
+}
+
+func resourceListValues(resources map[string]any) resourceValues {
+	cpu, _ := resources["cpu"].(string)
+	memory, _ := resources["memory"].(string)
+	return resourceValues{
+		cpu:    parseCPUQuantity(cpu),
+		memory: parseMemoryQuantity(memory),
+	}
+}
+
+// parseCPUQuantity parses a Kubernetes CPU quantity into millicores.
 func parseCPUQuantity(val string) int64 {
-	if val == "" || val == "0" {
+	quantity, err := resource.ParseQuantity(val)
+	if err != nil {
 		return 0
 	}
-	if strings.HasSuffix(val, "m") {
-		v, _ := strconv.ParseFloat(strings.TrimSuffix(val, "m"), 64)
-		return int64(v)
-	}
-	v, _ := strconv.ParseFloat(val, 64)
-	return int64(v * 1000)
+	return quantity.MilliValue()
 }
 
 // parseMemoryQuantity parses a Kubernetes memory quantity string into bytes.
 func parseMemoryQuantity(val string) int64 {
-	if val == "" || val == "0" {
+	quantity, err := resource.ParseQuantity(val)
+	if err != nil {
 		return 0
 	}
-	suffixes := []struct {
-		suffix     string
-		multiplier int64
-	}{
-		{"Ti", 1024 * 1024 * 1024 * 1024},
-		{"Gi", 1024 * 1024 * 1024},
-		{"Mi", 1024 * 1024},
-		{"Ki", 1024},
-		{"T", 1000 * 1000 * 1000 * 1000},
-		{"G", 1000 * 1000 * 1000},
-		{"M", 1000 * 1000},
-		{"K", 1000},
-	}
-	for _, s := range suffixes {
-		if strings.HasSuffix(val, s.suffix) {
-			v, _ := strconv.ParseFloat(strings.TrimSuffix(val, s.suffix), 64)
-			return int64(float64(s.multiplier) * v)
-		}
-	}
-	v, _ := strconv.ParseFloat(val, 64)
-	return int64(v)
+	return quantity.Value()
 }
 
 // getNestedFloat safely extracts a numeric value from a nested map path.

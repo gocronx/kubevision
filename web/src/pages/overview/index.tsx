@@ -26,6 +26,7 @@ import { canAccessAdmin } from "@/lib/permissions"
 
 interface ResourceMetric {
   allocatable: number
+  usage: number
   requests: number
   limits: number
 }
@@ -33,6 +34,7 @@ interface ResourceMetric {
 interface ResourceUsage {
   cpu: ResourceMetric
   memory: ResourceMetric
+  metricsAvailable: boolean
 }
 
 interface EventSummary {
@@ -85,6 +87,7 @@ interface OverviewData {
   boundPVCs: number
   pendingPVCs: number
   totalStorageBytes: number
+  allocatedStorageBytes: number
   usedStorageBytes: number
   // Pod status
   podStatusDistribution: PodStatusDist
@@ -206,25 +209,13 @@ interface ResourceBarProps {
   value: number
   total: number
   formatFn: (v: number) => string
-  /** Force a specific color variant instead of the dynamic threshold-based color. */
-  forceColor?: "red" | "blue" | "yellow"
 }
 
-const forceBarColorMap: Record<string, string> = {
-  red: "[&>[data-slot=progress-indicator]]:bg-red-500",
-  blue: "[&>[data-slot=progress-indicator]]:bg-blue-500",
-  yellow: "[&>[data-slot=progress-indicator]]:bg-yellow-500",
-}
-const forceTextColorMap: Record<string, string> = {
-  red: "text-red-500",
-  blue: "text-blue-500",
-  yellow: "text-yellow-500",
-}
-
-function ResourceBar({ label, value, total, formatFn, forceColor }: ResourceBarProps) {
-  const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0
-  const barClass = forceColor ? forceBarColorMap[forceColor] : getBarColorClass(pct)
-  const textClass = forceColor ? forceTextColorMap[forceColor] : getTextColorClass(pct)
+function ResourceBar({ label, value, total, formatFn }: ResourceBarProps) {
+  const pct = total > 0 ? (value / total) * 100 : 0
+  const barPct = Math.min(100, Math.max(0, pct))
+  const barClass = getBarColorClass(pct)
+  const textClass = getTextColorClass(pct)
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-sm">
@@ -234,7 +225,7 @@ function ResourceBar({ label, value, total, formatFn, forceColor }: ResourceBarP
         </span>
       </div>
       <Progress
-        value={pct}
+        value={barPct}
         max={100}
         className={`h-2.5 rounded-full ${barClass}`}
       />
@@ -292,6 +283,16 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
             <Cpu className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">CPU</span>
           </div>
+          {resources.metricsAvailable ? (
+            <ResourceBar
+              label={t("overview.actual_usage")}
+              value={resources.cpu.usage}
+              total={resources.cpu.allocatable}
+              formatFn={formatCPU}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("overview.metrics_unavailable")}</p>
+          )}
           <ResourceBar
             label={t("overview.requests")}
             value={resources.cpu.requests}
@@ -303,7 +304,6 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
             value={resources.cpu.limits}
             total={resources.cpu.allocatable}
             formatFn={formatCPU}
-            forceColor="red"
           />
         </div>
 
@@ -313,6 +313,16 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
             <MemoryStick className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("overview.memory")}</span>
           </div>
+          {resources.metricsAvailable ? (
+            <ResourceBar
+              label={t("overview.actual_usage")}
+              value={resources.memory.usage}
+              total={resources.memory.allocatable}
+              formatFn={formatMemory}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("overview.metrics_unavailable")}</p>
+          )}
           <ResourceBar
             label={t("overview.requests")}
             value={resources.memory.requests}
@@ -324,7 +334,6 @@ function ResourceUtilization({ resources, isLoading }: ResourceUtilizationProps)
             value={resources.memory.limits}
             total={resources.memory.allocatable}
             formatFn={formatMemory}
-            forceColor="red"
           />
         </div>
       </CardContent>
@@ -459,9 +468,7 @@ function StorageOverview({ data, isLoading }: StorageOverviewProps) {
 
   const pvTotal = data.persistentVolumes
   const pvcTotal = data.persistentVolumeClaims
-  const storagePct = data.totalStorageBytes > 0
-    ? Math.min(100, (data.usedStorageBytes / data.totalStorageBytes) * 100)
-    : 0
+  const allocatedStorage = data.allocatedStorageBytes ?? data.usedStorageBytes
 
   return (
     <Card className="flex flex-col rounded-2xl shadow-sm border-border/40 h-full">
@@ -511,21 +518,18 @@ function StorageOverview({ data, isLoading }: StorageOverviewProps) {
           </div>
         </div>
 
-        {/* Storage capacity bar */}
-        <div className="flex flex-col gap-1.5 pt-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground font-medium">{t("overview.storage_allocation")}</span>
-            <span className={`font-semibold ${getTextColorClass(storagePct)}`}>
-              {storagePct.toFixed(0)}%
-            </span>
+        {/* Kubernetes reports provisioned capacity here, not filesystem usage. */}
+        <div className="grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
+          <div>
+            <p className="text-xs text-muted-foreground">{t("overview.bound_capacity")}</p>
+            <p className="mt-1 text-sm font-semibold">{formatMemory(allocatedStorage)}</p>
           </div>
-          <Progress
-            value={storagePct}
-            max={100}
-            className={`h-2.5 rounded-full ${getBarColorClass(storagePct)}`}
-          />
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("overview.allocated")}: {formatMemory(data.usedStorageBytes)} / {t("overview.total_capacity")}: {formatMemory(data.totalStorageBytes)}
+          <div>
+            <p className="text-xs text-muted-foreground">{t("overview.provisioned_capacity")}</p>
+            <p className="mt-1 text-sm font-semibold">{formatMemory(data.totalStorageBytes)}</p>
+          </div>
+          <p className="col-span-2 text-xs text-muted-foreground">
+            {t("overview.volume_usage_unavailable")}
           </p>
         </div>
       </CardContent>
@@ -929,7 +933,11 @@ export function OverviewPage() {
             {/* Row 1, Col 1 */}
             <div className="lg:col-span-4 min-h-0 h-full">
               <ResourceUtilization
-                resources={data?.resources ?? { cpu: { allocatable: 0, requests: 0, limits: 0 }, memory: { allocatable: 0, requests: 0, limits: 0 } }}
+                resources={data?.resources ?? {
+                  cpu: { allocatable: 0, usage: 0, requests: 0, limits: 0 },
+                  memory: { allocatable: 0, usage: 0, requests: 0, limits: 0 },
+                  metricsAvailable: false,
+                }}
                 isLoading={isLoading}
               />
             </div>

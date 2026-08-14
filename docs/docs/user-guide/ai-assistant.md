@@ -58,6 +58,12 @@ Use the layout control to switch between the side panel and full-tab workspace.
 The conversation remains available when switching modes. Full-tab mode is
 better for long investigations; the panel keeps the current resource visible.
 
+Conversations and drafts are stored in the browser, scoped to the signed-in
+user, and restored after logout or a later login on the same browser. They are
+not synchronized through the KubeVision server or shared with another browser.
+Clear the site's browser data to remove them. Avoid leaving sensitive cluster
+content on a shared device.
+
 ## Current Boundaries
 
 - The assistant does not run autonomous background remediation.

@@ -211,7 +211,7 @@ func main() {
 	podMetricsService := service.NewPodMetricsService(clusterRepo, clusterManager)
 	resourceActionService := service.NewResourceActionService(clusterRepo, clusterManager)
 	quotaService := service.NewQuotaService(k8sRepo, clusterRepo)
-	overviewService := service.NewOverviewService(k8sRepo, clusterRepo)
+	overviewService := service.NewOverviewService(k8sRepo, clusterRepo).WithPodMetrics(podMetricsService)
 	favoriteService := service.NewFavoriteService(favoriteRepo)
 	searchService := service.NewSearchService(informerMgr, clusterManager, resourceRegistry, clusterRepo)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, userRepo)

@@ -293,7 +293,8 @@ func TestOverviewService_GetOverview_ResourceAggregation(t *testing.T) {
 		}},
 	}
 
-	// Two pods: each requests 500m CPU / 512Mi memory and limits 1 CPU / 1Gi memory.
+	// Two active pods request resources. A completed Helm installer with very
+	// large limits must not distort the current cluster allocation.
 	podItems := []repository.Resource{
 		{Raw: map[string]any{
 			"status": map[string]any{"phase": "Running"},
@@ -321,12 +322,37 @@ func TestOverviewService_GetOverview_ResourceAggregation(t *testing.T) {
 				},
 			},
 		}},
+		{Raw: map[string]any{
+			"status": map[string]any{"phase": "Succeeded"},
+			"spec": map[string]any{
+				"containers": []any{
+					map[string]any{
+						"resources": map[string]any{
+							"requests": map[string]any{"cpu": "32", "memory": "32Gi"},
+							"limits":   map[string]any{"cpu": "32", "memory": "32Gi"},
+						},
+					},
+				},
+			},
+		}},
+		{Raw: map[string]any{
+			"status": map[string]any{"phase": "Failed"},
+			"spec": map[string]any{
+				"containers": []any{
+					map[string]any{
+						"resources": map[string]any{
+							"limits": map[string]any{"cpu": "32", "memory": "32Gi"},
+						},
+					},
+				},
+			},
+		}},
 	}
 
 	callIndex := 0
 	k8sRepoCustom := &sequentialMockK8sRepoWithItems{
 		calls: []sequentialCall{
-			{total: 2, items: podItems},  // pods
+			{total: 4, items: podItems},  // pods
 			{total: 0, items: nil},       // deployments
 			{total: 0, items: nil},       // services
 			{total: 2, items: nodeItems}, // nodes
@@ -384,6 +410,108 @@ func TestOverviewService_GetOverview_ResourceAggregation(t *testing.T) {
 	wantMemLimits := int64(2 * 1024 * 1024 * 1024)
 	if resp.Resources.Memory.Limits != wantMemLimits {
 		t.Errorf("Memory.Limits = %d, want %d", resp.Resources.Memory.Limits, wantMemLimits)
+	}
+}
+
+type stubPodMetricsReader struct {
+	metrics map[string]*repository.PodMetrics
+	err     error
+}
+
+func (s stubPodMetricsReader) List(context.Context, uint, string) (map[string]*repository.PodMetrics, error) {
+	return s.metrics, s.err
+}
+
+func TestOverviewService_GetOverview_LiveMetrics(t *testing.T) {
+	clusterRepo := newMockClusterRepo()
+	clusterRepo.addCluster(makeTestCluster(1, "prod"))
+	k8sRepo := newMockK8sRepo()
+	metrics := stubPodMetricsReader{metrics: map[string]*repository.PodMetrics{
+		"default/api":     {CPUMilli: 6, MemoryBytes: 12 * 1024 * 1024},
+		"kube-system/dns": {CPUMilli: 4, MemoryBytes: 8 * 1024 * 1024},
+	}}
+	svc := NewOverviewService(k8sRepo, clusterRepo).WithPodMetrics(metrics)
+
+	resp, err := svc.GetOverview(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.Resources.MetricsAvailable {
+		t.Fatal("MetricsAvailable = false, want true")
+	}
+	if resp.Resources.CPU.Usage != 10 {
+		t.Errorf("CPU.Usage = %d, want 10", resp.Resources.CPU.Usage)
+	}
+	if resp.Resources.Memory.Usage != 20*1024*1024 {
+		t.Errorf("Memory.Usage = %d, want %d", resp.Resources.Memory.Usage, 20*1024*1024)
+	}
+}
+
+func TestOverviewService_GetOverview_MetricsFailureIsOptional(t *testing.T) {
+	clusterRepo := newMockClusterRepo()
+	clusterRepo.addCluster(makeTestCluster(1, "prod"))
+	svc := NewOverviewService(newMockK8sRepo(), clusterRepo).WithPodMetrics(
+		stubPodMetricsReader{err: errors.New("metrics API unavailable")},
+	)
+
+	resp, err := svc.GetOverview(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("overview failed with optional metrics error: %v", err)
+	}
+	if resp.Resources.MetricsAvailable {
+		t.Fatal("MetricsAvailable = true, want false")
+	}
+}
+
+func TestOverviewQuantityParsing(t *testing.T) {
+	if got := parseCPUQuantity("2500000n"); got != 3 {
+		t.Errorf("parseCPUQuantity(2500000n) = %d, want 3", got)
+	}
+	if got := parseMemoryQuantity("1.5Gi"); got != 1610612736 {
+		t.Errorf("parseMemoryQuantity(1.5Gi) = %d, want 1610612736", got)
+	}
+	if got := parseMemoryQuantity("invalid"); got != 0 {
+		t.Errorf("parseMemoryQuantity(invalid) = %d, want 0", got)
+	}
+}
+
+func TestEffectivePodAllocationIncludesInitContainersAndOverhead(t *testing.T) {
+	pod := map[string]any{
+		"spec": map[string]any{
+			"containers": []any{map[string]any{
+				"resources": map[string]any{
+					"requests": map[string]any{"cpu": "100m", "memory": "100Mi"},
+					"limits":   map[string]any{"cpu": "500m", "memory": "500Mi"},
+				},
+			}},
+			"initContainers": []any{
+				map[string]any{
+					"restartPolicy": "Always",
+					"resources": map[string]any{
+						"requests": map[string]any{"cpu": "20m", "memory": "20Mi"},
+						"limits":   map[string]any{"cpu": "50m", "memory": "50Mi"},
+					},
+				},
+				map[string]any{
+					"resources": map[string]any{
+						"requests": map[string]any{"cpu": "200m", "memory": "200Mi"},
+						"limits":   map[string]any{"cpu": "1", "memory": "1Gi"},
+					},
+				},
+			},
+			"overhead": map[string]any{"cpu": "10m", "memory": "10Mi"},
+		},
+	}
+
+	got := effectivePodAllocation(pod)
+	if got.cpuRequests != 230 || got.cpuLimits != 1060 {
+		t.Errorf("CPU allocation = requests %dm, limits %dm; want 230m and 1060m", got.cpuRequests, got.cpuLimits)
+	}
+	if got.memoryRequests != 230*1024*1024 {
+		t.Errorf("memory requests = %d, want %d", got.memoryRequests, 230*1024*1024)
+	}
+	if got.memoryLimits != 1084*1024*1024 {
+		t.Errorf("memory limits = %d, want %d", got.memoryLimits, 1084*1024*1024)
 	}
 }
 

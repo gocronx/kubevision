@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { vi } from "vitest"
 import type { StreamCallbacks } from "./ai-chat-stream"
+import { loadStoredChat } from "./ai-chat-storage"
 import { useAIChat } from "./use-ai-chat"
 
 interface PendingStream {
@@ -134,6 +135,17 @@ describe("useAIChat sessions", () => {
     await waitFor(() => expect(result.current.activeSession.messages).toHaveLength(0))
     await new Promise((resolve) => setTimeout(resolve, 300))
 
-    expect(sessionStorage.getItem("kubevision:ai-chat:8")).not.toContain("private to seven")
+    expect(localStorage.getItem("kubevision:ai-chat:8")).not.toContain("private to seven")
+  })
+
+  it("persists the latest conversation immediately when the chat unmounts", async () => {
+    const { result, unmount } = renderHook(() => useAIChat(7))
+    const sessionId = result.current.activeSession.id
+    act(() => result.current.sendMessage(sessionId, "keep after logout", 1))
+    await waitFor(() => expect(result.current.activeSession.messages).toHaveLength(1))
+
+    unmount()
+
+    expect(loadStoredChat(7)?.sessions[0].messages[0].content).toBe("keep after logout")
   })
 })

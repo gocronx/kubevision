@@ -48,6 +48,7 @@ export function useAIChat(userId?: number) {
 
   useEffect(() => {
     if (loadedUserIDRef.current === userId) return
+    saveStoredChat(workspaceUserIDRef.current, workspaceRef.current)
     controllersRef.current.forEach((controller) => controller.abort())
     controllersRef.current.clear()
     activeAssistantsRef.current.clear()
@@ -75,6 +76,7 @@ export function useAIChat(userId?: number) {
   }, [userId])
 
   useEffect(() => () => {
+    saveStoredChat(workspaceUserIDRef.current, workspaceRef.current)
     controllersRef.current.forEach((controller) => controller.abort())
   }, [])
 
