@@ -50,7 +50,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # ==============================================================================
 # Stage 3: Final minimal image
 # ==============================================================================
-FROM alpine:3.22
+FROM alpine:3.24
 
 ARG VERSION=dev
 ARG REVISION=unknown
