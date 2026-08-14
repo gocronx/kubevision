@@ -19,7 +19,6 @@ on:
 permissions:
   actions: read
   contents: read
-  security-events: write
 
 concurrency:
   group: security-${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -79,3 +78,16 @@ jobs:
       - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          output: codeql-results
+          upload: never
+          upload-database: false
+      - name: Enforce CodeQL findings
+        shell: bash
+        run: |
+          finding_count="$(jq -s '[.[].runs[]?.results[]?] | length' codeql-results/*.sarif)"
+          if [[ "$finding_count" -gt 0 ]]; then
+            echo "::error::CodeQL reported $finding_count security finding(s)"
+            jq -r '.runs[]?.results[]? | "\(.ruleId): \(.message.text)"' codeql-results/*.sarif
+            exit 1
+          fi
+          echo "CodeQL reported no security findings"
