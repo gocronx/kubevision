@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import { vi } from "vitest"
+import { beforeEach, vi } from "vitest"
 import { PackageChangeDialog } from "./change-dialog"
 
 const previewMutate = vi.fn()
@@ -10,6 +10,10 @@ vi.mock("@/hooks/use-package-releases", () => ({
 }))
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock("sonner", () => ({ toast: { error: toastError, success: vi.fn() } }))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 it("does not submit an install when Enter is pressed in a field", () => {
   render(<PackageChangeDialog open onOpenChange={vi.fn()} cluster="1" operation="install" />)
@@ -51,7 +55,7 @@ it("requires a new preview after execution fails", () => {
   fireEvent.click(screen.getByRole("button", { name: "packages.preview" }))
   fireEvent.click(screen.getByRole("button", { name: "packages.confirmInstall" }))
 
-  expect(screen.getByRole("button", { name: "packages.preview" })).toBeInTheDocument()
+  expect(screen.getByRole("button", { name: "packages.previewAgain" })).toBeInTheDocument()
 })
 
 it("automatically previews a trusted upgrade candidate", () => {
@@ -62,4 +66,41 @@ it("automatically previews a trusted upgrade candidate", () => {
     source: { chart: "demo", repoUrl: "https://charts.example", version: "1.1.0" },
     values: {},
   }), expect.any(Object))
+})
+
+it("edits nested defaults in guided mode", () => {
+  render(<PackageChangeDialog open onOpenChange={vi.fn()} cluster="1" operation="install" releaseName="demo" chart="demo" initialValues={{ db: { host: "old" } }} />)
+
+  fireEvent.change(screen.getByLabelText("db.host"), { target: { value: "postgres.default.svc" } })
+  fireEvent.click(screen.getByRole("button", { name: "packages.preview" }))
+
+  expect(previewMutate).toHaveBeenCalledWith(expect.objectContaining({
+    values: { db: { host: "postgres.default.svc" } },
+  }), expect.any(Object))
+})
+
+it("generates a secure value for sensitive defaults", () => {
+  vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+    const bytes = array as Uint8Array
+    bytes.fill(10)
+    return array
+  })
+  render(<PackageChangeDialog open onOpenChange={vi.fn()} cluster="1" operation="install" releaseName="demo" chart="demo" initialValues={{ authSecret: "" }} />)
+
+  fireEvent.click(screen.getByTitle("packages.generateSecret"))
+  fireEvent.click(screen.getByRole("button", { name: "packages.preview" }))
+
+  expect(previewMutate).toHaveBeenCalledWith(expect.objectContaining({
+    values: { authSecret: "0a".repeat(32) },
+  }), expect.any(Object))
+})
+
+it("validates the operation timeout before preview", () => {
+  render(<PackageChangeDialog open onOpenChange={vi.fn()} cluster="1" operation="install" releaseName="demo" chart="demo" />)
+
+  fireEvent.change(screen.getByLabelText("packages.timeoutSeconds"), { target: { value: "0" } })
+  fireEvent.click(screen.getByRole("button", { name: "packages.preview" }))
+
+  expect(previewMutate).not.toHaveBeenCalled()
+  expect(toastError).toHaveBeenCalledWith("packages.invalidTimeout")
 })

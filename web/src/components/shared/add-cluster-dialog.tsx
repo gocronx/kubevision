@@ -137,7 +137,7 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
 
           <fieldset className="space-y-1.5">
             <legend className="text-sm font-medium leading-none">{t("cluster.auth_type")}</legend>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {(["kubeconfig", "in-cluster"] as const).map((value) => (
                 <label
                   key={value}
@@ -172,7 +172,7 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
                 {t("cluster.kubeconfig")}
                 <span aria-hidden="true"> *</span>
               </Label>
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -208,7 +208,7 @@ export function AddClusterDialog({ open, onOpenChange }: AddClusterDialogProps) 
             </div>
           )}
 
-          <div className="flex gap-2 justify-end pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={resetAndClose} disabled={mutation.isPending}>
               {t("common.cancel")}
             </Button>

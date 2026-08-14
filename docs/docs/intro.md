@@ -30,7 +30,7 @@ _The cluster overview and AI assistant remain available together, including expl
 - **Real-time Architecture** — Informer Watch → WebSocket Push delivers sub-second updates with zero polling
 - **Multi-cluster Management** — Single dashboard for all your clusters
 - **Enterprise Security** — 2FA (TOTP), 5-level RBAC, audit logging, Secrets masking
-- **Developer Friendly** — kubectl hints, global search (Cmd+K), favorites, resource templates
+- **Developer Friendly** — Responsive desktop and mobile workflows, kubectl hints, global search (Cmd+K), favorites, and resource templates
 - **DevOps Tooling** — Dry-run previews, terminal recording, and resource topology
 
 ## AI Operating Model

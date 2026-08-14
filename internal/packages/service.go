@@ -6,7 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -403,7 +405,41 @@ func mapAdapterError(err error) error {
 	if strings.Contains(text, "not found") {
 		return bizerr.New(bizerr.CodeNotFound, "release or revision not found")
 	}
-	return bizerr.New(bizerr.CodeK8sUnavailable, "package operation failed")
+	detail := safeAdapterErrorDetail(err)
+	if errors.Is(err, context.DeadlineExceeded) || strings.Contains(text, "timed out") || strings.Contains(text, "timeout") {
+		return bizerr.New(bizerr.CodeK8sUnavailable, "timed out waiting for release resources; inspect Pods and Events, then retry with a longer timeout")
+	}
+	if strings.Contains(text, "failed pre-install") || strings.Contains(text, "failed post-install") || strings.Contains(text, "failed pre-upgrade") || strings.Contains(text, "failed post-upgrade") {
+		return bizerr.New(bizerr.CodeValidation, "Helm hook failed: "+detail)
+	}
+	if strings.Contains(text, "unable to build kubernetes objects") || strings.Contains(text, "rendered manifests contain") || strings.Contains(text, "cannot patch") || strings.Contains(text, "is invalid") {
+		return bizerr.New(bizerr.CodeValidation, "Kubernetes rejected the rendered resources: "+detail)
+	}
+	if strings.Contains(text, "connection refused") || strings.Contains(text, "no route to host") || strings.Contains(text, "tls handshake") || strings.Contains(text, "server is currently unable") {
+		return bizerr.New(bizerr.CodeK8sUnavailable, "cannot reach the Kubernetes API: "+detail)
+	}
+	return bizerr.New(bizerr.CodeK8sUnavailable, "package operation failed: "+detail)
+}
+
+var (
+	adapterCredentialPattern = regexp.MustCompile(`(?i)(password|token|secret|authorization|api[-_]?key|client[-_]?key[-_]?data)(\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,;]+)`)
+	adapterPrivateKeyPattern = regexp.MustCompile(`(?is)-----BEGIN[^-]*PRIVATE KEY-----.*?-----END[^-]*PRIVATE KEY-----`)
+	adapterURLUserPattern    = regexp.MustCompile(`://[^/@\s]+@`)
+)
+
+func safeAdapterErrorDetail(err error) string {
+	detail := adapterPrivateKeyPattern.ReplaceAllString(err.Error(), "[REDACTED PRIVATE KEY]")
+	detail = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(detail, "\r", " "), "\n", " "))
+	detail = adapterCredentialPattern.ReplaceAllString(detail, "$1$2[REDACTED]")
+	detail = adapterURLUserPattern.ReplaceAllString(detail, "://[REDACTED]@")
+	runes := []rune(detail)
+	if len(runes) > 512 {
+		detail = string(runes[:512])
+	}
+	if detail == "" {
+		return "unknown Helm error"
+	}
+	return detail
 }
 
 func chartValidationMessage(err error) (string, bool) {

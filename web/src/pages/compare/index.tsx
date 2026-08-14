@@ -137,7 +137,7 @@ export function ComparePage() {
       </div>
 
       {/* Two-panel selector */}
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <ResourceSelector
           label={t("compare.source")}
           value={source}
@@ -145,8 +145,8 @@ export function ComparePage() {
           clusters={clusters}
         />
 
-        <div className="flex items-center pt-16 shrink-0 text-muted-foreground">
-          <ArrowRight className="size-5" />
+        <div className="flex shrink-0 items-center justify-center text-muted-foreground md:pt-16">
+          <ArrowRight className="size-5 rotate-90 md:rotate-0" />
         </div>
 
         <ResourceSelector
@@ -173,10 +173,10 @@ export function ComparePage() {
       {/* Diff result */}
       {result && (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">{result.sourceRef}</span>
+          <div className="flex min-w-0 flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center">
+            <span className="break-all rounded bg-muted px-2 py-0.5 font-mono text-xs">{result.sourceRef}</span>
             <ArrowRight className="size-3" />
-            <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">{result.targetRef}</span>
+            <span className="break-all rounded bg-muted px-2 py-0.5 font-mono text-xs">{result.targetRef}</span>
           </div>
           <YamlDiffViewer
             original={result.sourceYaml}

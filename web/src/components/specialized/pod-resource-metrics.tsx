@@ -51,7 +51,7 @@ export function PodResourceMetrics({ metrics, status }: Props) {
               />
             </div>
             <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[30rem] text-sm">
                 <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 font-medium">{t("pod.container")}</th>

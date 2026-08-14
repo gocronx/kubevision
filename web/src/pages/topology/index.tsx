@@ -105,7 +105,7 @@ export function TopologyPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">{t("topology.title")}</h1>
       </div>
 
@@ -183,10 +183,10 @@ export function TopologyPage() {
                         <button
                           key={node.id}
                           onClick={() => handleNodeClick(node.kind, node.name)}
-                          className={`flex flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent ${colorClass}`}
+                          className={`flex min-w-0 max-w-full flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent ${colorClass}`}
                         >
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium truncate max-w-[200px]">{node.name}</span>
+                          <div className="flex min-w-0 max-w-full items-center gap-1.5">
+                            <span className="max-w-[min(12.5rem,60vw)] truncate text-sm font-medium">{node.name}</span>
                             {node.status && (
                               <Badge
                                 variant={node.status === "Running" || node.status === "Available" ? "default" : "secondary"}

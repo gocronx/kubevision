@@ -6,7 +6,7 @@ title: Roadmap
 
 KubeVision already includes multi-cluster resource management, English and
 Simplified Chinese UI, AI assistance, OAuth/OIDC, directory login, passkeys,
-CRD discovery, existing Helm release management, and read-only Prometheus,
+CRD discovery, guarded Helm package management, and read-only Prometheus,
 Grafana, and Argo CD integration APIs.
 
 The roadmap tracks work that is not yet delivered. Priorities may change based
@@ -14,7 +14,7 @@ on maintenance capacity and community feedback.
 
 ## Near Term
 
-- Helm chart installation and upgrade with values diff and server-side preview
+- Helm revision-to-revision Values diff and broader OCI update discovery
 - Kubernetes schema-aware YAML validation in the editor
 - Read-only Pod filesystem browsing and controlled downloads
 - Broader end-to-end coverage for authentication and destructive workflows

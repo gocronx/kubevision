@@ -46,7 +46,7 @@ export function OverviewPage() {
   const noClusters = !clustersLoading && clusters.length === 0
 
   return (
-    <div className="flex h-full flex-col gap-2">
+    <div className="flex min-h-full min-w-0 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between">
         <h1 className="text-lg font-bold tracking-tight">{t("overview.title")}</h1>
         {!noClusters && !clustersLoading && isClusterHealthy && (
@@ -96,7 +96,7 @@ function NoClusters({ open, onOpenChange }: { open: boolean; onOpenChange: (open
 function OverviewContent({ data, isLoading, error }: { data?: OverviewData; isLoading: boolean; error: unknown }) {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-4 lg:overflow-hidden">
       {error !== null && (
         <div className="flex shrink-0 items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-5 text-sm font-medium text-destructive">
           <AlertCircle className="size-5 shrink-0" />

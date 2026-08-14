@@ -116,7 +116,17 @@ func (h *PackageHandler) Install(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid install request")
 		return
 	}
-	writePackageResult(c, nil, h.service.Install(c.Request.Context(), packageActor(c), cluster, req.options()))
+	actor := packageActor(c)
+	if err := h.service.Install(c.Request.Context(), actor, cluster, req.options()); err != nil {
+		writePackageResult(c, nil, err)
+		return
+	}
+	item, err := h.service.Get(c.Request.Context(), actor, cluster, req.Namespace, req.ReleaseName, 0)
+	if err != nil {
+		response.Success(c, nil)
+		return
+	}
+	response.Success(c, item)
 }
 
 func (h *PackageHandler) Upgrade(c *gin.Context) {
@@ -129,7 +139,17 @@ func (h *PackageHandler) Upgrade(c *gin.Context) {
 		response.Error(c, bizerr.CodeParamInvalid, "invalid upgrade request")
 		return
 	}
-	writePackageResult(c, nil, h.service.Upgrade(c.Request.Context(), packageActor(c), cluster, req.options()))
+	actor := packageActor(c)
+	if err := h.service.Upgrade(c.Request.Context(), actor, cluster, req.options()); err != nil {
+		writePackageResult(c, nil, err)
+		return
+	}
+	item, err := h.service.Get(c.Request.Context(), actor, cluster, req.Namespace, req.ReleaseName, 0)
+	if err != nil {
+		response.Success(c, nil)
+		return
+	}
+	response.Success(c, item)
 }
 
 func (h *PackageHandler) CheckUpgrade(c *gin.Context) {

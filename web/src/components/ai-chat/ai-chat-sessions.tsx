@@ -98,7 +98,7 @@ export function ChatSessions({ sessions, activeSessionId, onCreate, onSelect, on
               <span className="sr-only">{t("ai.sessions")}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-72">
+          <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] max-w-[calc(100vw-1rem)] sm:min-w-72">
             {sessions.map((session) => {
               const selected = session.id === activeSessionId
               return (

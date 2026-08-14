@@ -72,20 +72,20 @@ function AuditLogsTab() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex flex-col gap-1 sm:w-auto">
               <Label className="text-xs">{t("audit.filterAction")}</Label>
               <Input
-                className="h-8 w-36"
+                className="h-8 w-full sm:w-36"
                 placeholder={t("audit.actionPlaceholder")}
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 sm:w-auto">
               <Label className="text-xs">{t("audit.filterCluster")}</Label>
               <Input
-                className="h-8 w-36"
+                className="h-8 w-full sm:w-36"
                 placeholder={t("audit.clusterPlaceholder")}
                 value={clusterFilter}
                 onChange={(e) => setClusterFilter(e.target.value)}
@@ -163,7 +163,7 @@ function AuditLogsTab() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center gap-2 justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           size="sm"
           variant="outline"
@@ -253,7 +253,7 @@ function APIKeysTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{t("apikeys.description")}</p>
         <Button size="sm" onClick={() => setShowGenDialog(true)}>
           <Plus className="size-3.5 mr-1" />
@@ -262,7 +262,7 @@ function APIKeysTab() {
       </div>
 
       {/* Keys list */}
-      <div className="rounded-md border">
+      <div className="max-w-full overflow-x-auto rounded-md border">
         {isLoading ? (
           <div className="p-4 space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -274,7 +274,7 @@ function APIKeysTab() {
             {t("apikeys.empty")}
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="px-3 py-2 text-left font-medium">{t("common.name")}</th>
@@ -424,7 +424,7 @@ export function AdminPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">{t("admin.title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("admin.description")}</p>

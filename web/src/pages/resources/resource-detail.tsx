@@ -246,9 +246,9 @@ export function ResourceDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+      <nav className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
         <Link
           to={`/${resource}`}
           className="hover:text-foreground transition-colors"
@@ -256,7 +256,7 @@ export function ResourceDetailPage() {
           {displayName}
         </Link>
         <ChevronRight className="size-3" />
-        <span className="text-foreground font-medium">{name}</span>
+        <span className="min-w-0 truncate font-medium text-foreground">{name}</span>
       </nav>
 
       {/* kubectl hint — shows the equivalent describe command for this resource */}
@@ -269,22 +269,22 @@ export function ResourceDetailPage() {
       />
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           {config?.icon && (
             <config.icon className={`size-7 ${config.iconColor}`} />
           )}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="break-all text-xl font-bold tracking-tight sm:text-2xl">{name}</h1>
             {namespace && (
               <p className="text-sm text-muted-foreground">
                 {t("resource.namespaceValue", { namespace })}
               </p>
             )}
           </div>
-          {status && <StatusBadge status={status} className="ml-2" />}
+          {status && <StatusBadge status={status} className="sm:ml-2" />}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Favorite toggle — only available when a cluster is selected */}
           {currentCluster && (
             <FavoriteButton

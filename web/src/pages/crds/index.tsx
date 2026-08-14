@@ -11,7 +11,7 @@ export function CRDListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t("crd.title")}</h1>
           <p className="text-muted-foreground">{t("crd.description")}</p>
@@ -37,8 +37,8 @@ export function CRDListPage() {
           <p>{t("crd.empty")}</p>
         </div>
       ) : (
-        <div className="rounded-md border">
-          <table className="w-full text-sm">
+        <div className="max-w-full overflow-x-auto rounded-md border">
+          <table className="w-full min-w-[42rem] text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="px-3 py-2 text-left font-medium">{t("crd.kind")}</th>

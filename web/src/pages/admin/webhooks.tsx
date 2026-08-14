@@ -254,7 +254,7 @@ export function WebhooksPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("webhook.title")}</h1>
           <p className="text-muted-foreground text-sm">{t("webhook.description")}</p>
@@ -265,7 +265,7 @@ export function WebhooksPage() {
             setEditing(null)
             setFormOpen(true)
           }}
-          className="gap-1.5"
+          className="self-start gap-1.5"
         >
           <Plus className="size-4" />
           {t("webhook.create")}
@@ -288,14 +288,14 @@ export function WebhooksPage() {
           {webhooks.map((wh) => (
             <Card key={wh.id}>
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <CardTitle className="text-base">{wh.name}</CardTitle>
                     <Badge variant={wh.isActive ? "default" : "secondary"}>
                       {wh.isActive ? t("webhook.active") : t("webhook.inactive")}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <Button
                       variant="outline"
                       size="sm"

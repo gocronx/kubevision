@@ -196,6 +196,35 @@ func TestServiceRejectsChangedRequestAfterPreview(t *testing.T) {
 	require.Error(t, service.Upgrade(context.Background(), actor, "cluster-a", opts))
 }
 
+func TestMapAdapterErrorReturnsActionableSanitizedDetails(t *testing.T) {
+	tests := []struct {
+		name    string
+		err     error
+		code    int
+		message string
+	}{
+		{name: "timeout", err: context.DeadlineExceeded, code: bizerr.CodeK8sUnavailable, message: "inspect Pods and Events"},
+		{name: "hook", err: errors.New("failed post-install: password=super-secret job failed"), code: bizerr.CodeValidation, message: "password=[REDACTED]"},
+		{name: "quoted credential", err: errors.New(`failed post-install: api_key="secret value" job failed`), code: bizerr.CodeValidation, message: "api_key=[REDACTED]"},
+		{name: "private key", err: errors.New("failed post-install: -----BEGIN PRIVATE KEY-----\nsecret-value\n-----END PRIVATE KEY-----"), code: bizerr.CodeValidation, message: "[REDACTED PRIVATE KEY]"},
+		{name: "invalid resource", err: errors.New("cannot patch Deployment: field is invalid"), code: bizerr.CodeValidation, message: "Kubernetes rejected"},
+		{name: "connection", err: errors.New("Get https://user:pass@cluster: connection refused"), code: bizerr.CodeK8sUnavailable, message: "https://[REDACTED]@cluster"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mapped := mapAdapterError(tt.err)
+			var businessError *bizerr.BizError
+			require.ErrorAs(t, mapped, &businessError)
+			require.Equal(t, tt.code, businessError.Code)
+			require.Contains(t, businessError.Message, tt.message)
+			require.NotContains(t, businessError.Message, "super-secret")
+			require.NotContains(t, businessError.Message, "user:pass")
+			require.NotContains(t, businessError.Message, "secret value")
+			require.NotContains(t, businessError.Message, "secret-value")
+		})
+	}
+}
+
 func TestServiceCriticalRiskRequiresAdministrator(t *testing.T) {
 	adapter := &fakeAdapter{preview: &Preview{Digest: "abc", Risks: []Risk{{Level: "critical", Code: "cluster-privilege"}}}}
 	auth := fakeAuth{permissions: map[string]bool{PermissionInstall: true}}

@@ -166,9 +166,9 @@ export function YamlDiffViewer({
   const hasChanges = diff.some((l) => l.kind !== "unchanged")
 
   return (
-    <div className={cn("flex flex-col rounded-md border overflow-hidden", className)}>
+    <div className={cn("flex flex-col overflow-x-auto rounded-md border", className)}>
       {/* Column headers */}
-      <div className="grid grid-cols-2 divide-x divide-border border-b bg-muted/60">
+      <div className="grid min-w-[40rem] grid-cols-2 divide-x divide-border border-b bg-muted/60">
         <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {originalLabel}
         </div>
@@ -184,8 +184,8 @@ export function YamlDiffViewer({
       )}
 
       {hasChanges && (
-        <div className="overflow-auto max-h-[500px]">
-          <div className="grid grid-cols-2 divide-x divide-border min-w-0">
+        <div className="max-h-[500px] min-w-[40rem] overflow-auto">
+          <div className="grid grid-cols-2 divide-x divide-border">
             {/* Left pane */}
             <div className="font-mono text-xs leading-5 overflow-x-auto">
               {Array.from({ length: totalRows }, (_, idx) => {

@@ -181,7 +181,7 @@ export function GlobalSearch() {
         variant="outline"
         size="sm"
         onClick={() => setOpen(true)}
-        className="relative h-8 w-48 justify-start gap-2 rounded-md text-muted-foreground text-sm font-normal shadow-none md:w-56 lg:w-64"
+        className="relative size-8 justify-center gap-2 rounded-md px-0 text-sm font-normal text-muted-foreground shadow-none sm:w-48 sm:justify-start sm:px-3 md:w-56 lg:w-64"
       >
         <Search className="size-4 shrink-0" />
         <span className="hidden sm:inline">{t("search.placeholder")}</span>

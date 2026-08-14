@@ -45,7 +45,7 @@ export function NamespaceSelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("gap-2", className)}>
+        <Button variant="outline" size="sm" className={cn("max-w-full gap-2", className)}>
           <FolderOpen className="size-4" />
           <span className="max-w-[150px] truncate">
             {value ? value : t("common.allNamespaces")}
@@ -53,7 +53,7 @@ export function NamespaceSelector({
           <ChevronsUpDown className="size-3 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[220px]">
+      <DropdownMenuContent align="start" className="w-[220px] max-w-[calc(100vw-1rem)]">
         <ScrollArea className="max-h-[300px]">
           <DropdownMenuItem
             onClick={() => onChange("")}

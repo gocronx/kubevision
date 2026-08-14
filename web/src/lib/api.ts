@@ -8,6 +8,16 @@ interface ApiResponse<T = unknown> {
   meta?: ApiMeta
 }
 
+export class ApiError extends Error {
+  readonly code: number
+
+  constructor(message: string, code: number) {
+    super(message)
+    this.name = "ApiError"
+    this.code = code
+  }
+}
+
 export interface ApiMeta {
   total?: number
   stale?: boolean
@@ -163,11 +173,11 @@ transport.interceptors.response.use(
     // 40300 = permission denied.
     if (body.code === 40300) {
       toast.error("Permission denied")
-      return Promise.reject(new Error(body.message || "Permission denied"))
+      return Promise.reject(new ApiError(body.message || "Permission denied", body.code))
     }
     if (body.code >= 40000) {
       toast.error(body.message || "Request failed")
-      return Promise.reject(new Error(body.message))
+      return Promise.reject(new ApiError(body.message || "Request failed", body.code))
     }
     return body.data as never
   },

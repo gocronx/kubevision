@@ -175,7 +175,7 @@ export function LoginPage() {
           <LanguageToggle i18n={i18n} />
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
-            <CardDescription className="whitespace-nowrap">{t("login.description")}</CardDescription>
+            <CardDescription>{t("login.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCredentialsSubmit} onKeyDownCapture={preventSubmitWhileComposing} className="flex flex-col gap-4">

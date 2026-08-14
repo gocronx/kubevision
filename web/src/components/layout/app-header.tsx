@@ -68,13 +68,13 @@ export function AppHeader() {
     : "U"
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-      <div className="flex flex-1 items-center gap-2">
+    <header className="flex h-14 min-w-0 shrink-0 items-center gap-1 border-b px-2 sm:gap-2 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
         <SidebarTrigger />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <span className="text-sm text-muted-foreground">{breadcrumb}</span>
+        <Separator orientation="vertical" className="mr-2 hidden h-4 sm:block" />
+        <span className="hidden truncate text-sm text-muted-foreground sm:block">{breadcrumb}</span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <GlobalSearch />
 
         {/* Appearance dropdown */}

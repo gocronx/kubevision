@@ -31,7 +31,7 @@ function PlayDialog({ session, onClose }: PlayDialogProps) {
 
   return (
     <Dialog open={!!session} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl h-[80vh] flex flex-col gap-4">
+      <DialogContent className="flex h-[calc(100dvh-1rem)] flex-col gap-4 sm:h-[80vh] sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <TerminalSquare className="size-4" />
@@ -100,8 +100,8 @@ export function TerminalSessionsPage() {
         </div>
       ) : (
         <>
-          <div className="rounded-md border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="max-w-full overflow-x-auto rounded-md border">
+            <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("terminalSession.user")}</th>
@@ -149,7 +149,7 @@ export function TerminalSessionsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <span>
                 {t("terminalSession.showingPage", { page: page + 1, total: totalPages })}
               </span>

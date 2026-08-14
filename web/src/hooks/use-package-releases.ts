@@ -55,7 +55,7 @@ export function usePackageRemove(cluster: string, namespace: string, name: strin
 export function usePackageChange(cluster: string, operation: "install" | "upgrade") {
   const cache = useQueryClient()
   const preview = useMutation({ mutationFn: (input: PackageChangeInput) => api.post<PackagePreview>(`${base(cluster)}/preview/${operation}`, input, { timeout: 600_000 }) })
-  const execute = useMutation({ mutationFn: (input: PackageChangeInput) => api.post(`${base(cluster)}/${operation}`, input, { timeout: 600_000 }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
+  const execute = useMutation({ mutationFn: (input: PackageChangeInput) => api.post<PackageRelease | null>(`${base(cluster)}/${operation}`, input, { timeout: 600_000 }), onSuccess: () => cache.invalidateQueries({ queryKey: ["package-releases"] }) })
   return { preview, execute }
 }
 

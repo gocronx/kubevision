@@ -5,14 +5,14 @@ title: 路线图
 # 路线图
 
 KubeVision 已经提供多集群资源管理、中英文界面、AI 助手、OAuth/OIDC、目录
-登录、通行密钥、CRD 发现、已有 Helm Release 管理，以及只读的 Prometheus、
+登录、通行密钥、CRD 发现、受控 Helm 软件包管理，以及只读的 Prometheus、
 Grafana 和 Argo CD 集成 API。
 
 路线图仅记录尚未交付的工作，优先级可能随维护能力和社区反馈调整。
 
 ## 近期
 
-- Helm Chart 安装和升级，包括 Values 差异和服务端预览
+- Helm 修订版本间的 Values 差异，以及更广泛的 OCI 更新发现
 - YAML 编辑器中的 Kubernetes Schema 感知校验
 - 只读 Pod 文件浏览和受控下载
 - 扩大认证与破坏性操作的端到端测试覆盖

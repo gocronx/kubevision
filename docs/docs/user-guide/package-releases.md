@@ -51,11 +51,27 @@ result. Select **Upgrade** from a release detail page. KubeVision accepts public
 `oci://` references, direct HTTPS `.tgz` URLs, chart names paired with an HTTPS
 Helm repository URL, managed repositories, and temporary uploads.
 
-Enter overrides as a JSON object and select **Preview changes**. KubeVision runs
-a server-side Helm dry run and shows rendered resources, hooks, risks, and a
-redacted manifest. The one-time confirmation expires after ten minutes and is
-bound to the user, cluster, release, chart source, Values, operation, and rendered
-digest. Execution repeats the dry run and rejects changed output.
+Default scalar Values can be edited in **Guided** mode and searched by their
+nested path. Boolean, numeric, text, and sensitive fields use appropriate
+controls; sensitive fields can receive a browser-generated cryptographically
+random value. Switch to **JSON** mode for arrays, objects, or the complete Values
+document. Both modes edit the same JSON object.
+
+Select **Preview changes** before installation. KubeVision runs a server-side
+Helm dry run and shows rendered resource counts, hooks, risks, and a redacted
+manifest. Advanced options expose the operation timeout, readiness wait, atomic
+rollback, and namespace creation. The one-time confirmation expires after ten
+minutes and is bound to the user, cluster, release, chart source, Values,
+operation, and rendered digest. Any edit requires a new preview, and execution
+repeats the dry run and rejects changed output.
+
+After a successful install, KubeVision opens the release detail page. The page
+shows Helm's release status and links supported rendered resources to their
+Kubernetes detail views. A `deployed` Helm status means Helm completed the
+release; it does not by itself prove that every Pod or application dependency is
+healthy. Inspect the workload resources and Events before exposing the service.
+Failed operations report a sanitized cause and suggest relevant Pods, Events,
+hooks, connectivity, or timeout checks without returning credentials.
 
 ### Check for updates
 

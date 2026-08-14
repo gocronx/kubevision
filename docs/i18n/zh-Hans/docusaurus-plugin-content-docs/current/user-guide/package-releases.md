@@ -40,10 +40,22 @@ Artifact Hub 搜索同时支持 HTTPS Helm 仓库和公开 OCI Chart 引用。�
 详情页选择**升级**。KubeVision 支持公开 `oci://` 引用、HTTPS `.tgz` 直链、Chart
 名称与 HTTPS Helm 仓库 URL 的组合、托管仓库以及临时上传。
 
-以 JSON 对象填写覆盖值后选择**预览变更**。KubeVision 会执行服务端 Helm Dry Run，
-展示渲染资源、Hook、风险和已脱敏清单。一次性确认信息十分钟后过期，并绑定用户、
-集群、Release、Chart 来源、Values、操作类型和渲染摘要。执行前会再次 Dry Run，
-输出发生变化时会拒绝操作。
+Chart 的默认标量 Values 可以在**基础配置**模式中按嵌套路径搜索和编辑。布尔值、
+数值、文本和敏感字段使用对应的控件，敏感字段可在浏览器中生成加密安全的随机值。
+数组、对象或完整 Values 文档可切换到 **JSON** 模式编辑；两种模式修改的是同一个
+JSON 对象。
+
+安装前选择**预览变更**。KubeVision 会执行服务端 Helm Dry Run，展示渲染资源数量、
+Hook、风险和已脱敏清单。高级选项可以调整操作超时、等待资源就绪、失败时原子回滚
+以及创建命名空间。一次性确认信息十分钟后过期，并绑定用户、集群、Release、Chart
+来源、Values、操作类型和渲染摘要。修改任何内容后都必须重新预览；执行前还会再次
+Dry Run，输出发生变化时会拒绝操作。
+
+安装成功后，KubeVision 会打开 Release 详情页，展示 Helm Release 状态，并将支持的
+渲染资源链接到 Kubernetes 资源详情页。Helm 状态为 `deployed` 只表示 Helm 已完成
+该 Release，不代表所有 Pod 或应用依赖都已健康；对外提供服务前仍应检查工作负载和
+事件。操作失败时会返回脱敏后的原因，并根据情况提示检查 Pod、事件、Hook、连接或
+超时，不会在错误中返回凭据。
 
 ### 检查更新
 

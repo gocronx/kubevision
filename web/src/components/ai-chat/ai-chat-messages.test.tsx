@@ -41,6 +41,7 @@ describe("ChatMessages", () => {
       content: "",
       toolName: "delete_resource",
       toolArgs: { kind: "Pod", namespace: "default", name: "web" },
+      clusterId: 7,
       actionStatus: "pending",
     }
 
@@ -49,6 +50,9 @@ describe("ChatMessages", () => {
     )
 
     expect(screen.getByRole("button", { name: "ai.confirm" })).toBeInTheDocument()
+    expect(screen.getByText("ai.riskHigh")).toBeInTheDocument()
+    expect(screen.getByText("ai.targetCluster")).toBeInTheDocument()
+    expect(screen.getByText("ai.actionTarget")).toBeInTheDocument()
   })
 
   it("does not force the user back to the bottom after they scroll up", () => {

@@ -95,6 +95,37 @@ describe("useAIChat sessions", () => {
     expect(result.current.sessions.find((item) => item.id === first)?.messages.at(-1)?.content).toBe("finished")
   })
 
+  it("keeps the target cluster on consecutive confirmed actions", async () => {
+    const { result } = renderHook(() => useAIChat(7))
+    const sessionId = result.current.activeSession.id
+    act(() => result.current.sendMessage(sessionId, "create resources", 23))
+    await waitFor(() => expect(pending).toHaveLength(1))
+
+    act(() => pending[0].callbacks.onEvent("action_required", {
+      tool_call_id: "first",
+      tool: "create_resource",
+      args: { kind: "Deployment", namespace: "default", name: "demo" },
+      session_id: "approval-one",
+    }))
+    act(() => pending[0].resolve())
+    await waitFor(() => expect(result.current.activeSession.isRunning).toBe(false))
+    const firstAction = result.current.activeSession.messages.find((message) => message.toolCallId === "first")
+    expect(firstAction?.clusterId).toBe(23)
+
+    act(() => result.current.approveAction(sessionId, firstAction!))
+    await waitFor(() => expect(pending).toHaveLength(2))
+    act(() => pending[1].callbacks.onEvent("action_required", {
+      tool_call_id: "second",
+      tool: "create_resource",
+      args: { kind: "Service", namespace: "default", name: "demo" },
+      session_id: "approval-two",
+    }))
+
+    await waitFor(() => expect(result.current.activeSession.messages.find((message) => message.toolCallId === "second")?.clusterId).toBe(23))
+    act(() => pending[1].resolve())
+    await waitFor(() => expect(result.current.activeSession.isRunning).toBe(false))
+  })
+
   it("deletes only the requested session and selects the most recent remaining one", () => {
     const { result } = renderHook(() => useAIChat(7))
     const first = result.current.activeSession.id

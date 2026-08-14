@@ -318,7 +318,7 @@ export function SecuritySettingsPage() {
   // ---- Render ----
 
   return (
-    <div className="container max-w-2xl py-8 space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6 py-2 sm:py-8">
       <div>
         <h1 className="text-2xl font-bold">{t("settings.security", "Security")}</h1>
         <p className="text-muted-foreground mt-1">
@@ -331,8 +331,8 @@ export function SecuritySettingsPage() {
       {/* 2FA section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
               {is2FAEnabled ? (
                 <ShieldCheck className="size-5 text-green-500" />
               ) : (
@@ -347,7 +347,7 @@ export function SecuritySettingsPage() {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant={is2FAEnabled ? "default" : "secondary"}>
+            <Badge className="self-start" variant={is2FAEnabled ? "default" : "secondary"}>
               {is2FAEnabled
                 ? t("twofa.statusEnabled", "Enabled")
                 : t("twofa.statusDisabled", "Disabled")}
@@ -398,7 +398,7 @@ export function SecuritySettingsPage() {
                 <p className="text-xs text-muted-foreground">
                   {t("twofa.orEnterManually", "Or enter this key manually:")}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-1 sm:gap-2">
                   <code className="flex-1 rounded bg-muted px-2 py-1 text-xs font-mono break-all">
                     {showSecret ? setupData.secret : setupData.secret.replace(/./g, "•")}
                   </code>
@@ -429,7 +429,7 @@ export function SecuritySettingsPage() {
                 <Label htmlFor="enableCode">
                   {t("twofa.enterCode", "Enter the 6-digit code to confirm")}
                 </Label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Input
                     id="enableCode"
                     type="text"
@@ -439,7 +439,7 @@ export function SecuritySettingsPage() {
                     value={enableCode}
                     onChange={(e) => setEnableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     maxLength={6}
-                    className="text-center tracking-widest text-lg w-36"
+                    className="w-36 text-center text-lg tracking-widest"
                     autoFocus
                   />
                   <Button
@@ -467,7 +467,7 @@ export function SecuritySettingsPage() {
                 {t("twofa.recoveryWarning", "Save these recovery codes in a safe place. Each code can only be used once.")}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {setupData.recoveryCodes.map((code, i) => (
                   <div
                     key={code}
@@ -490,7 +490,7 @@ export function SecuritySettingsPage() {
                 ))}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                 <Button variant="outline" onClick={copyAllCodes}>
                   <Copy className="size-4" />
                   {t("twofa.copyAll", "Copy All")}

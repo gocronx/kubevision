@@ -150,9 +150,9 @@ export function ResourceYamlTab({ content, name, namespace }: ResourceYamlTabPro
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">{t("resource.resourceYaml")}</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <Download className="size-4" />
               {t("pod.download")}
@@ -177,7 +177,7 @@ export function ResourceYamlTab({ content, name, namespace }: ResourceYamlTabPro
 
 function DetailRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-2">
+    <div className="grid gap-1 sm:grid-cols-[120px_1fr] sm:gap-2">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className={`text-sm break-all ${mono ? "font-mono text-xs" : ""}`}>{value}</dd>
     </div>

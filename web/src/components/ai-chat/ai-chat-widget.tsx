@@ -132,14 +132,17 @@ export function AIChatWidget() {
       data-chat-mode={mode}
       className={mode === "full"
         ? "fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-background"
-        : `fixed bottom-4 right-4 z-50 flex max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-background shadow-2xl sm:bottom-6 sm:right-6 ${isDragging ? "select-none" : "transition-[width,height] duration-200"}`}
-      style={mode === "floating" ? { width: dimensions.width, height: dimensions.height } : undefined}
+        : `fixed inset-2 z-50 flex !h-auto !w-auto flex-col overflow-hidden rounded-lg border bg-background shadow-2xl sm:inset-auto sm:bottom-6 sm:right-6 sm:!h-[var(--chat-height)] sm:!w-[var(--chat-width)] ${isDragging ? "select-none" : "transition-[width,height] duration-200"}`}
+      style={mode === "floating" ? {
+        "--chat-width": `${dimensions.width}px`,
+        "--chat-height": `${dimensions.height}px`,
+      } as React.CSSProperties : undefined}
     >
       {mode === "floating" && (
         <button
           type="button"
           aria-label={t("ai.resizeChat")}
-          className="absolute left-0 top-0 z-10 flex size-11 touch-none cursor-nwse-resize items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          className="absolute left-0 top-0 z-10 hidden size-11 touch-none cursor-nwse-resize items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:flex"
           onPointerDown={startDragResize}
           onPointerMove={dragResize}
           onPointerUp={stopDragResize}
@@ -159,7 +162,7 @@ export function AIChatWidget() {
         <TooltipProvider>
           <div className="ml-auto flex shrink-0 items-center gap-1">
             {mode === "floating" && (
-              <>
+              <div className="hidden items-center gap-1 sm:flex">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -190,7 +193,7 @@ export function AIChatWidget() {
                   </TooltipTrigger>
                   <TooltipContent side="bottom">{t("ai.enlargeChat")}</TooltipContent>
                 </Tooltip>
-              </>
+              </div>
             )}
             <Tooltip>
               <TooltipTrigger asChild>

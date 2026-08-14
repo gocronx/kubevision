@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Collapsible,
   CollapsibleContent,
@@ -268,6 +269,8 @@ function ToolMessage({
 }) {
   const { t } = useTranslation()
   const pending = message.actionStatus === "pending"
+  const risk = actionRisk(message)
+  const target = actionTarget(message)
 
   return (
     <div
@@ -284,6 +287,13 @@ function ToolMessage({
 
       {pending && (
         <>
+          <div className="mt-2 grid gap-1 rounded-md border bg-background/70 p-2 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant={risk === "high" ? "destructive" : "secondary"}>{t(`ai.risk${risk === "high" ? "High" : "Medium"}`)}</Badge>
+              {message.clusterId !== undefined && <span className="text-muted-foreground">{t("ai.targetCluster", { cluster: message.clusterId })}</span>}
+            </div>
+            <span className="break-all text-muted-foreground">{t("ai.actionTarget", { target })}</span>
+          </div>
           {hasPreview(message) && (
             <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded bg-muted p-2 font-mono text-xs">
               {previewText(message)}
@@ -321,6 +331,18 @@ function ToolMessage({
       )}
     </div>
   )
+}
+
+function actionRisk(message: ChatMessage): "high" | "medium" {
+  return message.toolName === "delete_resource" ? "high" : "medium"
+}
+
+function actionTarget(message: ChatMessage): string {
+  const args = message.toolArgs ?? {}
+  const kind = String(args.kind ?? "resource")
+  const namespace = String(args.namespace ?? "default")
+  const name = String(args.name ?? "new resource")
+  return `${namespace}/${kind}/${name}`
 }
 
 function StatusIcon({ status }: { status?: ChatMessage["actionStatus"] }) {

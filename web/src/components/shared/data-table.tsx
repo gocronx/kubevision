@@ -72,10 +72,12 @@ export function DataTable<T = Record<string, unknown>>({
     return <ArrowDown className="size-3" />
   }
 
+  const tableStyle = { minWidth: `${Math.max(36, columns.length * 8)}rem` }
+
   if (isLoading) {
     return (
-      <div className="rounded-md border">
-        <table className="w-full">
+      <div className="max-w-full overflow-x-auto rounded-md border">
+        <table className="w-full" style={tableStyle}>
           <thead>
             <tr className="border-b bg-muted/50">
               {columns.map((col) => (
@@ -106,8 +108,8 @@ export function DataTable<T = Record<string, unknown>>({
 
   if (data.length === 0) {
     return (
-      <div className="rounded-md border">
-        <table className="w-full">
+      <div className="max-w-full overflow-x-auto rounded-md border">
+        <table className="w-full" style={tableStyle}>
           <thead>
             <tr className="border-b bg-muted/50">
               {columns.map((col) => (
@@ -129,8 +131,8 @@ export function DataTable<T = Record<string, unknown>>({
   }
 
   return (
-    <div className="rounded-md border">
-      <table className="w-full">
+    <div className="max-w-full overflow-x-auto rounded-md border">
+      <table className="w-full" style={tableStyle}>
         <thead>
           <tr className="border-b bg-muted/50">
             {columns.map((col) => (

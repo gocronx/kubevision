@@ -30,6 +30,13 @@ function rowNames() {
 }
 
 describe("DataTable stable ordering", () => {
+  it("keeps wide tables scrollable on narrow viewports", () => {
+    const { container } = render(<DataTable columns={columns} data={items} />)
+
+    expect(container.firstElementChild).toHaveClass("max-w-full", "overflow-x-auto")
+    expect(screen.getByRole("table")).toHaveStyle({ minWidth: "36rem" })
+  })
+
   it("keeps the namespace and name order when refreshed data arrives shuffled", () => {
     const view = render(
       <DataTable columns={columns} data={items} getRowKey={(item) => item.metadata.uid} />,

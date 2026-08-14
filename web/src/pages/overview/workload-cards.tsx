@@ -33,16 +33,16 @@ export function PodStatusBar({ dist, total, isLoading }: { dist: PodStatusDist; 
   return (
     <Card className="flex h-full flex-col rounded-2xl border-border/40 shadow-sm">
       <CardHeader className="shrink-0 p-5 pb-4"><CardTitle className="text-sm font-semibold">{t("overview.pod_status")}</CardTitle></CardHeader>
-      <CardContent className="flex flex-1 items-center justify-center p-5 pt-0">
-        <div className="flex items-center gap-10">
-          <div className="relative aspect-square w-[130px] shrink-0">
+      <CardContent className="flex flex-1 items-center justify-center p-4 pt-0 sm:p-5 sm:pt-0">
+        <div className="flex w-full flex-col items-center gap-6 sm:w-auto sm:flex-row sm:gap-10">
+          <div className="relative aspect-square w-28 shrink-0 sm:w-[130px]">
             <svg viewBox="0 0 100 100" className="size-full">
               <circle cx={50} cy={50} r={radius} fill="none" stroke="currentColor" className="text-muted/30" strokeWidth={strokeWidth} />
               {arcs.map((arc) => <circle key={arc.label} cx={50} cy={50} r={radius} fill="none" stroke={arc.color} strokeWidth={strokeWidth} strokeDasharray={`${arc.dashLength} ${circumference - arc.dashLength}`} strokeDashoffset={arc.dashOffset} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 ease-out" />)}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-3xl font-bold tracking-tight">{total}</span><span className="mt-1 text-xs font-medium text-muted-foreground">{t("overview.pods")}</span></div>
           </div>
-          <div className="flex min-w-[140px] flex-col gap-3">
+          <div className="flex w-full min-w-0 max-w-64 flex-col gap-3 sm:min-w-[140px]">
             {segments.map((segment) => <div key={segment.label} className="flex items-center gap-2.5 text-sm"><span className={`size-3 shrink-0 rounded-full ${segment.className}`} /><span className="truncate font-medium text-muted-foreground">{segment.label}</span><span className="ml-auto shrink-0 font-semibold tabular-nums">{segment.count}</span><span className="w-10 shrink-0 text-right text-xs text-muted-foreground tabular-nums">{(total > 0 ? segment.count / total * 100 : 0).toFixed(1)}%</span></div>)}
           </div>
         </div>

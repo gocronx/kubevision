@@ -140,7 +140,7 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
 
           <div className="space-y-2">
             <Label htmlFor="ai-model">{t("ai.model")}</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 id="ai-model"
                 value={model}
@@ -152,6 +152,7 @@ function AISettingsForm({ config }: { config: AIConfigView }) {
                 type="button"
                 variant="outline"
                 disabled={!isAdmin || !baseURL.trim() || providerKeyRequired || (!apiKey.trim() && !config.hasApiKey) || discoverModels.isPending}
+                className="sm:shrink-0"
                 onClick={discover}
               >
                 {discoverModels.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}

@@ -16,6 +16,7 @@ export interface ChatMessage {
   toolArgs?: Record<string, unknown>
   toolResult?: string
   isError?: boolean
+  clusterId?: number
 
   // Set when a mutation is awaiting the user's approval.
   pendingSessionId?: string

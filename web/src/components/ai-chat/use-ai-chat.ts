@@ -37,6 +37,7 @@ export function useAIChat(userId?: number) {
   const workspaceUserIDRef = useRef(userId)
   const controllersRef = useRef(new Map<string, AbortController>())
   const activeAssistantsRef = useRef(new Map<string, string>())
+  const streamClusterIDsRef = useRef(new Map<string, number>())
   workspaceRef.current = workspace
 
   const updateSession = useCallback((sessionId: string, update: (session: ChatSession) => ChatSession) => {
@@ -52,6 +53,7 @@ export function useAIChat(userId?: number) {
     controllersRef.current.forEach((controller) => controller.abort())
     controllersRef.current.clear()
     activeAssistantsRef.current.clear()
+    streamClusterIDsRef.current.clear()
     const nextWorkspace = initialWorkspace(userId)
     loadedUserIDRef.current = userId
     workspaceUserIDRef.current = userId
@@ -144,6 +146,7 @@ export function useAIChat(userId?: number) {
           id: newID(), role: "tool", content: "",
           toolCallId: String(data.tool_call_id ?? ""), toolName: String(data.tool ?? ""),
           toolArgs: (data.args as Record<string, unknown>) ?? {},
+          clusterId: streamClusterIDsRef.current.get(sessionId),
           pendingSessionId: String(data.session_id ?? ""), actionStatus: "pending",
         })
         break
@@ -175,6 +178,7 @@ export function useAIChat(userId?: number) {
       activeAssistantsRef.current.delete(sessionId)
       if (controllersRef.current.get(sessionId) === controller) {
         controllersRef.current.delete(sessionId)
+        streamClusterIDsRef.current.delete(sessionId)
         updateSession(sessionId, (session) => ({ ...session, isRunning: false, updatedAt: Date.now() }))
       }
     }
@@ -189,7 +193,10 @@ export function useAIChat(userId?: number) {
         .slice(0, MAX_CHAT_SESSIONS - 1)
       const retainedIDs = new Set(retained.map((item) => item.id))
       current.sessions.forEach((item) => {
-        if (!retainedIDs.has(item.id)) controllersRef.current.get(item.id)?.abort()
+        if (!retainedIDs.has(item.id)) {
+          controllersRef.current.get(item.id)?.abort()
+          streamClusterIDsRef.current.delete(item.id)
+        }
       })
       return { activeSessionId: session.id, sessions: [session, ...retained] }
     })
@@ -218,6 +225,7 @@ export function useAIChat(userId?: number) {
     controllersRef.current.get(sessionId)?.abort()
     controllersRef.current.delete(sessionId)
     activeAssistantsRef.current.delete(sessionId)
+    streamClusterIDsRef.current.delete(sessionId)
     setWorkspace((current) => {
       if (!current.sessions.some((session) => session.id === sessionId)) return current
       const remaining = current.sessions
@@ -239,6 +247,7 @@ export function useAIChat(userId?: number) {
     const session = workspaceRef.current.sessions.find((item) => item.id === sessionId)
     if (!trimmed || !session || session.isRunning || controllersRef.current.has(sessionId)) return
     const userMessage: ChatMessage = { id: newID(), role: "user", content: trimmed }
+    streamClusterIDsRef.current.set(sessionId, clusterId)
     const history: APIChatMessage[] = [...session.messages, userMessage]
       .filter((message) => message.role === "user" || message.role === "assistant")
       .map((message) => ({ role: message.role as "user" | "assistant", content: message.content }))
@@ -255,6 +264,7 @@ export function useAIChat(userId?: number) {
   const approveAction = useCallback((sessionId: string, message: ChatMessage) => {
     if (!message.pendingSessionId || controllersRef.current.has(sessionId)) return
     const pendingSessionId = message.pendingSessionId
+    if (message.clusterId !== undefined) streamClusterIDsRef.current.set(sessionId, message.clusterId)
     patchMessage(sessionId, message.id, { actionStatus: "running", pendingSessionId: undefined })
     void runStream(sessionId, CONTINUE_URL, { sessionId: pendingSessionId })
   }, [patchMessage, runStream])

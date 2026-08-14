@@ -383,19 +383,19 @@ export function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("users.title")}</h1>
           <p className="text-muted-foreground text-sm">{t("users.description")}</p>
         </div>
-        <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
+        <Button size="sm" onClick={() => setCreateOpen(true)} className="self-start gap-1.5">
           <Plus className="size-4" />
           {t("users.create")}
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <table className="w-full text-sm">
+      <div className="max-w-full overflow-x-auto rounded-md border">
+        <table className="w-full min-w-[44rem] text-sm">
           <thead className="bg-muted/50">
             <tr className="border-b">
               <th className="px-3 py-2 text-left font-medium">ID</th>
