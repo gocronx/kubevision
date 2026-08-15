@@ -218,7 +218,7 @@ func TestTerminalHandler_HandleExec_MissingToken(t *testing.T) {
 
 	var body map[string]string
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Contains(t, body["error"], "missing token")
+	assert.Contains(t, body["error"], "missing ticket")
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +234,7 @@ func TestTerminalHandler_ResolveClusterConfig_ClusterNotFound(t *testing.T) {
 
 	handler := NewTerminalHandler(nil, repo, nil, nil, nil, newDiscardLogger())
 
-	req := httptest.NewRequest(http.MethodGet, "/exec?token=x", nil)
+	req := httptest.NewRequest(http.MethodGet, "/exec?ticket=x", nil)
 	w := httptest.NewRecorder()
 	c := newTestGinContext(w, req)
 
@@ -253,7 +253,7 @@ func TestTerminalHandler_HandleExec_InvalidToken_Rejected(t *testing.T) {
 	jwtMgr := newTestJWTManager()
 	handler := NewTerminalHandler(nil, nil, jwtMgr, nil, nil, newDiscardLogger())
 
-	req := httptest.NewRequest(http.MethodGet, "/exec?token=notavalidjwt", nil)
+	req := httptest.NewRequest(http.MethodGet, "/exec?ticket=notavalidjwt", nil)
 	w := httptest.NewRecorder()
 
 	c := newTestGinContext(w, req)

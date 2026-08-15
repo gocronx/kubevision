@@ -103,6 +103,7 @@ e2e-test:
 ## helm-validate: Lint and render all production baseline fixtures
 helm-validate:
 	helm lint deploy/helm/kubevision
+	@grep -q '^USER 65532:65532$$' deploy/Dockerfile
 	@for values in deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
 		deploy/helm/kubevision/tests/fixtures/helm-values-existing-secret.yaml \
 		deploy/helm/kubevision/tests/fixtures/helm-values-external-database.yaml \
@@ -121,6 +122,29 @@ helm-validate:
 	@helm template kubevision deploy/helm/kubevision \
 		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
 		--show-only templates/deployment.yaml | grep -q 'path: /readyz'
+	@helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		--show-only templates/deployment.yaml | grep -q 'readOnlyRootFilesystem: true'
+	@helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		--show-only templates/deployment.yaml | grep -q 'allowPrivilegeEscalation: false'
+	@helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		--show-only templates/deployment.yaml | grep -q 'runAsUser: 65532'
+	@helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		--show-only templates/deployment.yaml | grep -q 'value: /data/.kubevision-secrets.yaml'
+	@for resource in deployments/scale replicasets/scale statefulsets/scale; do \
+		helm template kubevision deploy/helm/kubevision \
+			--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+			--show-only templates/clusterrole.yaml | grep -q "$$resource" || exit 1; \
+	done
+	@! helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-default.yaml \
+		--show-only templates/clusterrole.yaml | grep -q '\*'
+	@test "$$(helm template kubevision deploy/helm/kubevision \
+		--values deploy/helm/kubevision/tests/fixtures/helm-values-external-database.yaml \
+		--show-only templates/deployment.yaml | grep -c 'emptyDir: {}')" -eq 2
 	@! helm template kubevision deploy/helm/kubevision \
 		--values deploy/helm/kubevision/tests/fixtures/helm-values-external-database.yaml | grep -q 'kind: PersistentVolumeClaim'
 

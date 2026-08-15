@@ -90,14 +90,14 @@ func TestLogsHandler_HandleLogs_MissingToken_Returns400(t *testing.T) {
 
 	var body map[string]string
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Contains(t, body["error"], "missing token")
+	assert.Contains(t, body["error"], "missing ticket")
 }
 
 func TestLogsHandler_HandleLogs_InvalidToken_Returns401(t *testing.T) {
 	jwtMgr := newTestJWTManager()
 	handler := NewLogsHandler(nil, nil, jwtMgr, nil, nil, newDiscardLogger())
 
-	req := httptest.NewRequest(http.MethodGet, "/logs?token=garbage-token", nil)
+	req := httptest.NewRequest(http.MethodGet, "/logs?ticket=garbage-ticket", nil)
 	w := httptest.NewRecorder()
 
 	c := newTestGinContext(w, req)

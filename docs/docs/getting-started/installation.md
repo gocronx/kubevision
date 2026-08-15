@@ -50,6 +50,17 @@ helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
   -f values.yaml
 ```
 
+The chart runs the container as numeric UID/GID `65532` with a read-only root
+filesystem, dropped Linux capabilities, and the runtime-default seccomp
+profile. Auto-generated application keys are written to
+`/data/.kubevision-secrets.yaml`; the default SQLite PVC preserves this file.
+When persistence is disabled, `/data` is an ephemeral volume, so PostgreSQL
+installations should use `existingSecret` to preserve JWT and encryption keys
+across Pod replacements. The ClusterRole lists the built-in resource types used
+by the dashboard instead of using wildcard resources. Add narrowly scoped
+`rbac.extraRules` entries when custom resources or optional controllers require
+more Kubernetes API permissions.
+
 ## Accessing KubeVision
 
 ### Local or Temporary Access

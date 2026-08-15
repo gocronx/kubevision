@@ -228,6 +228,35 @@ func TestGenerateAndParseRefreshToken(t *testing.T) {
 	})
 }
 
+func TestWebSocketTicketIsShortLivedAndScoped(t *testing.T) {
+	mgr := newTestJWTManager()
+	ticket, err := mgr.GenerateWebSocketTicket(42)
+	if err != nil {
+		t.Fatalf("GenerateWebSocketTicket error: %v", err)
+	}
+	claims, err := mgr.ParseWebSocketTicket(ticket)
+	if err != nil {
+		t.Fatalf("ParseWebSocketTicket error: %v", err)
+	}
+	if claims.UserID != 42 {
+		t.Fatalf("UserID = %d, want 42", claims.UserID)
+	}
+	if time.Until(claims.ExpiresAt.Time) > 31*time.Second {
+		t.Fatalf("websocket ticket lifetime is too long: %s", time.Until(claims.ExpiresAt.Time))
+	}
+
+	accessToken, err := mgr.GenerateAccessToken(&TokenClaims{UserID: 42})
+	if err != nil {
+		t.Fatalf("GenerateAccessToken error: %v", err)
+	}
+	if _, err := mgr.ParseWebSocketTicket(accessToken); err == nil {
+		t.Fatal("access token was accepted as a websocket ticket")
+	}
+	if _, err := mgr.ParseToken(ticket); err == nil {
+		t.Fatal("websocket ticket was accepted as an access token")
+	}
+}
+
 func TestParseRefreshTokenFailures(t *testing.T) {
 	mgr := newTestJWTManager()
 

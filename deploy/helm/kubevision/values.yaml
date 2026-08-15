@@ -20,8 +20,20 @@ serviceAccount:
   name: ""
 
 podAnnotations: {}
-podSecurityContext: {}
-securityContext: {}
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
 
 # Name of a pre-created Secret whose keys are KubeVision environment variables,
 # for example KUBEVISION_JWT_SECRET, KUBEVISION_ENCRYPT_KEY, and
@@ -146,6 +158,8 @@ persistence:
 
 rbac:
   create: true
+  # Add rules for custom resources or optional controllers used by your cluster.
+  extraRules: []
 
 podDisruptionBudget:
   enabled: false

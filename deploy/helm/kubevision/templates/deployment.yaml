@@ -60,6 +60,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - --config=/etc/kubevision/config.yaml
+          env:
+            - name: KUBEVISION_SECRETS_FILE
+              value: /data/.kubevision-secrets.yaml
           {{- with .Values.existingSecret }}
           envFrom:
             - secretRef:
@@ -107,19 +110,23 @@ spec:
             - name: config
               mountPath: /etc/kubevision
               readOnly: true
-            {{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /data
-            {{- end }}
+            - name: tmp
+              mountPath: /tmp
       volumes:
+        - name: tmp
+          emptyDir: {}
         - name: config
           configMap:
             name: {{ include "kubevision.fullname" . }}
-        {{- if .Values.persistence.enabled }}
         - name: data
+          {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "kubevision.fullname" . }}
-        {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

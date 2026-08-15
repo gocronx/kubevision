@@ -15,13 +15,15 @@ type TokenClaims struct {
 	Role         string            `json:"role"`
 	ClusterRoles map[string]string `json:"clusterRoles,omitempty"`
 	TokenVersion int               `json:"tv"`
+	TokenType    string            `json:"typ"`
 }
 
 // refreshClaims holds the JWT claims for refresh tokens.
 type refreshClaims struct {
 	jwt.RegisteredClaims
-	UserID       uint `json:"uid"`
-	TokenVersion int  `json:"tv"`
+	UserID       uint   `json:"uid"`
+	TokenVersion int    `json:"tv"`
+	TokenType    string `json:"typ"`
 }
 
 // TempTokenClaims holds the JWT claims for short-lived 2FA pending tokens.
@@ -29,9 +31,21 @@ type refreshClaims struct {
 // and are used exclusively to authorize the 2FA verification step.
 type TempTokenClaims struct {
 	jwt.RegisteredClaims
-	UserID     uint `json:"uid"`
-	Pending2FA bool `json:"pending2fa"`
+	UserID     uint   `json:"uid"`
+	Pending2FA bool   `json:"pending2fa"`
+	TokenType  string `json:"typ"`
 }
+
+// WebSocketTicketClaims holds the identity carried by a short-lived ticket.
+// Tickets are separate from access tokens so URL exposure cannot disclose a
+// reusable application session.
+type WebSocketTicketClaims struct {
+	jwt.RegisteredClaims
+	UserID    uint   `json:"uid"`
+	TokenType string `json:"typ"`
+}
+
+const webSocketTicketTTL = 30 * time.Second
 
 // JWTManager handles JWT token generation and validation.
 type JWTManager struct {
@@ -52,6 +66,7 @@ func NewJWTManager(secret string, accessTTL, refreshTTL time.Duration) *JWTManag
 // GenerateAccessToken creates a signed JWT access token with the given claims.
 func (m *JWTManager) GenerateAccessToken(claims *TokenClaims) (string, error) {
 	now := time.Now()
+	claims.TokenType = "access"
 	claims.RegisteredClaims = jwt.RegisteredClaims{
 		Issuer:    "kubevision",
 		Subject:   fmt.Sprintf("%d", claims.UserID),
@@ -77,6 +92,7 @@ func (m *JWTManager) GenerateRefreshToken(userID uint, tokenVersion int) (string
 		},
 		UserID:       userID,
 		TokenVersion: tokenVersion,
+		TokenType:    "refresh",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -96,10 +112,53 @@ func (m *JWTManager) ParseToken(tokenStr string) (*TokenClaims, error) {
 	}
 
 	claims, ok := token.Claims.(*TokenClaims)
-	if !ok || !token.Valid {
+	if !ok || !token.Valid || claims.TokenType != "" && claims.TokenType != "access" {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
+	return claims, nil
+}
+
+// GenerateWebSocketTicket creates a narrowly scoped ticket for WebSocket
+// upgrades. The caller must already be authenticated.
+func (m *JWTManager) GenerateWebSocketTicket(userID uint) (string, error) {
+	now := time.Now()
+	claims := &WebSocketTicketClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "kubevision",
+			Subject:   fmt.Sprintf("%d", userID),
+			Audience:  jwt.ClaimStrings{"kubevision-websocket"},
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(webSocketTicketTTL)),
+		},
+		UserID:    userID,
+		TokenType: "websocket",
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(m.secret)
+}
+
+// ParseWebSocketTicket validates a short-lived WebSocket ticket. Access and
+// refresh tokens are rejected because they lack the required audience.
+func (m *JWTManager) ParseWebSocketTicket(ticket string) (*WebSocketTicketClaims, error) {
+	token, err := jwt.ParseWithClaims(
+		ticket,
+		&WebSocketTicketClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			if token.Method != jwt.SigningMethodHS256 {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return m.secret, nil
+		},
+		jwt.WithIssuer("kubevision"),
+		jwt.WithAudience("kubevision-websocket"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("parse websocket ticket: %w", err)
+	}
+	claims, ok := token.Claims.(*WebSocketTicketClaims)
+	if !ok || !token.Valid || claims.UserID == 0 || claims.TokenType != "websocket" {
+		return nil, fmt.Errorf("invalid websocket ticket claims")
+	}
 	return claims, nil
 }
 
@@ -116,6 +175,7 @@ func (m *JWTManager) GenerateTempToken(userID uint) (string, error) {
 		},
 		UserID:     userID,
 		Pending2FA: true,
+		TokenType:  "2fa",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(m.secret)
@@ -138,7 +198,7 @@ func (m *JWTManager) ParseTempToken(tokenStr string) (*TempTokenClaims, error) {
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid temp token claims")
 	}
-	if !claims.Pending2FA {
+	if !claims.Pending2FA || (claims.TokenType != "" && claims.TokenType != "2fa") {
 		return nil, fmt.Errorf("token is not a 2FA pending token")
 	}
 	return claims, nil
@@ -163,7 +223,7 @@ func (m *JWTManager) ParseRefreshToken(tokenStr string) (*RefreshTokenClaims, er
 	}
 
 	claims, ok := token.Claims.(*refreshClaims)
-	if !ok || !token.Valid {
+	if !ok || !token.Valid || claims.TokenType != "" && claims.TokenType != "refresh" {
 		return nil, fmt.Errorf("invalid refresh token claims")
 	}
 

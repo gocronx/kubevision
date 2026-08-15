@@ -119,6 +119,7 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 	stopCh     chan struct{}
+	stopOnce   sync.Once
 	logger     *zap.Logger
 }
 
@@ -134,9 +135,9 @@ func NewHub(logger *zap.Logger) *Hub {
 	}
 }
 
-// Stop signals the Run goroutine to exit. It is safe to call once during shutdown.
+// Stop signals the Run goroutine to exit. It is safe to call repeatedly.
 func (h *Hub) Stop() {
-	close(h.stopCh)
+	h.stopOnce.Do(func() { close(h.stopCh) })
 }
 
 // Run is the main event loop for the Hub. It must be started as a goroutine.
@@ -147,6 +148,11 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case <-h.stopCh:
+			for client := range h.clients {
+				delete(h.clients, client)
+				close(client.send)
+				_ = client.conn.Close()
+			}
 			return
 
 		case client := <-h.register:
@@ -218,7 +224,12 @@ func (h *Hub) HandleWatch(c *gin.Context) {
 		topics: make(map[string]bool),
 	}
 
-	h.register <- client
+	select {
+	case h.register <- client:
+	case <-h.stopCh:
+		_ = conn.Close()
+		return
+	}
 
 	// Start read and write pumps in separate goroutines.
 	go client.writePump()
@@ -230,8 +241,11 @@ func (h *Hub) HandleWatch(c *gin.Context) {
 // error occurs, it unregisters the client from the Hub.
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
+		select {
+		case c.hub.unregister <- c:
+		case <-c.hub.stopCh:
+		}
+		_ = c.conn.Close()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)

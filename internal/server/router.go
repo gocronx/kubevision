@@ -43,6 +43,7 @@ type RouterDeps struct {
 	WSHub                  *ws.Hub
 	TerminalHandler        *ws.TerminalHandler
 	LogsHandler            *ws.LogsHandler
+	WSTicketHandler        *ws.TicketHandler
 	HTTPAccessHandler      *handler.HTTPAccessHandler
 	AuthMiddleware         gin.HandlerFunc
 	RBACMiddleware         gin.HandlerFunc
@@ -115,13 +116,16 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 		if deps != nil && deps.AuthMiddleware != nil {
 			authOnly.Use(deps.AuthMiddleware)
 		} else {
-			authOnly.Use(middleware.Auth())
+			authOnly.Use(middleware.RequireConfiguredAuth())
 		}
 		auditWrite := func(c *gin.Context) { c.Next() }
 		if deps != nil && deps.AuditMiddleware != nil {
 			auditWrite = deps.AuditMiddleware
 		}
 		{
+			if deps != nil && deps.WSTicketHandler != nil {
+				authOnly.POST("/ws/ticket", deps.WSTicketHandler.Create)
+			}
 			if deps != nil && deps.OperationHandler != nil {
 				operations := authOnly.Group("/operations")
 				operations.GET("", deps.OperationHandler.List)
@@ -201,7 +205,7 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 		if deps != nil && deps.AuthMiddleware != nil {
 			httpAccess.Use(deps.AuthMiddleware)
 		} else {
-			httpAccess.Use(middleware.Auth())
+			httpAccess.Use(middleware.RequireConfiguredAuth())
 		}
 		if deps != nil && deps.HTTPAccessHandler != nil {
 			httpAccess.GET("/clusters/:id/namespaces/:namespace/http/:kind/:name", deps.HTTPAccessHandler.Serve)
@@ -215,7 +219,7 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 		if deps != nil && deps.AuthMiddleware != nil {
 			protected.Use(deps.AuthMiddleware)
 		} else {
-			protected.Use(middleware.Auth())
+			protected.Use(middleware.RequireConfiguredAuth())
 		}
 		// Apply RBAC middleware after auth so the user role is available.
 		if deps != nil && deps.RBACMiddleware != nil {
@@ -399,9 +403,8 @@ func RegisterRoutes(r *gin.Engine, deps *RouterDeps) {
 				protected.GET("/clusters/:id/namespaces/:namespace/topology", deps.TopologyHandler.GetTopology)
 			}
 
-			// Pod terminal and log streaming routes.
-			// Authentication is handled inside the handlers via the ?token= query param
-			// because browsers cannot send custom headers during a WebSocket upgrade.
+			// Pod terminal and log streaming routes authenticate inside the handlers
+			// with a short-lived, WebSocket-only ticket.
 			// These routes are registered outside the protected group on purpose.
 			if deps != nil && deps.TerminalHandler != nil {
 				v1.GET("/clusters/:id/namespaces/:namespace/pods/:name/exec", deps.TerminalHandler.HandleExec)

@@ -69,20 +69,20 @@ func NewLogsHandler(
 //
 // Query parameters:
 //
-//	token      - JWT access token (required)
+//	ticket     - short-lived WebSocket ticket (required)
 //	container  - container name (optional)
 //	follow     - "true" to stream in real-time (default: false)
 //	previous   - "true" to show logs from the previous container instance
 //	tailLines  - number of lines from the end to show (omit for all)
 //	timestamps - "true" to prefix each line with its timestamp
 func (h *LogsHandler) HandleLogs(c *gin.Context) {
-	// --- Authentication via query-param token ---
-	tokenStr := c.Query("token")
-	if tokenStr == "" {
-		c.JSON(400, gin.H{"error": "missing token query parameter"})
+	// The ticket is short-lived and cannot be used as an API access token.
+	ticket := c.Query("ticket")
+	if ticket == "" {
+		c.JSON(400, gin.H{"error": "missing ticket query parameter"})
 		return
 	}
-	authResult, err := h.authenticateToken(c, tokenStr)
+	authResult, err := h.authenticateTicket(c, ticket)
 	if err != nil {
 		c.JSON(401, gin.H{"error": "unauthorized: " + err.Error()})
 		return
@@ -251,16 +251,14 @@ func (h *LogsHandler) sendLogMsg(conn *websocket.Conn, writeMu *sync.Mutex, msgT
 	_ = conn.WriteMessage(websocket.TextMessage, raw)
 }
 
-// logsAuthResult bundles the validated JWT claims with the user's
-// current role as stored in the database.
+// logsAuthResult bundles the ticket identity with the user's current role.
 type logsAuthResult struct {
-	Claims   *auth.TokenClaims
+	UserID   uint
 	UserRole string
 }
 
-// authenticateToken validates a JWT token string and checks the user in the database.
-func (h *LogsHandler) authenticateToken(c *gin.Context, tokenStr string) (*logsAuthResult, error) {
-	claims, err := h.jwtManager.ParseToken(tokenStr)
+func (h *LogsHandler) authenticateTicket(c *gin.Context, ticket string) (*logsAuthResult, error) {
+	claims, err := h.jwtManager.ParseWebSocketTicket(ticket)
 	if err != nil {
 		return nil, err
 	}
@@ -271,8 +269,5 @@ func (h *LogsHandler) authenticateToken(c *gin.Context, tokenStr string) (*logsA
 	if !user.IsActive {
 		return nil, errAccountDisabled
 	}
-	if claims.TokenVersion != user.TokenVersion {
-		return nil, errTokenRevoked
-	}
-	return &logsAuthResult{Claims: claims, UserRole: user.Role}, nil
+	return &logsAuthResult{UserID: claims.UserID, UserRole: user.Role}, nil
 }

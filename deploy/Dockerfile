@@ -62,16 +62,17 @@ LABEL org.opencontainers.image.title="KubeVision" \
 
 RUN apk add --no-cache ca-certificates tzdata
 
-# Create non-root user.
-RUN addgroup -S kubevision && adduser -S kubevision -G kubevision
+# Use a fixed numeric identity so Kubernetes can enforce runAsNonRoot.
+RUN addgroup -S -g 65532 kubevision && \
+    adduser -S -D -H -u 65532 -G kubevision kubevision
 
 WORKDIR /app
 
 # Copy the compiled binary from the builder stage.
 COPY --from=backend-builder /app/bin/kubevision .
 
-# Switch to non-root user.
-USER kubevision
+# Switch to the numeric non-root identity used by the Helm security context.
+USER 65532:65532
 
 EXPOSE 8080
 

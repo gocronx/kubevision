@@ -23,6 +23,7 @@ import {
   TerminalSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createWebSocketTicket } from "@/lib/websocket-ticket"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,7 @@ export function PodTerminal({
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const ticketAbortRef = useRef<AbortController | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const inputSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
@@ -166,6 +168,8 @@ export function PodTerminal({
   // ---- WebSocket connection --------------------------------------------------
 
   const disconnect = useCallback(() => {
+    ticketAbortRef.current?.abort()
+    ticketAbortRef.current = null
     inputSubscriptionRef.current?.dispose()
     inputSubscriptionRef.current = null
     if (pingTimerRef.current) {
@@ -177,6 +181,8 @@ export function PodTerminal({
       reconnectTimerRef.current = null
     }
     if (wsRef.current) {
+      wsRef.current.onopen = null
+      wsRef.current.onmessage = null
       wsRef.current.onclose = null
       wsRef.current.onerror = null
       wsRef.current.close()
@@ -184,7 +190,15 @@ export function PodTerminal({
     }
   }, [])
 
-  const connect = useCallback(() => {
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) return
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null
+      if (mountedRef.current) connectRef.current()
+    }, RECONNECT_DELAY_MS)
+  }, [])
+
+  const connect = useCallback(async () => {
     if (!mountedRef.current) return
     disconnect()
 
@@ -195,9 +209,24 @@ export function PodTerminal({
       term.writeln("\x1b[90m--- Connecting to " + podName + " ---\x1b[0m")
     }
 
-    const token = localStorage.getItem("token") ?? ""
+    const controller = new AbortController()
+    ticketAbortRef.current = controller
+    let ticket: string
+    try {
+      ticket = await createWebSocketTicket(controller.signal)
+    } catch {
+      if (mountedRef.current && !controller.signal.aborted) {
+        updateStatus("error")
+        xtermRef.current?.writeln("\r\n\x1b[90m--- Connection failed. Reconnecting in 3s... ---\x1b[0m")
+        scheduleReconnect()
+      }
+      return
+    }
+    if (!mountedRef.current || controller.signal.aborted) return
+    ticketAbortRef.current = null
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const params = new URLSearchParams({ token, container })
+    const params = new URLSearchParams({ ticket, container })
     if (shell !== "auto") {
       params.set("command", shell)
     }
@@ -231,6 +260,7 @@ export function PodTerminal({
     }
 
     ws.onmessage = (ev) => {
+      if (!mountedRef.current || wsRef.current !== ws) return
       try {
         const msg = JSON.parse(ev.data as string) as TermMsg
         if (!xtermRef.current) return
@@ -253,7 +283,7 @@ export function PodTerminal({
     }
 
     ws.onerror = () => {
-      if (!mountedRef.current) return
+      if (!mountedRef.current || wsRef.current !== ws) return
       updateStatus("error")
     }
 
@@ -271,14 +301,10 @@ export function PodTerminal({
         if (xtermRef.current) {
           xtermRef.current.writeln("\r\n\x1b[90m--- Disconnected. Reconnecting in 3s... ---\x1b[0m")
         }
-        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
-        reconnectTimerRef.current = setTimeout(() => {
-          reconnectTimerRef.current = null
-          if (mountedRef.current) connectRef.current()
-        }, RECONNECT_DELAY_MS)
+        scheduleReconnect()
       }
     }
-  }, [clusterId, namespace, podName, container, shell, disconnect, sendResize, updateStatus])
+  }, [clusterId, namespace, podName, container, shell, disconnect, scheduleReconnect, sendResize, updateStatus])
 
   useEffect(() => {
     connectRef.current = connect

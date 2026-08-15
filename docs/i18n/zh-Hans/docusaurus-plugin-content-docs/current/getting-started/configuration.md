@@ -70,6 +70,7 @@ oauth:
 | `KUBEVISION_CRD_DISCOVERY_INTERVAL` | CRD 发现刷新周期 | `5m` |
 | `KUBEVISION_OAUTH_ENABLED` | 启用已配置的 OAuth/OIDC 提供商 | `false` |
 | `KUBEVISION_ENCRYPT_KEY` | 持久化凭据加密密钥 | 自动生成 |
+| `KUBEVISION_SECRETS_FILE` | 自动生成 JWT 和加密密钥的持久化文件 | `.kubevision-secrets.yaml` |
 | `KUBEVISION_ALLOWED_ORIGINS` | WebSocket 来源白名单（逗号分隔）| `*` |
 
 ## 数据库

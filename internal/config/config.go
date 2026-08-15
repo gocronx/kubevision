@@ -250,6 +250,13 @@ func Load(path string) (*Config, error) {
 
 const secretsFile = ".kubevision-secrets.yaml"
 
+func secretsFilePath() string {
+	if path := os.Getenv("KUBEVISION_SECRETS_FILE"); path != "" {
+		return path
+	}
+	return secretsFile
+}
+
 // secretsData is the minimal struct written to the secrets file.
 type secretsData struct {
 	Auth struct {
@@ -259,9 +266,10 @@ type secretsData struct {
 }
 
 func persistSecrets(cfg *Config) error {
+	path := secretsFilePath()
 	// Try to load existing secrets first so we don't overwrite user-provided values.
 	existing := secretsData{}
-	if data, err := os.ReadFile(secretsFile); err == nil {
+	if data, err := os.ReadFile(path); err == nil {
 		_ = yaml.Unmarshal(data, &existing)
 	}
 
@@ -276,11 +284,11 @@ func persistSecrets(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(secretsFile, out, 0600)
+	return os.WriteFile(path, out, 0600)
 }
 
 func loadSecrets(cfg *Config) {
-	data, err := os.ReadFile(secretsFile)
+	data, err := os.ReadFile(secretsFilePath())
 	if err != nil {
 		return
 	}

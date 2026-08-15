@@ -21,30 +21,45 @@ the authenticated upgrade request and then manages subscriptions for cluster,
 namespace, and resource scopes. RBAC is applied before the connection is
 accepted.
 
+## WebSocket Tickets
+
+Pod terminal and log connections do not put the reusable access token in the
+WebSocket URL. First request a 30-second, WebSocket-only ticket through the
+normal authenticated API:
+
+```http
+POST /api/v1/ws/ticket
+Authorization: Bearer <access-token>
+```
+
+The response `data.ticket` value cannot authenticate ordinary API requests.
+Request a fresh ticket for each connection or reconnection attempt. Tickets are
+short-lived bearer credentials, not one-time credentials: a captured ticket can
+be replayed until its 30-second expiry because the server does not keep a
+cross-replica consumption record.
+
 ## Pod Terminal
 
 ```text
-wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/exec?token=<access-token>&container=<name>
+wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/exec?ticket=<ws-ticket>&container=<name>
 ```
 
-The handler authenticates the `token` query parameter because browser
-WebSocket APIs cannot add an `Authorization` header. Terminal data uses binary
-frames; resize/control messages use JSON. Sessions can be recorded when
-terminal recording is enabled.
+Terminal data uses text frames; resize and input messages use JSON. Sessions
+can be recorded when terminal recording is enabled.
 
 ## Pod Logs
 
 ```text
-wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/logs?token=<access-token>&container=<name>&tail=100
+wss://example.com/api/v1/clusters/:id/namespaces/:namespace/pods/:name/logs?ticket=<ws-ticket>&container=<name>&tailLines=100
 ```
 
 The handler streams historical and follow-up container logs after checking
 cluster, namespace, Pod, and container access.
 
 :::warning
-Use HTTPS/WSS in production. Query-string tokens may be visible to proxies or
-access logs, so infrastructure should redact query strings and avoid retaining
-them unnecessarily.
+Use HTTPS/WSS in production. Although tickets expire after 30 seconds and are
+not API access tokens, infrastructure should still redact query strings from
+access logs.
 :::
 
 ## AI Chat (SSE)

@@ -128,11 +128,12 @@ func AuthMiddleware(
 	}
 }
 
-// Auth returns a no-op Gin middleware stub used as a fallback when
-// the full AuthMiddleware has not been wired in. It simply passes through.
-func Auth() gin.HandlerFunc {
+// RequireConfiguredAuth fails closed when route dependencies are incomplete.
+// Production routes must never become public because middleware wiring failed.
+func RequireConfiguredAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Next()
+		response.Error(c, bizerr.CodeUnauthorized, "authentication is not configured")
+		c.Abort()
 	}
 }
 

@@ -70,6 +70,7 @@ All settings can be overridden via environment variables:
 | `KUBEVISION_CRD_DISCOVERY_INTERVAL` | CRD discovery refresh interval | `5m` |
 | `KUBEVISION_OAUTH_ENABLED` | Enable configured OAuth/OIDC providers | `false` |
 | `KUBEVISION_ENCRYPT_KEY` | Key used to encrypt persisted credentials | auto-generated |
+| `KUBEVISION_SECRETS_FILE` | File used to persist auto-generated JWT and encryption keys | `.kubevision-secrets.yaml` |
 | `KUBEVISION_ALLOWED_ORIGINS` | WebSocket origin whitelist (comma-separated) | `*` |
 
 ## Database

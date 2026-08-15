@@ -616,25 +616,32 @@ func TestAuthMiddleware_DBRoleOverridesClaimRole(t *testing.T) {
 	}
 }
 
-func TestAuth_NoopMiddleware(t *testing.T) {
+func TestRequireConfiguredAuth_FailsClosed(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
 
 	handlerCalled := false
 	router := gin.New()
-	router.Use(Auth())
-	router.GET("/open", func(c *gin.Context) {
+	router.Use(RequireConfiguredAuth())
+	router.GET("/protected", func(c *gin.Context) {
 		handlerCalled = true
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/open", nil)
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
 	router.ServeHTTP(w, req)
 
-	if !handlerCalled {
-		t.Error("noop Auth middleware should pass through to handler")
+	if handlerCalled {
+		t.Error("fail-closed authentication middleware called the protected handler")
 	}
 	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
+		t.Errorf("expected unified response status 200, got %d", w.Code)
+	}
+	var body response.Response
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Code != bizerr.CodeUnauthorized {
+		t.Errorf("expected unauthorized business code, got %d", body.Code)
 	}
 }

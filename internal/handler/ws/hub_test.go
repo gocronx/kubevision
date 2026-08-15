@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/gocronx/kubevision/internal/kubernetes/informer"
 	"go.uber.org/zap/zaptest"
@@ -25,6 +26,24 @@ func TestNewHub(t *testing.T) {
 	}
 	if hub.unregister == nil {
 		t.Error("unregister channel should be initialized")
+	}
+}
+
+func TestHub_StopIsIdempotentAndStopsRun(t *testing.T) {
+	hub := NewHub(zaptest.NewLogger(t))
+	done := make(chan struct{})
+	go func() {
+		hub.Run()
+		close(done)
+	}()
+
+	hub.Stop()
+	hub.Stop()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("hub Run did not stop")
 	}
 }
 

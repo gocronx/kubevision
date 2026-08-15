@@ -325,6 +325,7 @@ func main() {
 	terminalHandler := ws.NewTerminalHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger).
 		WithSessionService(terminalSessionService)
 	logsHandler := ws.NewLogsHandler(clusterManager, clusterRepo, jwtManager, userRepo, roleRepo, logger)
+	wsTicketHandler := ws.NewTicketHandler(jwtManager)
 	httpAccessHandler := handler.NewHTTPAccessHandler(clusterManager, clusterRepo, roleRepo, auditService, logger)
 
 	// Middleware
@@ -367,6 +368,7 @@ func main() {
 		WSHub:                  wsHub,
 		TerminalHandler:        terminalHandler,
 		LogsHandler:            logsHandler,
+		WSTicketHandler:        wsTicketHandler,
 		HTTPAccessHandler:      httpAccessHandler,
 		AuthMiddleware:         authMiddleware,
 		RBACMiddleware:         rbacMiddleware,

@@ -86,22 +86,21 @@ func (h *TerminalHandler) WithSessionService(svc *service.TerminalSessionService
 //
 // Query parameters:
 //
-//	token     - JWT access token (required; browsers cannot send custom headers on WS)
+//	ticket    - short-lived WebSocket ticket (required)
 //	container - container name (optional; first container used when absent)
 //	command   - shell to launch, e.g. "bash", "sh" (default: "sh")
 func (h *TerminalHandler) HandleExec(c *gin.Context) {
-	// --- Authentication via query-param token ---
-	tokenStr := c.Query("token")
-	if tokenStr == "" {
-		h.writeErrorAndClose(c, "missing token query parameter")
+	// The ticket is short-lived and cannot be used as an API access token.
+	ticket := c.Query("ticket")
+	if ticket == "" {
+		h.writeErrorAndClose(c, "missing ticket query parameter")
 		return
 	}
-	authResult, err := h.authenticateToken(c, tokenStr)
+	authResult, err := h.authenticateTicket(c, ticket)
 	if err != nil {
 		h.writeErrorAndClose(c, "unauthorized: "+err.Error())
 		return
 	}
-	claims := authResult.Claims
 
 	// --- RBAC: require pods:exec permission ---
 	if h.roleRepo != nil {
@@ -230,7 +229,7 @@ func (h *TerminalHandler) HandleExec(c *gin.Context) {
 	// Persist the recording asynchronously to avoid blocking the WebSocket close.
 	if h.sessionService != nil && recordingBuf.Len() > 0 {
 		recording := recordingBuf.String()
-		userID := claims.UserID
+		userID := authResult.UserID
 		go func() {
 			saveCtx, saveCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer saveCancel()
@@ -361,17 +360,14 @@ func (h *TerminalHandler) detectShell(restConfig *k8sRestConfig, namespace, pod,
 	return ""
 }
 
-// terminalAuthResult bundles the validated JWT claims with the user's
-// current role as stored in the database (may differ from the JWT claim
-// if the role was changed after the token was issued).
+// terminalAuthResult bundles the ticket identity with the user's current role.
 type terminalAuthResult struct {
-	Claims   *auth.TokenClaims
+	UserID   uint
 	UserRole string
 }
 
-// authenticateToken validates a JWT token string against the database.
-func (h *TerminalHandler) authenticateToken(c *gin.Context, tokenStr string) (*terminalAuthResult, error) {
-	claims, err := h.jwtManager.ParseToken(tokenStr)
+func (h *TerminalHandler) authenticateTicket(c *gin.Context, ticket string) (*terminalAuthResult, error) {
+	claims, err := h.jwtManager.ParseWebSocketTicket(ticket)
 	if err != nil {
 		return nil, err
 	}
@@ -382,10 +378,7 @@ func (h *TerminalHandler) authenticateToken(c *gin.Context, tokenStr string) (*t
 	if !user.IsActive {
 		return nil, errAccountDisabled
 	}
-	if claims.TokenVersion != user.TokenVersion {
-		return nil, errTokenRevoked
-	}
-	return &terminalAuthResult{Claims: claims, UserRole: user.Role}, nil
+	return &terminalAuthResult{UserID: claims.UserID, UserRole: user.Role}, nil
 }
 
 // --------------------------------------------------------------------------

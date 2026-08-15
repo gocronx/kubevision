@@ -49,6 +49,14 @@ helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
   -f values.yaml
 ```
 
+Chart 默认以数字 UID/GID `65532` 运行容器，启用只读根文件系统、移除 Linux
+capabilities，并使用 RuntimeDefault seccomp。自动生成的应用密钥写入
+`/data/.kubevision-secrets.yaml`，默认 SQLite PVC 会持久化该文件。禁用持久化时
+`/data` 使用临时卷，因此 PostgreSQL 部署应通过 `existingSecret` 提供 JWT 和加密
+密钥，避免 Pod 替换后密钥变化。ClusterRole 显式列出仪表盘使用的内置资源类型，
+不使用资源通配符。启用自定义资源或需要额外 Kubernetes API 权限的可选控制器时，
+应通过 `rbac.extraRules` 添加范围尽可能小的规则。
+
 ## 访问 KubeVision
 
 ### 本地或临时访问

@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { createWebSocketTicket } from "@/lib/websocket-ticket"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +80,7 @@ export function PodLogs({
   containers,
 }: PodLogsProps) {
   const wsRef = useRef<WebSocket | null>(null)
+  const ticketAbortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const mountedRef = useRef(true)
 
@@ -108,7 +110,11 @@ export function PodLogs({
   // ---- WebSocket connection --------------------------------------------------
 
   const disconnect = useCallback(() => {
+    ticketAbortRef.current?.abort()
+    ticketAbortRef.current = null
     if (wsRef.current) {
+      wsRef.current.onopen = null
+      wsRef.current.onmessage = null
       wsRef.current.onclose = null
       wsRef.current.onerror = null
       wsRef.current.close()
@@ -116,70 +122,79 @@ export function PodLogs({
     }
   }, [])
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!mountedRef.current) return
     disconnect()
 
     setLines([])
     setStatus("connecting")
 
-    const token = localStorage.getItem("token") ?? ""
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const params = new URLSearchParams({
-      token,
-      container,
-      follow: follow ? "true" : "false",
-      timestamps: showTimestamps ? "true" : "false",
-    })
-    if (tailOption) params.set("tailLines", tailOption)
+    const controller = new AbortController()
+    ticketAbortRef.current = controller
+    try {
+      const ticket = await createWebSocketTicket(controller.signal)
+      if (!mountedRef.current || controller.signal.aborted) return
+      ticketAbortRef.current = null
 
-    const url = `${protocol}//${window.location.host}/api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/logs?${params}`
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+      const params = new URLSearchParams({
+        ticket,
+        container,
+        follow: follow ? "true" : "false",
+        timestamps: showTimestamps ? "true" : "false",
+      })
+      if (tailOption) params.set("tailLines", tailOption)
 
-    const ws = new WebSocket(url)
-    wsRef.current = ws
+      const url = `${protocol}//${window.location.host}/api/v1/clusters/${clusterId}/namespaces/${namespace}/pods/${podName}/logs?${params}`
+      const ws = new WebSocket(url)
+      wsRef.current = ws
 
-    ws.onopen = () => {
-      if (!mountedRef.current) return
-      setStatus("connected")
-    }
-
-    ws.onmessage = (ev) => {
-      if (!mountedRef.current) return
-      try {
-        const msg = JSON.parse(ev.data as string) as LogMsg
-        switch (msg.type) {
-          case "log":
-            setLines((prev) => {
-              const next = [...prev, { id: ++lineCounter, text: msg.data }]
-              return next.length > MAX_RETAINED_LOG_LINES
-                ? next.slice(next.length - MAX_RETAINED_LOG_LINES)
-                : next
-            })
-            break
-          case "error":
-            setLines((prev) => [
-              ...prev,
-              { id: ++lineCounter, text: `[ERROR] ${msg.data}` },
-            ])
-            setStatus("error")
-            break
-          case "close":
-            setStatus("disconnected")
-            break
-        }
-      } catch {
-        // Non-JSON frame — ignore.
+      ws.onopen = () => {
+        if (!mountedRef.current || wsRef.current !== ws) return
+        setStatus("connected")
       }
-    }
 
-    ws.onerror = () => {
-      if (!mountedRef.current) return
-      setStatus("error")
-    }
+      ws.onmessage = (ev) => {
+        if (!mountedRef.current || wsRef.current !== ws) return
+        try {
+          const msg = JSON.parse(ev.data as string) as LogMsg
+          switch (msg.type) {
+            case "log":
+              setLines((prev) => {
+                const next = [...prev, { id: ++lineCounter, text: msg.data }]
+                return next.length > MAX_RETAINED_LOG_LINES
+                  ? next.slice(next.length - MAX_RETAINED_LOG_LINES)
+                  : next
+              })
+              break
+            case "error":
+              setLines((prev) => [
+                ...prev,
+                { id: ++lineCounter, text: `[ERROR] ${msg.data}` },
+              ])
+              setStatus("error")
+              break
+            case "close":
+              setStatus("disconnected")
+              break
+          }
+        } catch {
+          // Non-JSON frame — ignore.
+        }
+      }
 
-    ws.onclose = () => {
-      if (!mountedRef.current) return
-      setStatus("disconnected")
+      ws.onerror = () => {
+        if (!mountedRef.current || wsRef.current !== ws) return
+        setStatus("error")
+      }
+
+      ws.onclose = () => {
+        if (!mountedRef.current || wsRef.current !== ws) return
+        wsRef.current = null
+        setStatus("disconnected")
+      }
+    } catch {
+      if (mountedRef.current && !controller.signal.aborted) setStatus("error")
     }
   }, [clusterId, namespace, podName, container, follow, showTimestamps, tailOption, disconnect])
 

@@ -7,32 +7,55 @@ metadata:
     {{- include "kubevision.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
-    resources: ["*"]
+    resources:
+      - configmaps
+      - endpoints
+      - events
+      - limitranges
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - resourcequotas
+      - secrets
+      - serviceaccounts
+      - services
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
-    resources: ["*"]
+    resources: ["daemonsets", "deployments", "replicasets", "statefulsets"]
     verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale", "replicasets/scale", "statefulsets/scale"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: ["batch"]
-    resources: ["*"]
+    resources: ["cronjobs", "jobs"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["networking.k8s.io"]
-    resources: ["*"]
+    resources: ["ingresses", "networkpolicies"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
-    resources: ["*"]
+    resources: ["storageclasses"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["*"]
+    resources: ["clusterrolebindings", "clusterroles", "rolebindings", "roles"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["get", "list", "watch"]
-  # Pod CPU and memory usage from Metrics Server.
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods"]
     verbs: ["get", "list"]
-  # Pod exec for terminal
   - apiGroups: [""]
-    resources: ["pods/exec", "pods/log"]
-    verbs: ["create", "get"]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  {{- with .Values.rbac.extraRules }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
 {{- end }}
