@@ -2,6 +2,8 @@
 
 This repository is a Go backend with a React/Vite frontend, Docker image, and Helm chart. Keep changes small, explicit, and aligned with the existing package boundaries.
 
+Keep communication concise, direct, and free of unnecessary commentary.
+
 ## Development Focus
 
 - Backend changes need Go lifecycle review: handlers, services, repositories, Kubernetes clients, WebSockets, goroutines, channels, and context cancellation.
