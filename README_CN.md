@@ -83,10 +83,9 @@ KubeVision 采用人机协同模式。AI 可以协助调查和执行，但不会
 通过 Helm 可以最快地在集群中部署 KubeVision：
 
 ```bash
-# 1. 从公开 OCI Registry 安装 KubeVision v0.2.0
+# 1. 从公开 OCI Registry 安装 KubeVision
 helm install kubevision oci://ghcr.io/gocronx/charts/kubevision \
-  --version 0.2.0 \
-  --namespace kubevision \
+  -n kubevision \
   --create-namespace
 
 # 2. 从本机临时访问仪表盘
