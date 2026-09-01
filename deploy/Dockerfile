@@ -22,7 +22,7 @@ RUN pnpm build
 # ==============================================================================
 # Stage 2: Build Go backend
 # ==============================================================================
-FROM golang:1.26-alpine AS backend-builder
+FROM golang:1.27-alpine AS backend-builder
 
 ARG VERSION=dev
 ARG REVISION=unknown
